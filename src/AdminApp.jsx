@@ -221,46 +221,57 @@ function DefaultScheduleView({questions}) {
 }
 
 // ── User Profile Modal ────────────────────────────────────────────────────────
-function UserProfileModal({user, questions, allSchedules, defaultSchedule, onClose}) {
-  const [schedules, setSchedules] = useState(allSchedules.filter(s=>s.userId===user.id||s.userId==='all'))
+function UserProfileModal({user, questions, onClose}) {
+  const [liveSchedules, setLiveSchedules] = useState([])
   const [applying, setApplying] = useState(false)
-  const [saving, setSaving] = useState(null) // questionId being saved
-  const [localEdits, setLocalEdits] = useState({}) // {scheduleId: {time, repeat, interval, active}}
+  const [saving, setSaving] = useState(null)
+  const [applySuccess, setApplySuccess] = useState(false)
 
-  const userSchedules = allSchedules.filter(s=>s.userId===user.id)
-  const globalSchedules = allSchedules.filter(s=>s.userId==='all')
-  const allUserQIds = new Set([...userSchedules.map(s=>s.questionId), ...globalSchedules.map(s=>s.questionId)])
+  // Live listener so schedules update immediately after apply
+  useEffect(()=>{
+    const unsub = onSnapshot(
+      query(collection(db,'schedules'), where('userId','==',user.id)),
+      snap => setLiveSchedules(snap.docs.map(d=>({id:d.id,...d.data()})))
+    )
+    return unsub
+  },[user.id])
 
-  const DEFAULT_TIMES = ['09:00','12:00','15:00','18:00','21:00']
+  const userSchedules  = liveSchedules
+  const DEFAULT_TIMES  = ['09:00','12:00','15:00','18:00','21:00']
 
   async function applyDefault() {
     if(!questions.length){ alert('No questions found in the database.'); return }
     setApplying(true)
-    // Remove existing user-specific schedules
-    for(const s of userSchedules) {
-      await deleteDoc(doc(db,'schedules',s.id))
-    }
-    const startDate = today()
-    // End date = 15 days from today
-    const end = new Date()
-    end.setDate(end.getDate() + 14) // 14 days after today = 15 days total
-    const endDate = end.toISOString().split('T')[0]
+    try {
+      // Remove existing user-specific schedules
+      for(const s of userSchedules) {
+        await deleteDoc(doc(db,'schedules',s.id))
+      }
+      const startDate = today()
+      const end = new Date()
+      end.setDate(end.getDate() + 14)
+      const endDate = end.toISOString().split('T')[0]
 
-    for(const time of DEFAULT_TIMES) {
-      const ref = await addDoc(collection(db,'schedules'),{
-        questionId: '__ALL__',
-        userId: user.id,
-        time,
-        repeat: 'Daily',
-        interval: null,
-        mode: 'time',
-        startDate,
-        endDate,
-        durationDays: 15,
-        active: true,
-        isDefaultSession: true
-      })
-      await updateDoc(doc(db,'schedules',ref.id),{id:ref.id})
+      for(const time of DEFAULT_TIMES) {
+        const ref = await addDoc(collection(db,'schedules'),{
+          questionId: '__ALL__',
+          userId: user.id,
+          time,
+          repeat: 'Daily',
+          interval: null,
+          mode: 'time',
+          startDate,
+          endDate,
+          durationDays: 15,
+          active: true,
+          isDefaultSession: true
+        })
+        await updateDoc(doc(db,'schedules',ref.id),{id:ref.id})
+      }
+      setApplySuccess(true)
+      setTimeout(()=>setApplySuccess(false), 4000)
+    } catch(e) {
+      alert('Error applying schedule: ' + e.message)
     }
     setApplying(false)
   }
@@ -289,15 +300,24 @@ function UserProfileModal({user, questions, allSchedules, defaultSchedule, onClo
 
   async function saveScheduleEdit(sId, edits) {
     setSaving(sId)
-    await updateDoc(doc(db,'schedules',sId),edits)
+    await updateDoc(doc(db,'schedules',sId), edits)
     setSaving(null)
   }
 
   function qInfo(id) { return questions.find(q=>q.id===id) }
 
-  const [tab, setTab] = useState('active') // 'active' | 'add'
+  const [tab, setTab] = useState('active')
   const [addSearch, setAddSearch] = useState('')
-  const availableToAdd = questions.filter(q=>!allUserQIds.has(q.id)&&(!addSearch||q.text.toLowerCase().includes(addSearch.toLowerCase())))
+  const assignedQIds = new Set(userSchedules.map(s=>s.questionId))
+  const availableToAdd = questions.filter(q=>
+    !assignedQIds.has(q.id) &&
+    (!addSearch || q.text.toLowerCase().includes(addSearch.toLowerCase()))
+  )
+
+  const defaultSched = userSchedules.find(s=>s.isDefaultSession)
+  const daysLeft = defaultSched?.endDate
+    ? Math.max(0, Math.ceil((new Date(defaultSched.endDate)-new Date(today()))/86400000)+1)
+    : null
 
   return (
     <div style={{position:'fixed',inset:0,background:'rgba(10,10,20,.7)',backdropFilter:'blur(6px)',zIndex:200,display:'flex',alignItems:'flex-start',justifyContent:'center',padding:20,overflowY:'auto'}}>
@@ -313,9 +333,10 @@ function UserProfileModal({user, questions, allSchedules, defaultSchedule, onClo
             <button onClick={onClose} style={{background:'#FFFFFF1A',border:'none',color:'#E8E4FF',borderRadius:10,padding:'8px 14px',fontSize:13,cursor:'pointer'}}>Close</button>
           </div>
           {/* Apply default button */}
-          <button onClick={applyDefault} disabled={applying} style={{marginTop:16,width:'100%',background:'linear-gradient(135deg,#6C63FF,#4A42CC)',color:'#fff',border:'none',borderRadius:12,padding:'11px',fontSize:14,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>
-            {applying?<><Spin/> Applying…</>:'⚡ Apply Default Schedule (15 days · 5×/day · all 92 questions)'}
+          <button onClick={applyDefault} disabled={applying} style={{marginTop:16,width:'100%',background:applySuccess?'#1A6644':'linear-gradient(135deg,#6C63FF,#4A42CC)',color:'#fff',border:'none',borderRadius:12,padding:'11px',fontSize:14,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:8,transition:'background .3s'}}>
+            {applying?<><Spin/> Applying…</>:applySuccess?'✓ Applied — 5×/day for 15 days':'⚡ Apply Default Schedule (15 days · 5×/day · all 92 questions)'}
           </button>
+          {defaultSched&&daysLeft!==null&&<div style={{marginTop:8,fontSize:12,color:'#A89FFF',textAlign:'center'}}>{daysLeft>0?`${daysLeft} day${daysLeft!==1?'s':''} remaining · ends ${defaultSched.endDate}`:'Schedule has ended'}</div>}
         </div>
 
         <div style={{padding:'20px 24px'}}>
@@ -328,12 +349,28 @@ function UserProfileModal({user, questions, allSchedules, defaultSchedule, onClo
 
           {/* Active Questions tab */}
           {tab==='active'&&<>
-            {allUserQIds.size===0&&<div style={{textAlign:'center',padding:'40px 20px',color:'#C8C0B0'}}><p style={{fontSize:15}}>No questions assigned yet.</p><p style={{fontSize:13,marginTop:4}}>Apply the default schedule or add questions individually.</p></div>}
+            {userSchedules.length===0&&<div style={{textAlign:'center',padding:'40px 20px',color:'#C8C0B0'}}><p style={{fontSize:15}}>No schedule assigned yet.</p><p style={{fontSize:13,marginTop:4}}>Click the button above to apply the default schedule.</p></div>}
 
-            {/* User-specific schedules */}
             {userSchedules.length>0&&<>
-              <div style={{fontSize:11,fontWeight:700,color:'#9B98B8',letterSpacing:1.5,textTransform:'uppercase',marginBottom:10}}>Individual Schedules</div>
-              {userSchedules.map(s=>{
+              <div style={{fontSize:11,fontWeight:700,color:'#9B98B8',letterSpacing:1.5,textTransform:'uppercase',marginBottom:10}}>
+                {userSchedules.some(s=>s.isDefaultSession)?'Default Schedule (All 92 Questions)':'Individual Schedules'}
+              </div>
+              {/* Show default session summary */}
+              {userSchedules.filter(s=>s.isDefaultSession).length>0&&(
+                <div style={{background:'#fff',borderRadius:14,padding:'16px',border:'1.5px solid #E8E3DA',marginBottom:12}}>
+                  <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:8}}>
+                    <div>
+                      <div style={{fontWeight:600,fontSize:14,color:'#1A1A2E'}}>All 92 Questions · 5 sessions/day</div>
+                      <div style={{fontSize:12,color:'#9B98B8',marginTop:2}}>9:00 AM · 12:00 PM · 3:00 PM · 6:00 PM · 9:00 PM</div>
+                    </div>
+                    <span style={{fontSize:11,color:'#1A6644',background:'#D1FAE5',borderRadius:20,padding:'3px 10px',fontWeight:600}}>Active</span>
+                  </div>
+                  {defaultSched&&<div style={{fontSize:12,color:'#9B98B8'}}>{defaultSched.startDate} → {defaultSched.endDate} ({daysLeft>0?`${daysLeft} days left`:'ended'})</div>}
+                  <button onClick={()=>{ if(window.confirm('Remove default schedule for this patient?')) userSchedules.forEach(s=>removeSchedule(s)) }} style={{marginTop:12,padding:'6px 14px',borderRadius:8,border:'1.5px solid #FEE2E2',background:'#fff',color:'#EF4444',fontSize:12,fontWeight:600,cursor:'pointer'}}>Remove Schedule</button>
+                </div>
+              )}
+              {/* Non-default individual schedules */}
+              {userSchedules.filter(s=>!s.isDefaultSession).map(s=>{
                 const q=qInfo(s.questionId)
                 if(!q)return null
                 const [editing,setEditing]=useState(false)
@@ -356,27 +393,6 @@ function UserProfileModal({user, questions, allSchedules, defaultSchedule, onClo
                         <button onClick={()=>toggleSchedule(s)} style={{padding:'5px 10px',borderRadius:8,border:'1.5px solid #E5E0D8',background:'#fff',color:'#6B6888',fontSize:11,fontWeight:600,cursor:'pointer'}}>{s.active?'Pause':'Resume'}</button>
                         <button onClick={()=>removeSchedule(s)} style={{padding:'5px 8px',borderRadius:8,border:'1.5px solid #FEE2E2',background:'#fff',color:'#EF4444',fontSize:11,cursor:'pointer'}}>✕</button>
                       </div>
-                    </div>
-                  </div>
-                )
-              })}
-            </>}
-
-            {/* Global schedules */}
-            {globalSchedules.length>0&&<>
-              <div style={{fontSize:11,fontWeight:700,color:'#9B98B8',letterSpacing:1.5,textTransform:'uppercase',marginBottom:10,marginTop:userSchedules.length?16:0}}>Global (All Users)</div>
-              {globalSchedules.map(s=>{
-                const q=qInfo(s.questionId)
-                if(!q)return null
-                return(
-                  <div key={s.id} style={{background:'#fff',borderRadius:14,padding:'14px 16px',border:'1.5px solid #E8E3DA',marginBottom:8,opacity:.8}}>
-                    <div style={{display:'flex',alignItems:'center',gap:10}}>
-                      <div style={{flex:1}}>
-                        <div style={{display:'flex',gap:6,marginBottom:4}}><TBadge type={q.type}/><span style={{fontSize:11,color:'#1D4ED8',background:'#DBEAFE',borderRadius:20,padding:'2px 8px',fontWeight:600}}>All Users</span></div>
-                        <p style={{fontSize:13,color:'#1A1A2E',fontWeight:500,margin:'0 0 4px',lineHeight:1.4}}>{q.text.length>70?q.text.slice(0,70)+'…':q.text}</p>
-                        <div style={{fontSize:11,color:'#9B98B8'}}>{s.mode==='interval'?`Every ${s.interval}h from ${s.time}`:`Daily at ${s.time}`}</div>
-                      </div>
-                      <span style={{fontSize:11,color:'#C8C0B0',flexShrink:0}}>Edit from Schedule tab</span>
                     </div>
                   </div>
                 )
@@ -452,8 +468,6 @@ function UsersView({questions}) {
         <UserProfileModal
           user={selectedUser}
           questions={questions}
-          allSchedules={schedules}
-          defaultSchedule={defaultSchedule}
           onClose={()=>setSelectedUser(null)}
         />
       )}
