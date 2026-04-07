@@ -1,7 +1,16 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { db, auth } from './firebase.js'
-import { collection, doc, getDoc, setDoc, addDoc, updateDoc, deleteDoc, onSnapshot, query, where, orderBy } from 'firebase/firestore'
+import {
+  collection, doc, getDoc, setDoc, addDoc, updateDoc, deleteDoc,
+  onSnapshot, query, where, orderBy
+} from 'firebase/firestore'
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth'
+import {
+  registerServiceWorker, requestNotificationPermission,
+  scheduleSessionNotifications, listenForSessionOpen,
+  startInAppScheduler, isSessionTime, nextSessionTime,
+  SESSION_TIMES
+} from './notifications.js'
 
 const G = `
   @import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&family=Playfair+Display:wght@600;700;800&display=swap');
@@ -11,14 +20,17 @@ const G = `
   @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
   @keyframes pop{from{opacity:0;transform:scale(0.96)}to{opacity:1;transform:scale(1)}}
   @keyframes spin{to{transform:rotate(360deg)}}
+  @keyframes slideDown{from{opacity:0;transform:translateY(-20px)}to{opacity:1;transform:translateY(0)}}
 `
 
 const MOODS=[{label:'Radiant',score:5,emoji:'✦',color:'#F6C549',bg:'#FFF8E1'},{label:'Good',score:4,emoji:'◎',color:'#6ECB8A',bg:'#E8F9ED'},{label:'Neutral',score:3,emoji:'◈',color:'#7BB8F5',bg:'#EBF4FF'},{label:'Low',score:2,emoji:'◇',color:'#B48FE8',bg:'#F3EEFF'},{label:'Struggling',score:1,emoji:'◯',color:'#F2857A',bg:'#FFF0EE'}]
 const TAGS=['Work','Rest','Exercise','Social','Family','Anxiety','Grateful','Creative','Tired','Hopeful','Nature','Food']
 function fmtDate(d){return new Date(d).toLocaleDateString('en-US',{month:'short',day:'numeric'})}
 function today(){return new Date().toISOString().split('T')[0]}
+function nowStr(){return new Date().toISOString()}
 const Spin=()=><div style={{width:20,height:20,border:'2px solid #1e2640',borderTop:'2px solid #6C63FF',borderRadius:'50%',animation:'spin .7s linear infinite'}}/>
 
+// ── Welcome ───────────────────────────────────────────────────────────────────
 function WelcomeScreen({onLogin,onRegister}){
   return(
     <div style={{minHeight:'100vh',background:'#080A16',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:32,fontFamily:"'DM Sans',sans-serif"}}>
@@ -37,6 +49,7 @@ function WelcomeScreen({onLogin,onRegister}){
   )
 }
 
+// ── Register ──────────────────────────────────────────────────────────────────
 function RegisterScreen({onBack,onSuccess}){
   const [step,setStep]=useState(0)
   const [code,setCode]=useState(''); const [codeErr,setCodeErr]=useState(''); const [invite,setInvite]=useState(null)
@@ -68,7 +81,7 @@ function RegisterScreen({onBack,onSuccess}){
     setLoading(false)
   }
 
-  const fieldStyle={width:'100%',background:'#0d1120',border:'1.5px solid #1e2640',borderRadius:12,padding:'14px 16px',color:'#E8E4FF',fontSize:14,fontFamily:"'DM Sans',sans-serif"}
+  const fs={width:'100%',background:'#0d1120',border:'1.5px solid #1e2640',borderRadius:12,padding:'14px 16px',color:'#E8E4FF',fontSize:14,fontFamily:"'DM Sans',sans-serif"}
 
   return(
     <div style={{minHeight:'100vh',background:'#080A16',display:'flex',flexDirection:'column',padding:24,fontFamily:"'DM Sans',sans-serif"}}>
@@ -91,7 +104,7 @@ function RegisterScreen({onBack,onSuccess}){
           {[['Full Name','text',name,setName,'Your name'],['Email','email',email,setEmail,'Your email'],['Password','password',pw,setPw,'Min 6 characters']].map(([l,t,v,s,p])=>(
             <div key={l} style={{marginBottom:14}}>
               <div style={{fontSize:11,color:'#4a4a6a',letterSpacing:1,textTransform:'uppercase',marginBottom:6}}>{l}</div>
-              <input type={t} value={v} onChange={e=>s(e.target.value)} placeholder={p} style={fieldStyle}/>
+              <input type={t} value={v} onChange={e=>s(e.target.value)} placeholder={p} style={fs}/>
             </div>
           ))}
           {err&&<p style={{color:'#F2857A',fontSize:12,marginBottom:12,lineHeight:1.5}}>{err}</p>}
@@ -102,6 +115,7 @@ function RegisterScreen({onBack,onSuccess}){
   )
 }
 
+// ── Login ─────────────────────────────────────────────────────────────────────
 function LoginScreen({onBack,onSuccess}){
   const [email,setEmail]=useState(''); const [pw,setPw]=useState(''); const [err,setErr]=useState(''); const [loading,setLoading]=useState(false)
   async function login(){
@@ -133,35 +147,182 @@ function LoginScreen({onBack,onSuccess}){
   )
 }
 
-function QuestionCard({question,onAnswer,onSkip}){
-  const [scaleVal,setScaleVal]=useState(Math.round((question.scaleMin+question.scaleMax)/2))
-  const [textVal,setTextVal]=useState(''); const [choice,setChoice]=useState(null)
-  function submit(){const a=question.type==='scale'?scaleVal:question.type==='text'?textVal.trim():choice;if(!a&&a!==0)return;onAnswer(a)}
-  const canSubmit=question.type==='scale'||(question.type==='text'&&textVal.trim())||(question.type==='choice'&&choice!==null)
+// ── Notification Permission Banner ────────────────────────────────────────────
+function NotifBanner({onDismiss}){
+  const [asking,setAsking]=useState(false)
+  async function enable(){
+    setAsking(true)
+    await registerServiceWorker()
+    const result=await requestNotificationPermission()
+    if(result==='granted') await scheduleSessionNotifications()
+    onDismiss()
+  }
   return(
-    <div style={{background:'#0d1120',border:'1px solid #1e2640',borderRadius:22,padding:22,marginBottom:14,animation:'fadeUp .4s ease'}}>
-      <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:14}}>
-        {question.type==='scale'&&<span style={{fontSize:11,color:'#7BB8F5',background:'#7BB8F522',borderRadius:20,padding:'3px 10px',fontWeight:600}}>▬ Scale</span>}
-        {question.type==='choice'&&<span style={{fontSize:11,color:'#B48FE8',background:'#B48FE822',borderRadius:20,padding:'3px 10px',fontWeight:600}}>◉ Choice</span>}
-        {question.type==='text'&&<span style={{fontSize:11,color:'#6ECB8A',background:'#6ECB8A22',borderRadius:20,padding:'3px 10px',fontWeight:600}}>☰ Open</span>}
-        <span style={{marginLeft:'auto',fontSize:11,color:'#3a3a5c'}}>From your care team</span>
+    <div style={{background:'linear-gradient(135deg,#1a1f3a,#0f1525)',border:'1px solid #6C63FF44',borderRadius:16,padding:'14px 16px',marginBottom:16,animation:'slideDown .4s ease',display:'flex',alignItems:'center',gap:12}}>
+      <div style={{fontSize:22,flexShrink:0}}>🔔</div>
+      <div style={{flex:1}}>
+        <div style={{color:'#A89FFF',fontWeight:600,fontSize:14,marginBottom:2}}>Enable check-in reminders</div>
+        <div style={{color:'#6B6888',fontSize:12,lineHeight:1.5}}>Get notified at 9am, 12pm, 3pm, 6pm and 9pm daily.</div>
       </div>
-      <p style={{fontFamily:"'Playfair Display',serif",color:'#E8E4FF',fontSize:17,lineHeight:1.5,fontWeight:600,marginBottom:18}}>{question.text}</p>
-      {question.type==='scale'&&<div>
-        <div style={{display:'flex',justifyContent:'center',marginBottom:12}}><span style={{fontFamily:"'Playfair Display',serif",fontSize:42,fontWeight:700,color:'#6C63FF'}}>{scaleVal}</span></div>
-        <input type="range" min={question.scaleMin} max={question.scaleMax} value={scaleVal} onChange={e=>setScaleVal(+e.target.value)} style={{width:'100%',accentColor:'#6C63FF',marginBottom:8}}/>
-        <div style={{display:'flex',justifyContent:'space-between'}}><span style={{fontSize:11,color:'#6B6888'}}>{question.scaleMinLabel||question.scaleMin}</span><span style={{fontSize:11,color:'#6B6888'}}>{question.scaleMaxLabel||question.scaleMax}</span></div>
-      </div>}
-      {question.type==='choice'&&<div style={{display:'flex',flexDirection:'column',gap:8}}>{question.options?.map(o=><button key={o} onClick={()=>setChoice(o)} style={{padding:'12px 16px',borderRadius:12,border:`1.5px solid ${choice===o?'#6C63FF':'#1e2640'}`,background:choice===o?'#6C63FF22':'transparent',color:choice===o?'#A89FFF':'#9B98B8',fontSize:14,cursor:'pointer',textAlign:'left',fontFamily:"'DM Sans',sans-serif"}}>{o}</button>)}</div>}
-      {question.type==='text'&&<textarea value={textVal} onChange={e=>setTextVal(e.target.value)} rows={3} placeholder="Type your response…" style={{width:'100%',background:'#080A16',border:'1.5px solid #1e2640',borderRadius:12,padding:'12px 14px',color:'#E8E4FF',fontSize:14,fontFamily:"'DM Sans',sans-serif",lineHeight:1.6,resize:'none'}}/>}
-      <div style={{display:'flex',gap:10,marginTop:16}}>
-        <button onClick={onSkip} style={{flex:1,padding:'10px',borderRadius:12,border:'1px solid #1e2640',background:'transparent',color:'#4a4a6a',fontSize:13,cursor:'pointer'}}>Skip</button>
-        <button onClick={submit} disabled={!canSubmit} style={{flex:2,padding:'10px',borderRadius:12,border:'none',background:canSubmit?'linear-gradient(135deg,#6C63FF,#4A42CC)':'#1e2640',color:canSubmit?'#fff':'#3a3a5c',fontSize:14,fontWeight:700,cursor:canSubmit?'pointer':'default'}}>Submit →</button>
+      <div style={{display:'flex',gap:8,flexShrink:0}}>
+        <button onClick={onDismiss} style={{background:'none',border:'none',color:'#4a4a6a',fontSize:12,cursor:'pointer'}}>Later</button>
+        <button onClick={enable} disabled={asking} style={{background:'linear-gradient(135deg,#6C63FF,#4A42CC)',color:'#fff',border:'none',borderRadius:10,padding:'7px 14px',fontSize:12,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',gap:4}}>{asking?<Spin/>:'Enable'}</button>
       </div>
     </div>
   )
 }
 
+// ── In-App Session Banner ─────────────────────────────────────────────────────
+function SessionBanner({sessionTime, onStart}){
+  return(
+    <div onClick={onStart} style={{background:'linear-gradient(135deg,#6C63FF,#4A42CC)',borderRadius:16,padding:'16px 18px',marginBottom:16,cursor:'pointer',animation:'slideDown .4s ease',display:'flex',alignItems:'center',gap:12,boxShadow:'0 8px 24px #6C63FF44'}}>
+      <div style={{width:40,height:40,borderRadius:12,background:'#FFFFFF22',display:'flex',alignItems:'center',justifyContent:'center',fontSize:20,flexShrink:0}}>🔔</div>
+      <div style={{flex:1}}>
+        <div style={{color:'#fff',fontWeight:700,fontSize:15}}>Your {sessionTime} check-in is ready</div>
+        <div style={{color:'#A89FFF',fontSize:12,marginTop:2}}>Tap to answer your questions</div>
+      </div>
+      <span style={{color:'#fff',fontSize:20}}>→</span>
+    </div>
+  )
+}
+
+// ── Question Session Flow ─────────────────────────────────────────────────────
+function SessionScreen({questions, userId, sessionTime, onComplete}){
+  const [idx,setIdx]     = useState(0)
+  const [answer,setAnswer] = useState(null)
+  const [textVal,setTextVal] = useState('')
+  const [choice,setChoice]   = useState(null)
+  const [scaleVal,setScaleVal] = useState(null)
+  const [saving,setSaving]   = useState(false)
+  const [saved,setSaved]     = useState(0) // count saved
+
+  const q = questions[idx]
+  const total = questions.length
+  const pct = Math.round((idx/total)*100)
+
+  useEffect(()=>{
+    // Reset answer state when question changes
+    setTextVal(''); setChoice(null)
+    setScaleVal(q ? Math.round((q.scaleMin+q.scaleMax)/2) : 50)
+  },[idx])
+
+  const canNext = q?.type==='scale' || (q?.type==='text'&&textVal.trim()) || (q?.type==='choice'&&choice!==null)
+
+  async function saveAndNext(){
+    if(!q || !canNext) return
+    setSaving(true)
+    const ans = q.type==='scale' ? String(scaleVal) : q.type==='text' ? textVal.trim() : choice
+    try {
+      await addDoc(collection(db,'responses'),{
+        questionId: q.id,
+        userId,
+        answer: ans,
+        date: today(),
+        ts: nowStr(),
+        sessionTime: sessionTime||'manual'
+      })
+    } catch(e){ console.warn('Save error:',e) }
+    setSaved(s=>s+1)
+    setSaving(false)
+    if(idx < total-1){ setIdx(i=>i+1) }
+    else { onComplete(saved+1) }
+  }
+
+  async function skip(){
+    try{
+      await addDoc(collection(db,'responses'),{questionId:q.id,userId,answer:'__skipped__',date:today(),ts:nowStr(),sessionTime:sessionTime||'manual'})
+    }catch(e){}
+    if(idx < total-1){ setIdx(i=>i+1) }
+    else { onComplete(saved) }
+  }
+
+  if(!q) return null
+
+  return(
+    <div style={{minHeight:'100vh',background:'#080A16',display:'flex',flexDirection:'column',fontFamily:"'DM Sans',sans-serif"}}>
+      <style>{G}</style>
+      {/* Header */}
+      <div style={{padding:'52px 20px 16px',maxWidth:480,margin:'0 auto',width:'100%'}}>
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:12}}>
+          <div style={{fontSize:11,color:'#4a4a6a',letterSpacing:1.5,textTransform:'uppercase'}}>Check-in · {sessionTime||today()}</div>
+          <div style={{fontSize:12,color:'#6B6888'}}>{idx+1} of {total}</div>
+        </div>
+        {/* Progress bar */}
+        <div style={{height:4,background:'#1e2640',borderRadius:4,overflow:'hidden'}}>
+          <div style={{height:'100%',width:`${pct}%`,background:'linear-gradient(90deg,#6C63FF,#A89FFF)',borderRadius:4,transition:'width .3s ease'}}/>
+        </div>
+      </div>
+
+      {/* Question */}
+      <div style={{flex:1,maxWidth:480,margin:'0 auto',padding:'0 20px',width:'100%',overflowY:'auto',paddingBottom:120}}>
+        <div style={{animation:'fadeUp .3s ease'}}>
+          {/* Type badge */}
+          <div style={{marginBottom:14}}>
+            {q.type==='scale'&&<span style={{fontSize:11,color:'#7BB8F5',background:'#7BB8F522',borderRadius:20,padding:'3px 10px',fontWeight:600}}>▬ Scale</span>}
+            {q.type==='choice'&&<span style={{fontSize:11,color:'#B48FE8',background:'#B48FE822',borderRadius:20,padding:'3px 10px',fontWeight:600}}>◉ Choice</span>}
+            {q.type==='text'&&<span style={{fontSize:11,color:'#6ECB8A',background:'#6ECB8A22',borderRadius:20,padding:'3px 10px',fontWeight:600}}>☰ Open</span>}
+            {q.category&&q.category!=='General'&&<span style={{fontSize:11,color:'#A89FFF',background:'#6C63FF22',borderRadius:20,padding:'3px 10px',fontWeight:600,marginLeft:6}}>{q.category}</span>}
+          </div>
+
+          <p style={{fontFamily:"'Playfair Display',serif",color:'#E8E4FF',fontSize:20,lineHeight:1.5,fontWeight:600,marginBottom:24}}>{q.text}</p>
+
+          {q.type==='scale'&&(
+            <div style={{background:'#0d1120',borderRadius:20,padding:24,border:'1px solid #1e2640'}}>
+              <div style={{display:'flex',justifyContent:'center',marginBottom:16}}>
+                <span style={{fontFamily:"'Playfair Display',serif",fontSize:52,fontWeight:700,color:'#6C63FF'}}>{scaleVal}</span>
+              </div>
+              <input type="range" min={q.scaleMin} max={q.scaleMax} value={scaleVal} onChange={e=>setScaleVal(+e.target.value)} style={{width:'100%',accentColor:'#6C63FF',marginBottom:10}}/>
+              <div style={{display:'flex',justifyContent:'space-between'}}>
+                <span style={{fontSize:12,color:'#6B6888'}}>{q.scaleMinLabel||q.scaleMin}</span>
+                <span style={{fontSize:12,color:'#6B6888'}}>{q.scaleMaxLabel||q.scaleMax}</span>
+              </div>
+            </div>
+          )}
+
+          {q.type==='choice'&&(
+            <div style={{display:'flex',flexDirection:'column',gap:10}}>
+              {q.options?.map(o=>(
+                <button key={o} onClick={()=>setChoice(o)} style={{padding:'16px 18px',borderRadius:14,border:`2px solid ${choice===o?'#6C63FF':'#1e2640'}`,background:choice===o?'#6C63FF22':'#0d1120',color:choice===o?'#A89FFF':'#9B98B8',fontSize:15,cursor:'pointer',textAlign:'left',fontFamily:"'DM Sans',sans-serif",fontWeight:choice===o?600:400,transition:'all .15s'}}>{o}</button>
+              ))}
+            </div>
+          )}
+
+          {q.type==='text'&&(
+            <textarea value={textVal} onChange={e=>setTextVal(e.target.value)} rows={4} placeholder="Type your response here…" style={{width:'100%',background:'#0d1120',border:'1.5px solid #1e2640',borderRadius:14,padding:'14px 16px',color:'#E8E4FF',fontSize:14,fontFamily:"'DM Sans',sans-serif",lineHeight:1.6,resize:'none'}}/>
+          )}
+        </div>
+      </div>
+
+      {/* Bottom actions — fixed */}
+      <div style={{position:'fixed',bottom:0,left:0,right:0,background:'rgba(8,10,22,.97)',borderTop:'1px solid #1e2640',padding:'16px 20px 32px'}}>
+        <div style={{maxWidth:480,margin:'0 auto',display:'flex',gap:10}}>
+          <button onClick={skip} style={{flex:1,padding:'14px',borderRadius:14,border:'1px solid #1e2640',background:'transparent',color:'#4a4a6a',fontSize:14,cursor:'pointer'}}>Skip</button>
+          <button onClick={saveAndNext} disabled={!canNext||saving} style={{flex:3,padding:'14px',borderRadius:14,border:'none',background:canNext?'linear-gradient(135deg,#6C63FF,#4A42CC)':'#1e2640',color:canNext?'#fff':'#3a3a5c',fontSize:15,fontWeight:700,cursor:canNext?'pointer':'default',display:'flex',alignItems:'center',justifyContent:'center',gap:8,transition:'all .2s'}}>
+            {saving ? <Spin/> : idx < total-1 ? 'Next Question →' : 'Complete Session ✦'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Session Complete Screen ───────────────────────────────────────────────────
+function SessionCompleteScreen({answered, total, onHome}){
+  return(
+    <div style={{minHeight:'100vh',background:'#080A16',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:32,fontFamily:"'DM Sans',sans-serif",textAlign:'center'}}>
+      <style>{G}</style>
+      <div style={{animation:'fadeUp .5s ease'}}>
+        <div style={{fontSize:64,marginBottom:20}}>✦</div>
+        <h2 style={{fontFamily:"'Playfair Display',serif",color:'#E8E4FF',fontSize:28,fontWeight:700,marginBottom:8}}>Session Complete</h2>
+        <p style={{color:'#6B6888',fontSize:15,lineHeight:1.7,marginBottom:8}}>You answered {answered} of {total} questions.</p>
+        <p style={{color:'#4a4a6a',fontSize:13,marginBottom:40}}>Next check-in: {nextSessionTime()}</p>
+        <button onClick={onHome} style={{background:'linear-gradient(135deg,#6C63FF,#4A42CC)',color:'#fff',border:'none',borderRadius:16,padding:'16px 40px',fontSize:16,fontWeight:700,cursor:'pointer'}}>Back to Home</button>
+      </div>
+    </div>
+  )
+}
+
+// ── Sparkline ─────────────────────────────────────────────────────────────────
 function Sparkline({entries}){
   const W=220,H=60,P=8; if(entries.length<2)return null
   const pts=entries.slice(-14)
@@ -172,6 +333,7 @@ function Sparkline({entries}){
   return(<svg viewBox={`0 0 ${W} ${H}`} style={{width:'100%',height:60}}><defs><linearGradient id="sg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#6ECB8A" stopOpacity=".35"/><stop offset="100%" stopColor="#6ECB8A" stopOpacity="0"/></linearGradient></defs><path d={area} fill="url(#sg)"/><path d={path} fill="none" stroke="#6ECB8A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>{xs.map((x,i)=><circle key={i} cx={x} cy={ys[i]} r="3" fill={MOODS.find(m=>m.score===pts[i].mood)?.color||'#6ECB8A'} stroke="#fff" strokeWidth="1.5"/>)}</svg>)
 }
 
+// ── Check-in Modal ────────────────────────────────────────────────────────────
 function CheckInModal({onSave,onClose,existing}){
   const [step,setStep]=useState(0); const [mood,setMood]=useState(existing?.mood||null)
   const [tags,setTags]=useState(existing?.tags||[]); const [note,setNote]=useState(existing?.note||'')
@@ -195,43 +357,111 @@ function CheckInModal({onSave,onClose,existing}){
   )
 }
 
+// ── Main App ──────────────────────────────────────────────────────────────────
 function MainApp({user,onLogout}){
-  const [tab,setTab]=useState('home')
-  const [entries,setEntries]=useState([])
-  const [questions,setQuestions]=useState([])
-  const [schedules,setSchedules]=useState([])
-  const [responses,setResponses]=useState({})
-  const [showModal,setShowModal]=useState(false)
-  const [editEntry,setEditEntry]=useState(null)
-  const [selectedEntry,setSelected]=useState(null)
-  const [loadingQ,setLoadingQ]=useState(true)
+  const [tab,setTab]           = useState('home')
+  const [entries,setEntries]   = useState([])
+  const [questions,setQuestions] = useState([])
+  const [schedules,setSchedules] = useState([])
+  const [responses,setResponses] = useState({})
+  const [showModal,setShowModal] = useState(false)
+  const [editEntry,setEditEntry] = useState(null)
+  const [selectedEntry,setSelected] = useState(null)
+
+  // Session state
+  const [sessionActive,setSessionActive]   = useState(false)
+  const [sessionTime,setSessionTime]       = useState(null)
+  const [sessionComplete,setSessionComplete] = useState(null) // {answered,total}
+  const [sessionBanner,setSessionBanner]   = useState(null)  // time string
+
+  // Notification state
+  const [showNotifBanner,setShowNotifBanner] = useState(false)
 
   useEffect(()=>{
     const u1=onSnapshot(collection(db,'questions'),s=>{setQuestions(s.docs.map(d=>({id:d.id,...d.data()})))})
-    const u2=onSnapshot(collection(db,'schedules'),s=>{setSchedules(s.docs.map(d=>({id:d.id,...d.data()})));setLoadingQ(false)})
+    const u2=onSnapshot(collection(db,'schedules'),s=>{setSchedules(s.docs.map(d=>({id:d.id,...d.data()})))})
     const u3=onSnapshot(query(collection(db,'moodEntries'),where('userId','==',user.id),orderBy('date','asc')),s=>{setEntries(s.docs.map(d=>({id:d.id,...d.data()})))})
-    const u4=onSnapshot(query(collection(db,'responses'),where('userId','==',user.id),where('date','==',today())),s=>{const r={};s.docs.forEach(d=>{const data=d.data();r[data.questionId]=data.answer});setResponses(r)})
+    const u4=onSnapshot(query(collection(db,'responses'),where('userId','==',user.id),where('date','==',today())),s=>{
+      const r={}; s.docs.forEach(d=>{const data=d.data(); if(!r[data.questionId])r[data.questionId]=data.answer}); setResponses(r)
+    })
     return()=>{u1();u2();u3();u4()}
   },[user.id])
 
-  const mySchedules=schedules.filter(s=>s.active&&(s.userId==='all'||s.userId===user.id))
-  const myQIds=[...new Set(mySchedules.map(s=>s.questionId))]
-  const myQuestions=questions.filter(q=>myQIds.includes(q.id))
-  const pendingQs=myQuestions.filter(q=>!(q.id in responses))
+  // Set up notifications + in-app scheduler
+  useEffect(()=>{
+    // Show permission banner if not yet granted
+    if('Notification' in window && Notification.permission==='default'){
+      setTimeout(()=>setShowNotifBanner(true), 2000)
+    }
+    // Register SW for already-granted
+    if('Notification' in window && Notification.permission==='granted'){
+      registerServiceWorker().then(()=>scheduleSessionNotifications())
+    }
+    // Listen for SW open-session message
+    const unsub = listenForSessionOpen(()=>startSession('notification'))
+    // In-app scheduler
+    const stopScheduler = startInAppScheduler(time=>{
+      setSessionBanner(time)
+      setTimeout(()=>setSessionBanner(null), 30*60*1000) // hide after 30min
+    })
+    // If app opened at session time, show banner
+    if(isSessionTime()){
+      const now=new Date()
+      const t=`${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`
+      setSessionBanner(t)
+    }
+    // Check URL param (from notification click)
+    if(window.location.search.includes('session=1')) startSession('notification')
+    return()=>{unsub(); stopScheduler()}
+  },[])
+
+  function startSession(time){
+    setSessionTime(time)
+    setSessionActive(true)
+    setSessionBanner(null)
+    setTab('home')
+  }
+
+  function completeSession(answered){
+    setSessionActive(false)
+    setSessionComplete({answered, total:sessionQuestions.length})
+  }
+
+  // All questions for a session — respect endDate (15-day window)
+  const mySchedules = schedules.filter(s=>{
+    if(!s.active) return false
+    if(s.userId!=='all' && s.userId!==user.id) return false
+    if(s.endDate && today() > s.endDate) return false // expired
+    return true
+  })
+  const hasAllSchedule = mySchedules.some(s=>s.questionId==='__ALL__'||s.isDefaultSession)
+  const myQIds = [...new Set(mySchedules.filter(s=>s.questionId!=='__ALL__').map(s=>s.questionId))]
+  const sessionQuestions = hasAllSchedule
+    ? questions
+    : myQIds.length>0
+      ? questions.filter(q=>myQIds.includes(q.id))
+      : questions
+
+  // Days remaining in schedule
+  const defaultSchedule = mySchedules.find(s=>s.isDefaultSession)
+  const daysRemaining = defaultSchedule?.endDate
+    ? Math.max(0, Math.ceil((new Date(defaultSchedule.endDate) - new Date(today())) / 86400000) + 1)
+    : null
+  const scheduleExpired = defaultSchedule?.endDate && today() > defaultSchedule.endDate
+
+  const todayAnsweredCount = Object.keys(responses).filter(k=>responses[k]!=='__skipped__').length
+  const sessionsDoneToday  = SESSION_TIMES.filter(t=>{
+    // rough check — if most questions answered, assume session done
+    return false // placeholder, not tracking per-session completion
+  }).length
 
   async function saveEntry({mood,tags,note}){
-    const entry={userId:user.id,date:today(),mood,tags,note,updatedAt:new Date().toISOString()}
+    const entry={userId:user.id,date:today(),mood,tags,note,updatedAt:nowStr()}
     if(editEntry){await setDoc(doc(db,'moodEntries',editEntry.id),entry,{merge:true})}
     else{await addDoc(collection(db,'moodEntries'),entry)}
     setShowModal(false); setEditEntry(null)
   }
-
   async function deleteEntry(id){await deleteDoc(doc(db,'moodEntries',id))}
-
-  async function answerQuestion(qId,answer){
-    await addDoc(collection(db,'responses'),{questionId:qId,userId:user.id,answer:String(answer),date:today(),ts:new Date().toISOString()})
-    setResponses(p=>({...p,[qId]:answer}))
-  }
 
   const todayEntry=entries.find(e=>e.date===today())
   const avgMood=entries.length?(entries.reduce((s,e)=>s+e.mood,0)/entries.length).toFixed(1):'--'
@@ -239,6 +469,14 @@ function MainApp({user,onLogout}){
   const tagFreq={};entries.forEach(e=>e.tags?.forEach(t=>{tagFreq[t]=(tagFreq[t]||0)+1}))
   const topTags=Object.entries(tagFreq).sort((a,b)=>b[1]-a[1]).slice(0,5)
   const firstName=user.name?.split(' ')[0]||'there'
+
+  // ── Session screens ──
+  if(sessionActive && sessionQuestions.length>0){
+    return <SessionScreen questions={sessionQuestions} userId={user.id} sessionTime={sessionTime} onComplete={completeSession}/>
+  }
+  if(sessionComplete){
+    return <SessionCompleteScreen answered={sessionComplete.answered} total={sessionComplete.total} onHome={()=>setSessionComplete(null)}/>
+  }
 
   return(
     <div style={{minHeight:'100vh',background:'#080A16',fontFamily:"'DM Sans',sans-serif",paddingBottom:90}}>
@@ -248,7 +486,7 @@ function MainApp({user,onLogout}){
           <div>
             <div style={{fontSize:11,color:'#4a4a6a',letterSpacing:2,textTransform:'uppercase',marginBottom:4}}>Sylvia Precision Health</div>
             <h1 style={{fontFamily:"'Playfair Display',serif",color:'#E8E4FF',fontSize:26,margin:0,fontWeight:700}}>
-              {tab==='home'&&`Hello, ${firstName}`}{tab==='questions'&&'My Questions'}{tab==='log'&&'Mood Log'}{tab==='insights'&&'Insights'}
+              {tab==='home'&&`Hello, ${firstName}`}{tab==='log'&&'Mood Log'}{tab==='insights'&&'Insights'}
             </h1>
           </div>
           {tab==='home'&&<button onClick={()=>{setEditEntry(null);setShowModal(true)}} style={{background:'linear-gradient(135deg,#6C63FF,#4A42CC)',color:'#fff',border:'none',borderRadius:16,padding:'10px 18px',fontSize:14,fontWeight:600,cursor:'pointer'}}>+ Check in</button>}
@@ -257,12 +495,45 @@ function MainApp({user,onLogout}){
       </div>
 
       <div style={{maxWidth:480,margin:'0 auto',padding:'0 20px'}}>
+
         {tab==='home'&&<>
-          {pendingQs.length>0&&<div onClick={()=>setTab('questions')} style={{background:'linear-gradient(135deg,#1a1f3a,#0f1525)',border:'1px solid #6C63FF44',borderRadius:20,padding:'16px 18px',marginBottom:18,cursor:'pointer',display:'flex',alignItems:'center',gap:14}}>
-            <div style={{width:40,height:40,borderRadius:14,background:'#6C63FF22',display:'flex',alignItems:'center',justifyContent:'center',fontSize:18,flexShrink:0}}>◈</div>
-            <div style={{flex:1}}><div style={{color:'#A89FFF',fontWeight:600,fontSize:14}}>Your care team sent {pendingQs.length} question{pendingQs.length!==1?'s':''}</div><div style={{color:'#6B6888',fontSize:12,marginTop:2}}>Tap to respond</div></div>
-            <span style={{color:'#6C63FF',fontSize:20}}>→</span>
-          </div>}
+          {/* Notification permission banner */}
+          {showNotifBanner&&<NotifBanner onDismiss={()=>setShowNotifBanner(false)}/>}
+
+          {/* In-app session banner */}
+          {sessionBanner&&<SessionBanner sessionTime={sessionBanner} onStart={()=>startSession(sessionBanner)}/>}
+
+          {/* Manual start session button */}
+          {!sessionBanner&&sessionQuestions.length>0&&!scheduleExpired&&(
+            <div style={{background:'#0d1120',border:'1px solid #1e2640',borderRadius:20,padding:'16px 18px',marginBottom:18,display:'flex',alignItems:'center',gap:14}}>
+              <div style={{flex:1}}>
+                <div style={{color:'#E8E4FF',fontWeight:600,fontSize:14,marginBottom:2}}>{sessionQuestions.length} questions ready</div>
+                <div style={{color:'#6B6888',fontSize:12}}>
+                  Next scheduled: {nextSessionTime()}
+                  {daysRemaining!==null&&<span style={{color:'#A89FFF',marginLeft:8}}>· {daysRemaining} day{daysRemaining!==1?'s':''} remaining</span>}
+                </div>
+              </div>
+              <button onClick={()=>startSession('manual')} style={{background:'linear-gradient(135deg,#6C63FF,#4A42CC)',color:'#fff',border:'none',borderRadius:12,padding:'10px 16px',fontSize:13,fontWeight:700,cursor:'pointer',flexShrink:0}}>Start Now</button>
+            </div>
+          )}
+
+          {/* Schedule expired notice */}
+          {scheduleExpired&&(
+            <div style={{background:'#0d1120',border:'1px solid #1e2640',borderRadius:20,padding:'16px 18px',marginBottom:18}}>
+              <div style={{color:'#F6C549',fontWeight:600,fontSize:14,marginBottom:4}}>✦ Study complete</div>
+              <div style={{color:'#6B6888',fontSize:13,lineHeight:1.6}}>Your 15-day check-in period has ended. Thank you for your participation. Please contact your care provider if you have questions.</div>
+            </div>
+          )}
+
+          {/* Today stats */}
+          {todayAnsweredCount>0&&(
+            <div style={{background:'#0d1120',border:'1px solid #6ECB8A33',borderRadius:16,padding:'12px 16px',marginBottom:18,display:'flex',alignItems:'center',gap:10}}>
+              <span style={{color:'#6ECB8A',fontSize:18}}>✓</span>
+              <span style={{color:'#9B98B8',fontSize:13}}>{todayAnsweredCount} question{todayAnsweredCount!==1?'s':''} answered today</span>
+            </div>
+          )}
+
+          {/* Today mood card */}
           <div style={{background:todayEntry?MOODS.find(m=>m.score===todayEntry.mood)?.bg+'18':'#0d1120',border:`1px solid ${todayEntry?MOODS.find(m=>m.score===todayEntry.mood)?.color+'44':'#1e2640'}`,borderRadius:24,padding:22,marginBottom:18}}>
             <div style={{fontSize:11,color:'#4a4a6a',letterSpacing:1.5,textTransform:'uppercase',marginBottom:8}}>Today · {fmtDate(today())}</div>
             {todayEntry?(
@@ -277,11 +548,13 @@ function MainApp({user,onLogout}){
             ):(
               <div style={{textAlign:'center',padding:'14px 0'}}>
                 <div style={{fontSize:32,marginBottom:8}}>◌</div>
-                <p style={{color:'#4a4a6a',fontSize:14,margin:'0 0 14px'}}>No check-in yet today.</p>
+                <p style={{color:'#4a4a6a',fontSize:14,margin:'0 0 14px'}}>No mood check-in yet today.</p>
                 <button onClick={()=>setShowModal(true)} style={{background:'linear-gradient(135deg,#6C63FF,#4A42CC)',color:'#fff',border:'none',borderRadius:14,padding:'10px 22px',fontSize:14,fontWeight:600,cursor:'pointer'}}>Start Check-in</button>
               </div>
             )}
           </div>
+
+          {/* Stats */}
           <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:12,marginBottom:18}}>
             {[{label:'Avg Mood',value:avgMood,unit:'/5',color:'#6ECB8A'},{label:'Streak',value:streak,unit:'d',color:'#F6C549'},{label:'Entries',value:entries.length,unit:'',color:'#7BB8F5'}].map(s=>(
               <div key={s.label} style={{background:'#0d1120',border:'1px solid #1e2640',borderRadius:18,padding:'16px 12px',textAlign:'center'}}>
@@ -290,32 +563,12 @@ function MainApp({user,onLogout}){
               </div>
             ))}
           </div>
+
+          {/* Sparkline */}
           <div style={{background:'#0d1120',border:'1px solid #1e2640',borderRadius:20,padding:'18px 18px 14px'}}>
             <div style={{fontSize:11,color:'#4a4a6a',letterSpacing:1.5,textTransform:'uppercase',marginBottom:10}}>Last 14 Days</div>
             <Sparkline entries={entries}/>
           </div>
-        </>}
-
-        {tab==='questions'&&<>
-          {loadingQ&&<div style={{display:'flex',justifyContent:'center',padding:60}}><Spin/></div>}
-          {!loadingQ&&pendingQs.length>0&&<>
-            <div style={{fontSize:11,color:'#4a4a6a',letterSpacing:1.5,textTransform:'uppercase',marginBottom:12}}>Pending · {today()}</div>
-            {pendingQs.map(q=><QuestionCard key={q.id} question={q} onAnswer={a=>answerQuestion(q.id,a)} onSkip={()=>answerQuestion(q.id,'__skipped__')}/>)}
-          </>}
-          {!loadingQ&&pendingQs.length===0&&<div style={{textAlign:'center',padding:'60px 20px'}}>
-            <div style={{fontSize:48,marginBottom:16}}>✦</div>
-            <p style={{fontFamily:"'Playfair Display',serif",color:'#E8E4FF',fontSize:20,fontWeight:600,marginBottom:8}}>All caught up</p>
-            <p style={{color:'#6B6888',fontSize:14,lineHeight:1.6}}>No pending questions right now.<br/>Your care team will send more soon.</p>
-          </div>}
-          {Object.entries(responses).filter(([,a])=>a!=='__skipped__').length>0&&<div style={{marginTop:20}}>
-            <div style={{fontSize:11,color:'#4a4a6a',letterSpacing:1.5,textTransform:'uppercase',marginBottom:12}}>Completed Today</div>
-            {myQuestions.filter(q=>responses[q.id]&&responses[q.id]!=='__skipped__').map(q=>(
-              <div key={q.id} style={{background:'#0d1120',border:'1px solid #6ECB8A33',borderRadius:16,padding:'14px 16px',marginBottom:10,display:'flex',alignItems:'center',gap:12}}>
-                <span style={{color:'#6ECB8A',fontSize:18}}>✓</span>
-                <div style={{flex:1}}><p style={{color:'#9B98B8',fontSize:13,margin:0}}>{q.text}</p><p style={{color:'#6ECB8A',fontSize:12,margin:'4px 0 0',fontWeight:600}}>Answered: {String(responses[q.id])}</p></div>
-              </div>
-            ))}
-          </div>}
         </>}
 
         {tab==='log'&&<>
@@ -364,12 +617,12 @@ function MainApp({user,onLogout}){
         </>}
       </div>
 
+      {/* Bottom Nav — 3 tabs (removed Questions tab, session is now flow-based) */}
       <div style={{position:'fixed',bottom:0,left:0,right:0,background:'rgba(8,10,22,.95)',backdropFilter:'blur(16px)',borderTop:'1px solid #1e2640',display:'flex',justifyContent:'space-around',padding:'10px 0 20px',zIndex:50}}>
-        {[{id:'home',emoji:'◎',label:'Home'},{id:'questions',emoji:'◈',label:'Questions',badge:pendingQs.length},{id:'log',emoji:'▣',label:'Log'},{id:'insights',emoji:'✦',label:'Insights'}].map(t=>(
-          <button key={t.id} onClick={()=>setTab(t.id)} style={{background:'none',border:'none',cursor:'pointer',display:'flex',flexDirection:'column',alignItems:'center',gap:4,padding:'4px 16px',position:'relative'}}>
+        {[{id:'home',emoji:'◎',label:'Home'},{id:'log',emoji:'▣',label:'Log'},{id:'insights',emoji:'✦',label:'Insights'}].map(t=>(
+          <button key={t.id} onClick={()=>setTab(t.id)} style={{background:'none',border:'none',cursor:'pointer',display:'flex',flexDirection:'column',alignItems:'center',gap:4,padding:'4px 24px'}}>
             <span style={{fontSize:20,color:tab===t.id?'#6C63FF':'#3a3a5c'}}>{t.emoji}</span>
             <span style={{fontSize:10,color:tab===t.id?'#A89FFF':'#3a3a5c',letterSpacing:.5}}>{t.label}</span>
-            {t.badge>0&&<div style={{position:'absolute',top:0,right:8,width:16,height:16,borderRadius:'50%',background:'#F2857A',display:'flex',alignItems:'center',justifyContent:'center',fontSize:9,color:'#fff',fontWeight:700}}>{t.badge}</div>}
           </button>
         ))}
       </div>
@@ -379,6 +632,7 @@ function MainApp({user,onLogout}){
   )
 }
 
+// ── Root ──────────────────────────────────────────────────────────────────────
 export default function UserApp(){
   const [screen,setScreen]=useState('loading')
   const [user,setUser]=useState(null)
