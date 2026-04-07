@@ -426,6 +426,11 @@ function MainApp({user,onLogout}){
 
   function completeSession(answered){
     setSessionActive(false)
+    setSessionComplete({answered, total: sessionQuestions.length || questions.length})
+  }
+
+  function completeSession(answered){
+    setSessionActive(false)
     setSessionComplete({answered, total:sessionQuestions.length})
   }
 
@@ -473,8 +478,9 @@ function MainApp({user,onLogout}){
   const firstName=user.name?.split(' ')[0]||'there'
 
   // ── Session screens ──
-  if(sessionActive && sessionQuestions.length>0){
-    return <SessionScreen questions={sessionQuestions} userId={user.id} sessionTime={sessionTime} onComplete={completeSession}/>
+  const activeSessionQuestions = sessionQuestions.length > 0 ? sessionQuestions : questions
+  if(sessionActive && activeSessionQuestions.length>0){
+    return <SessionScreen questions={activeSessionQuestions} userId={user.id} sessionTime={sessionTime} onComplete={completeSession}/>
   }
   if(sessionComplete){
     return <SessionCompleteScreen answered={sessionComplete.answered} total={sessionComplete.total} onHome={()=>setSessionComplete(null)}/>
@@ -505,17 +511,26 @@ function MainApp({user,onLogout}){
           {/* In-app session banner */}
           {sessionBanner&&<SessionBanner sessionTime={sessionBanner} onStart={()=>startSession(sessionBanner)}/>}
 
-          {/* Manual start session button */}
-          {!sessionBanner&&sessionQuestions.length>0&&!scheduleExpired&&(
-            <div style={{background:'#0d1120',border:'1px solid #1e2640',borderRadius:20,padding:'16px 18px',marginBottom:18,display:'flex',alignItems:'center',gap:14}}>
+          {/* Session card — always show if user has any active schedule */}
+          {!scheduleExpired&&mySchedules.length>0&&!sessionBanner&&(
+            <div style={{background:'linear-gradient(135deg,#1a1f3a,#0f1525)',border:'1px solid #6C63FF44',borderRadius:20,padding:'16px 18px',marginBottom:18,display:'flex',alignItems:'center',gap:14}}>
               <div style={{flex:1}}>
-                <div style={{color:'#E8E4FF',fontWeight:600,fontSize:14,marginBottom:2}}>{sessionQuestions.length} questions ready</div>
+                <div style={{color:'#E8E4FF',fontWeight:600,fontSize:14,marginBottom:2}}>
+                  {sessionQuestions.length} questions ready
+                </div>
                 <div style={{color:'#6B6888',fontSize:12}}>
-                  Next scheduled: {nextSessionTime()}
-                  {daysRemaining!==null&&<span style={{color:'#A89FFF',marginLeft:8}}>· {daysRemaining} day{daysRemaining!==1?'s':''} remaining</span>}
+                  Sessions at 9am · 12pm · 3pm · 6pm · 9pm
+                  {daysRemaining!==null&&<span style={{color:'#A89FFF',marginLeft:8}}>· {daysRemaining} day{daysRemaining!==1?'s':''} left</span>}
                 </div>
               </div>
               <button onClick={()=>startSession('manual')} style={{background:'linear-gradient(135deg,#6C63FF,#4A42CC)',color:'#fff',border:'none',borderRadius:12,padding:'10px 16px',fontSize:13,fontWeight:700,cursor:'pointer',flexShrink:0}}>Start Now</button>
+            </div>
+          )}
+
+          {/* No schedule assigned yet */}
+          {mySchedules.length===0&&schedules.length>0&&(
+            <div style={{background:'#0d1120',border:'1px solid #1e2640',borderRadius:16,padding:'14px 16px',marginBottom:18}}>
+              <div style={{color:'#4a4a6a',fontSize:13}}>No active schedule assigned. Contact your care provider.</div>
             </div>
           )}
 
