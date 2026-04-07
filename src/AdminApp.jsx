@@ -231,24 +231,34 @@ function UserProfileModal({user, questions, allSchedules, defaultSchedule, onClo
   const globalSchedules = allSchedules.filter(s=>s.userId==='all')
   const allUserQIds = new Set([...userSchedules.map(s=>s.questionId), ...globalSchedules.map(s=>s.questionId)])
 
+  const DEFAULT_TIMES = ['09:00','12:00','15:00','18:00','21:00']
+
   async function applyDefault() {
-    if(!defaultSchedule?.items?.length) { alert('No default schedule saved yet. Go to Default Schedule tab to set one up.'); return }
+    if(!questions.length){ alert('No questions found in the database.'); return }
     setApplying(true)
     // Remove existing user-specific schedules
     for(const s of userSchedules) {
       await deleteDoc(doc(db,'schedules',s.id))
     }
-    // Add default schedule items for this user
-    for(const item of defaultSchedule.items) {
+    const startDate = today()
+    // End date = 15 days from today
+    const end = new Date()
+    end.setDate(end.getDate() + 14) // 14 days after today = 15 days total
+    const endDate = end.toISOString().split('T')[0]
+
+    for(const time of DEFAULT_TIMES) {
       const ref = await addDoc(collection(db,'schedules'),{
-        questionId: item.questionId,
+        questionId: '__ALL__',
         userId: user.id,
-        time: item.time||'08:00',
-        repeat: item.repeat||'Daily',
-        interval: item.interval||null,
-        mode: item.mode||'time',
-        startDate: today(),
-        active: true
+        time,
+        repeat: 'Daily',
+        interval: null,
+        mode: 'time',
+        startDate,
+        endDate,
+        durationDays: 15,
+        active: true,
+        isDefaultSession: true
       })
       await updateDoc(doc(db,'schedules',ref.id),{id:ref.id})
     }
@@ -304,7 +314,7 @@ function UserProfileModal({user, questions, allSchedules, defaultSchedule, onClo
           </div>
           {/* Apply default button */}
           <button onClick={applyDefault} disabled={applying} style={{marginTop:16,width:'100%',background:'linear-gradient(135deg,#6C63FF,#4A42CC)',color:'#fff',border:'none',borderRadius:12,padding:'11px',fontSize:14,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>
-            {applying?<><Spin/> Applying…</>:'⚡ Apply Default Schedule'}
+            {applying?<><Spin/> Applying…</>:'⚡ Apply Default Schedule (15 days · 5×/day · all 92 questions)'}
           </button>
         </div>
 
