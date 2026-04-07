@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { db, auth } from './firebase.js'
 import {
   collection, doc, getDoc, setDoc, addDoc, updateDoc, deleteDoc,
-  onSnapshot, query, where, orderBy
+  onSnapshot, query, where
 } from 'firebase/firestore'
 import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth'
 
@@ -31,6 +31,7 @@ const Field = ({label,children}) => <div style={{marginBottom:18}}><Lbl>{label}<
 const inp = {border:'1.5px solid #E5E0D8',borderRadius:12,padding:'11px 14px',fontSize:14,color:'#1A1A2E',background:'#FAFAF8',width:'100%'}
 const Logo = () => <svg width="36" height="36" viewBox="0 0 44 44" fill="none"><rect width="44" height="44" rx="11" fill="#6C63FF" fillOpacity=".18"/><circle cx="22" cy="22" r="8" stroke="#A89FFF" strokeWidth="1.5" fill="none"/><circle cx="22" cy="22" r="3" fill="#A89FFF"/><line x1="22" y1="9" x2="22" y2="14" stroke="#6C63FF" strokeWidth="1.5" strokeLinecap="round"/><line x1="22" y1="30" x2="22" y2="35" stroke="#6C63FF" strokeWidth="1.5" strokeLinecap="round"/><line x1="9" y1="22" x2="14" y2="22" stroke="#6C63FF" strokeWidth="1.5" strokeLinecap="round"/><line x1="30" y1="22" x2="35" y2="22" stroke="#6C63FF" strokeWidth="1.5" strokeLinecap="round"/></svg>
 
+// ── Admin Login ───────────────────────────────────────────────────────────────
 function AdminLogin({onLogin}) {
   const [email,setEmail]=useState(''); const [pw,setPw]=useState(''); const [err,setErr]=useState(''); const [loading,setLoading]=useState(false)
   async function login() {
@@ -53,8 +54,9 @@ function AdminLogin({onLogin}) {
   )
 }
 
+// ── Sidebar ───────────────────────────────────────────────────────────────────
 function Sidebar({active,setActive,onLogout}) {
-  const nav=[{id:'questions',label:'Questions',icon:'◈'},{id:'schedule',label:'Schedule',icon:'◷'},{id:'users',label:'Users',icon:'◎'},{id:'invites',label:'Invites',icon:'✉'}]
+  const nav=[{id:'questions',label:'Questions',icon:'◈'},{id:'schedule',label:'Schedule',icon:'◷'},{id:'default',label:'Default Schedule',icon:'★'},{id:'users',label:'Users',icon:'◎'},{id:'invites',label:'Invites',icon:'✉'}]
   return (
     <div style={{width:230,background:'#1A1A2E',minHeight:'100vh',display:'flex',flexDirection:'column',padding:'28px 0',flexShrink:0}}>
       <div style={{padding:'0 20px 28px'}}>
@@ -77,21 +79,390 @@ function Sidebar({active,setActive,onLogout}) {
   )
 }
 
+// ── Schedule Entry Editor (reusable) ──────────────────────────────────────────
+function ScheduleEntryEditor({entry, onChange}) {
+  const [mode, setMode] = useState(entry.mode || 'time') // 'time' or 'interval'
+  return (
+    <div style={{background:'#FAFAF8',borderRadius:12,padding:14,border:'1px solid #E5E0D8',marginTop:10}}>
+      <div style={{display:'flex',gap:8,marginBottom:12}}>
+        {[['time','At a specific time'],['interval','At an interval']].map(([m,l])=>(
+          <button key={m} onClick={()=>{setMode(m);onChange({...entry,mode:m})}}
+            style={{flex:1,padding:'8px 10px',borderRadius:10,border:`1.5px solid ${mode===m?'#6C63FF':'#E5E0D8'}`,background:mode===m?'#F0EEFF':'#fff',color:mode===m?'#6C63FF':'#9B98B8',fontSize:12,fontWeight:600,cursor:'pointer'}}>
+            {l}
+          </button>
+        ))}
+      </div>
+      {mode==='time' && (
+        <div style={{display:'flex',gap:10}}>
+          <div style={{flex:1}}>
+            <div style={{fontSize:11,color:'#9B98B8',marginBottom:4}}>Send time</div>
+            <input type="time" value={entry.time||'08:00'} onChange={e=>onChange({...entry,time:e.target.value,mode:'time',repeat:'Daily'})} style={{...inp,padding:'8px 10px',borderRadius:8}}/>
+          </div>
+          <div style={{flex:1}}>
+            <div style={{fontSize:11,color:'#9B98B8',marginBottom:4}}>Repeat</div>
+            <select value={entry.repeat||'Daily'} onChange={e=>onChange({...entry,repeat:e.target.value})} style={{...inp,padding:'8px 10px',borderRadius:8}}>
+              {REPEATS.map(r=><option key={r} value={r}>{r}</option>)}
+            </select>
+          </div>
+        </div>
+      )}
+      {mode==='interval' && (
+        <div>
+          <div style={{display:'flex',gap:10,marginBottom:10}}>
+            <div style={{flex:1}}>
+              <div style={{fontSize:11,color:'#9B98B8',marginBottom:4}}>Start time</div>
+              <input type="time" value={entry.time||'08:00'} onChange={e=>onChange({...entry,time:e.target.value,mode:'interval',repeat:'Custom interval'})} style={{...inp,padding:'8px 10px',borderRadius:8}}/>
+            </div>
+            <div style={{flex:1}}>
+              <div style={{fontSize:11,color:'#9B98B8',marginBottom:4}}>Every N hours</div>
+              <input type="number" min={1} max={24} value={entry.interval||4} onChange={e=>onChange({...entry,interval:+e.target.value,repeat:'Custom interval',mode:'interval'})} style={{...inp,padding:'8px 10px',borderRadius:8}}/>
+            </div>
+          </div>
+          <div style={{fontSize:11,color:'#9B98B8'}}>Sends every {entry.interval||4} hour{(entry.interval||4)!==1?'s':''} starting at {entry.time||'08:00'}</div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Default Schedule View ─────────────────────────────────────────────────────
+function DefaultScheduleView({questions}) {
+  const [items, setItems] = useState([]) // [{questionId, time, mode, interval, repeat}]
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [search, setSearch] = useState('')
+  const [catFilter, setCatFilter] = useState('All')
+  const [saved, setSaved] = useState(false)
+
+  useEffect(()=>{
+    const unsub = onSnapshot(doc(db,'config','defaultSchedule'), snap=>{
+      if(snap.exists()) setItems(snap.data().items || [])
+      setLoading(false)
+    })
+    return unsub
+  },[])
+
+  async function saveDefault() {
+    setSaving(true)
+    await setDoc(doc(db,'config','defaultSchedule'), {items, updatedAt: new Date().toISOString()})
+    setSaved(true); setTimeout(()=>setSaved(false), 2000)
+    setSaving(false)
+  }
+
+  function isSelected(qId) { return items.some(i=>i.questionId===qId) }
+
+  function toggleQuestion(q) {
+    if(isSelected(q.id)) {
+      setItems(prev=>prev.filter(i=>i.questionId!==q.id))
+    } else {
+      setItems(prev=>[...prev,{questionId:q.id,time:'08:00',repeat:'Daily',mode:'time',interval:4}])
+    }
+  }
+
+  function updateEntry(qId, entry) {
+    setItems(prev=>prev.map(i=>i.questionId===qId?{...i,...entry}:i))
+  }
+
+  const cats = ['All',...Array.from(new Set(questions.map(q=>q.category||'General')))]
+  const filtered = questions.filter(q=>{
+    const mc = catFilter==='All'||(q.category||'General')===catFilter
+    const ms = !search||q.text?.toLowerCase().includes(search.toLowerCase())
+    return mc&&ms
+  })
+
+  return (
+    <div>
+      <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',marginBottom:8}}>
+        <div>
+          <h2 style={{fontFamily:"'Playfair Display',serif",fontWeight:800,fontSize:24,color:'#1A1A2E'}}>Default Schedule</h2>
+          <p style={{fontSize:13,color:'#9B98B8',marginTop:4}}>{items.length} questions selected · Apply to any user in one click from the Users tab</p>
+        </div>
+        <button onClick={saveDefault} disabled={saving} style={{background:saved?'#1A6644':'#1A1A2E',color:'#E8E4FF',border:'none',borderRadius:14,padding:'11px 20px',fontSize:14,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',gap:8,flexShrink:0}}>
+          {saving?<Spin/>:saved?'Saved ✓':'Save Default'}
+        </button>
+      </div>
+
+      <div style={{background:'#DBEAFE',borderRadius:12,padding:'12px 16px',marginBottom:20}}>
+        <div style={{fontSize:12,color:'#1D4ED8',fontWeight:600,marginBottom:2}}>How this works</div>
+        <div style={{fontSize:12,color:'#1D4ED8',lineHeight:1.6}}>Select questions below and set a time or interval for each. Save, then go to Users → click a patient → "Apply Default Schedule" to assign this bundle to them instantly.</div>
+      </div>
+
+      <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search questions…" style={{...inp,marginBottom:12}}/>
+      <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:20}}>
+        {cats.map(c=><button key={c} onClick={()=>setCatFilter(c)} style={{padding:'5px 12px',borderRadius:20,border:`1.5px solid ${catFilter===c?'#1A1A2E':'#E5E0D8'}`,background:catFilter===c?'#1A1A2E':'#fff',color:catFilter===c?'#E8E4FF':'#9B98B8',fontSize:11,fontWeight:600,cursor:'pointer',whiteSpace:'nowrap'}}>{c}</button>)}
+      </div>
+
+      {loading&&<div style={{display:'flex',justifyContent:'center',padding:40}}><Spin/></div>}
+      <div style={{display:'flex',flexDirection:'column',gap:10}}>
+        {filtered.map(q=>{
+          const selected = isSelected(q.id)
+          const entry = items.find(i=>i.questionId===q.id)
+          return (
+            <div key={q.id} style={{background:'#fff',borderRadius:16,padding:'16px 18px',border:`1.5px solid ${selected?'#6C63FF':'#E8E3DA'}`,transition:'border-color .2s'}}>
+              <div style={{display:'flex',alignItems:'flex-start',gap:12}}>
+                <div onClick={()=>toggleQuestion(q)} style={{width:22,height:22,borderRadius:6,border:`2px solid ${selected?'#6C63FF':'#D1D5DB'}`,background:selected?'#6C63FF':'#fff',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0,marginTop:2}}>
+                  {selected&&<span style={{color:'#fff',fontSize:13,fontWeight:700}}>✓</span>}
+                </div>
+                <div style={{flex:1}}>
+                  <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:4,flexWrap:'wrap'}}>
+                    <TBadge type={q.type}/>
+                    {q.category&&q.category!=='General'&&<span style={{fontSize:11,color:'#6D28D9',background:'#EDE9FE',borderRadius:20,padding:'2px 8px',fontWeight:600}}>{q.category}</span>}
+                  </div>
+                  <p style={{fontSize:14,color:'#1A1A2E',lineHeight:1.4,fontWeight:500,margin:0,cursor:'pointer'}} onClick={()=>toggleQuestion(q)}>{q.text}</p>
+                  {selected&&entry&&<ScheduleEntryEditor entry={entry} onChange={e=>updateEntry(q.id,e)}/>}
+                </div>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+// ── User Profile Modal ────────────────────────────────────────────────────────
+function UserProfileModal({user, questions, allSchedules, defaultSchedule, onClose}) {
+  const [schedules, setSchedules] = useState(allSchedules.filter(s=>s.userId===user.id||s.userId==='all'))
+  const [applying, setApplying] = useState(false)
+  const [saving, setSaving] = useState(null) // questionId being saved
+  const [localEdits, setLocalEdits] = useState({}) // {scheduleId: {time, repeat, interval, active}}
+
+  const userSchedules = allSchedules.filter(s=>s.userId===user.id)
+  const globalSchedules = allSchedules.filter(s=>s.userId==='all')
+  const allUserQIds = new Set([...userSchedules.map(s=>s.questionId), ...globalSchedules.map(s=>s.questionId)])
+
+  async function applyDefault() {
+    if(!defaultSchedule?.items?.length) { alert('No default schedule saved yet. Go to Default Schedule tab to set one up.'); return }
+    setApplying(true)
+    // Remove existing user-specific schedules
+    for(const s of userSchedules) {
+      await deleteDoc(doc(db,'schedules',s.id))
+    }
+    // Add default schedule items for this user
+    for(const item of defaultSchedule.items) {
+      const ref = await addDoc(collection(db,'schedules'),{
+        questionId: item.questionId,
+        userId: user.id,
+        time: item.time||'08:00',
+        repeat: item.repeat||'Daily',
+        interval: item.interval||null,
+        mode: item.mode||'time',
+        startDate: today(),
+        active: true
+      })
+      await updateDoc(doc(db,'schedules',ref.id),{id:ref.id})
+    }
+    setApplying(false)
+  }
+
+  async function toggleSchedule(s) {
+    await updateDoc(doc(db,'schedules',s.id),{active:!s.active})
+  }
+
+  async function removeSchedule(s) {
+    await deleteDoc(doc(db,'schedules',s.id))
+  }
+
+  async function addQuestion(q) {
+    const ref = await addDoc(collection(db,'schedules'),{
+      questionId: q.id,
+      userId: user.id,
+      time: '08:00',
+      repeat: 'Daily',
+      interval: null,
+      mode: 'time',
+      startDate: today(),
+      active: true
+    })
+    await updateDoc(doc(db,'schedules',ref.id),{id:ref.id})
+  }
+
+  async function saveScheduleEdit(sId, edits) {
+    setSaving(sId)
+    await updateDoc(doc(db,'schedules',sId),edits)
+    setSaving(null)
+  }
+
+  function qInfo(id) { return questions.find(q=>q.id===id) }
+
+  const [tab, setTab] = useState('active') // 'active' | 'add'
+  const [addSearch, setAddSearch] = useState('')
+  const availableToAdd = questions.filter(q=>!allUserQIds.has(q.id)&&(!addSearch||q.text.toLowerCase().includes(addSearch.toLowerCase())))
+
+  return (
+    <div style={{position:'fixed',inset:0,background:'rgba(10,10,20,.7)',backdropFilter:'blur(6px)',zIndex:200,display:'flex',alignItems:'flex-start',justifyContent:'center',padding:20,overflowY:'auto'}}>
+      <div style={{background:'#F4F1EC',borderRadius:24,width:'100%',maxWidth:620,boxShadow:'0 32px 80px rgba(0,0,0,.2)',animation:'pop .25s ease',marginTop:20,marginBottom:20}}>
+        {/* Header */}
+        <div style={{background:'#1A1A2E',borderRadius:'24px 24px 0 0',padding:'24px 28px'}}>
+          <div style={{display:'flex',alignItems:'center',gap:14}}>
+            <div style={{width:46,height:46,borderRadius:14,background:'#F0EEFF',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:800,fontSize:18,color:'#6C63FF',flexShrink:0}}>{user.name?.split(' ').map(n=>n[0]).join('')||'?'}</div>
+            <div style={{flex:1}}>
+              <div style={{fontFamily:"'Playfair Display',serif",fontWeight:700,fontSize:20,color:'#E8E4FF'}}>{user.name}</div>
+              <div style={{fontSize:12,color:'#6B6888',marginTop:2}}>{user.email} · Joined {user.joinedDate}</div>
+            </div>
+            <button onClick={onClose} style={{background:'#FFFFFF1A',border:'none',color:'#E8E4FF',borderRadius:10,padding:'8px 14px',fontSize:13,cursor:'pointer'}}>Close</button>
+          </div>
+          {/* Apply default button */}
+          <button onClick={applyDefault} disabled={applying} style={{marginTop:16,width:'100%',background:'linear-gradient(135deg,#6C63FF,#4A42CC)',color:'#fff',border:'none',borderRadius:12,padding:'11px',fontSize:14,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>
+            {applying?<><Spin/> Applying…</>:'⚡ Apply Default Schedule'}
+          </button>
+        </div>
+
+        <div style={{padding:'20px 24px'}}>
+          {/* Tabs */}
+          <div style={{display:'flex',gap:8,marginBottom:20}}>
+            {[['active',`Active Questions (${allUserQIds.size})`],['add','Add Questions']].map(([t,l])=>(
+              <button key={t} onClick={()=>setTab(t)} style={{flex:1,padding:'10px',borderRadius:12,border:`1.5px solid ${tab===t?'#1A1A2E':'#E5E0D8'}`,background:tab===t?'#1A1A2E':'#fff',color:tab===t?'#E8E4FF':'#9B98B8',fontSize:13,fontWeight:600,cursor:'pointer'}}>{l}</button>
+            ))}
+          </div>
+
+          {/* Active Questions tab */}
+          {tab==='active'&&<>
+            {allUserQIds.size===0&&<div style={{textAlign:'center',padding:'40px 20px',color:'#C8C0B0'}}><p style={{fontSize:15}}>No questions assigned yet.</p><p style={{fontSize:13,marginTop:4}}>Apply the default schedule or add questions individually.</p></div>}
+
+            {/* User-specific schedules */}
+            {userSchedules.length>0&&<>
+              <div style={{fontSize:11,fontWeight:700,color:'#9B98B8',letterSpacing:1.5,textTransform:'uppercase',marginBottom:10}}>Individual Schedules</div>
+              {userSchedules.map(s=>{
+                const q=qInfo(s.questionId)
+                if(!q)return null
+                const [editing,setEditing]=useState(false)
+                const [entry,setEntry]=useState({time:s.time,repeat:s.repeat,interval:s.interval,mode:s.mode||'time'})
+                return(
+                  <div key={s.id} style={{background:'#fff',borderRadius:14,padding:'14px 16px',border:`1.5px solid ${s.active?'#E8E3DA':'#F0EDE8'}`,marginBottom:8,opacity:s.active?1:.6}}>
+                    <div style={{display:'flex',alignItems:'flex-start',gap:10}}>
+                      <div style={{flex:1}}>
+                        <div style={{display:'flex',gap:6,marginBottom:4,flexWrap:'wrap'}}><TBadge type={q.type}/><span style={{fontSize:11,color:s.active?'#1A6644':'#92400E',background:s.active?'#D1FAE5':'#FEF3C7',borderRadius:20,padding:'2px 8px',fontWeight:600}}>{s.active?'Active':'Paused'}</span></div>
+                        <p style={{fontSize:13,color:'#1A1A2E',fontWeight:500,margin:'0 0 6px',lineHeight:1.4}}>{q.text.length>70?q.text.slice(0,70)+'…':q.text}</p>
+                        <div style={{fontSize:11,color:'#9B98B8'}}>{s.mode==='interval'?`Every ${s.interval}h from ${s.time}`:`Daily at ${s.time}`}</div>
+                        {editing&&<ScheduleEntryEditor entry={entry} onChange={e=>setEntry(e)}/>}
+                      </div>
+                      <div style={{display:'flex',gap:5,flexShrink:0,flexWrap:'wrap',justifyContent:'flex-end'}}>
+                        {editing?(
+                          <button onClick={async()=>{await saveScheduleEdit(s.id,entry);setEditing(false)}} style={{padding:'5px 10px',borderRadius:8,border:'none',background:'#1A1A2E',color:'#fff',fontSize:11,fontWeight:600,cursor:'pointer',display:'flex',alignItems:'center',gap:4}}>{saving===s.id?<Spin/>:'Save'}</button>
+                        ):(
+                          <button onClick={()=>setEditing(true)} style={{padding:'5px 10px',borderRadius:8,border:'1.5px solid #E5E0D8',background:'#fff',color:'#6B6888',fontSize:11,fontWeight:600,cursor:'pointer'}}>Edit</button>
+                        )}
+                        <button onClick={()=>toggleSchedule(s)} style={{padding:'5px 10px',borderRadius:8,border:'1.5px solid #E5E0D8',background:'#fff',color:'#6B6888',fontSize:11,fontWeight:600,cursor:'pointer'}}>{s.active?'Pause':'Resume'}</button>
+                        <button onClick={()=>removeSchedule(s)} style={{padding:'5px 8px',borderRadius:8,border:'1.5px solid #FEE2E2',background:'#fff',color:'#EF4444',fontSize:11,cursor:'pointer'}}>✕</button>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </>}
+
+            {/* Global schedules */}
+            {globalSchedules.length>0&&<>
+              <div style={{fontSize:11,fontWeight:700,color:'#9B98B8',letterSpacing:1.5,textTransform:'uppercase',marginBottom:10,marginTop:userSchedules.length?16:0}}>Global (All Users)</div>
+              {globalSchedules.map(s=>{
+                const q=qInfo(s.questionId)
+                if(!q)return null
+                return(
+                  <div key={s.id} style={{background:'#fff',borderRadius:14,padding:'14px 16px',border:'1.5px solid #E8E3DA',marginBottom:8,opacity:.8}}>
+                    <div style={{display:'flex',alignItems:'center',gap:10}}>
+                      <div style={{flex:1}}>
+                        <div style={{display:'flex',gap:6,marginBottom:4}}><TBadge type={q.type}/><span style={{fontSize:11,color:'#1D4ED8',background:'#DBEAFE',borderRadius:20,padding:'2px 8px',fontWeight:600}}>All Users</span></div>
+                        <p style={{fontSize:13,color:'#1A1A2E',fontWeight:500,margin:'0 0 4px',lineHeight:1.4}}>{q.text.length>70?q.text.slice(0,70)+'…':q.text}</p>
+                        <div style={{fontSize:11,color:'#9B98B8'}}>{s.mode==='interval'?`Every ${s.interval}h from ${s.time}`:`Daily at ${s.time}`}</div>
+                      </div>
+                      <span style={{fontSize:11,color:'#C8C0B0',flexShrink:0}}>Edit from Schedule tab</span>
+                    </div>
+                  </div>
+                )
+              })}
+            </>}
+          </>}
+
+          {/* Add Questions tab */}
+          {tab==='add'&&<>
+            <input value={addSearch} onChange={e=>setAddSearch(e.target.value)} placeholder="Search questions to add…" style={{...inp,marginBottom:12}}/>
+            <p style={{fontSize:12,color:'#9B98B8',marginBottom:14}}>Showing questions not yet assigned to this user. Click to add.</p>
+            <div style={{display:'flex',flexDirection:'column',gap:8,maxHeight:400,overflowY:'auto'}}>
+              {availableToAdd.map(q=>(
+                <div key={q.id} style={{background:'#fff',borderRadius:12,padding:'12px 14px',border:'1.5px solid #E8E3DA',display:'flex',alignItems:'center',gap:10,cursor:'pointer'}} onClick={()=>addQuestion(q)}>
+                  <div style={{flex:1}}>
+                    <div style={{display:'flex',gap:6,marginBottom:4,flexWrap:'wrap'}}><TBadge type={q.type}/>{q.category&&q.category!=='General'&&<span style={{fontSize:11,color:'#6D28D9',background:'#EDE9FE',borderRadius:20,padding:'2px 8px',fontWeight:600}}>{q.category}</span>}</div>
+                    <p style={{fontSize:13,color:'#1A1A2E',fontWeight:500,margin:0,lineHeight:1.4}}>{q.text.length>80?q.text.slice(0,80)+'…':q.text}</p>
+                  </div>
+                  <span style={{color:'#6C63FF',fontSize:20,flexShrink:0}}>+</span>
+                </div>
+              ))}
+              {availableToAdd.length===0&&<div style={{textAlign:'center',padding:30,color:'#C8C0B0'}}><p>All questions are already assigned to this user.</p></div>}
+            </div>
+          </>}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Users View ────────────────────────────────────────────────────────────────
+function UsersView({questions}) {
+  const [users,setUsers]=useState([]); const [schedules,setSchedules]=useState([]); const [loading,setLoading]=useState(true)
+  const [selectedUser,setSelectedUser]=useState(null)
+  const [defaultSchedule,setDefaultSchedule]=useState(null)
+
+  useEffect(()=>{
+    const u1=onSnapshot(collection(db,'users'),s=>{setUsers(s.docs.map(d=>({id:d.id,...d.data()})));setLoading(false)})
+    const u2=onSnapshot(collection(db,'schedules'),s=>{setSchedules(s.docs.map(d=>({id:d.id,...d.data()})))})
+    const u3=onSnapshot(doc(db,'config','defaultSchedule'),snap=>{if(snap.exists())setDefaultSchedule(snap.data())})
+    return()=>{u1();u2();u3()}
+  },[])
+
+  return (
+    <div>
+      <div style={{marginBottom:28}}>
+        <h2 style={{fontFamily:"'Playfair Display',serif",fontWeight:800,fontSize:24,color:'#1A1A2E'}}>Users</h2>
+        <p style={{fontSize:13,color:'#9B98B8',marginTop:4}}>{users.length} enrolled patient{users.length!==1?'s':''} · Click a user to manage their schedule</p>
+      </div>
+      {loading&&<div style={{display:'flex',justifyContent:'center',padding:40}}><Spin/></div>}
+      {!loading&&users.length===0&&<div style={{textAlign:'center',padding:'60px 20px',color:'#C8C0B0'}}><div style={{fontSize:40,marginBottom:12}}>◎</div><p style={{fontSize:15,fontWeight:500}}>No users yet — send an invite to get started</p></div>}
+      <div style={{display:'flex',flexDirection:'column',gap:10}}>
+        {users.map(u=>{
+          const userScheds=schedules.filter(s=>s.userId===u.id||s.userId==='all')
+          const activeCount=userScheds.filter(s=>s.active).length
+          return(
+            <div key={u.id} onClick={()=>setSelectedUser(u)} style={{background:'#fff',borderRadius:18,padding:'18px 22px',border:'1.5px solid #E8E3DA',display:'flex',alignItems:'center',gap:16,cursor:'pointer',transition:'box-shadow .2s',boxShadow:'0 1px 3px rgba(0,0,0,.04)'}}>
+              <div style={{width:42,height:42,borderRadius:14,background:'#F0EEFF',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:800,fontSize:16,color:'#6C63FF',flexShrink:0}}>{u.name?.split(' ').map(n=>n[0]).join('')||'?'}</div>
+              <div style={{flex:1}}>
+                <div style={{fontWeight:600,fontSize:15,color:'#1A1A2E'}}>{u.name}</div>
+                <div style={{fontSize:12,color:'#9B98B8',marginTop:2}}>{u.email} · Joined {u.joinedDate}</div>
+              </div>
+              <div style={{textAlign:'right',flexShrink:0}}>
+                <Badge status={u.status||'active'}/>
+                <div style={{fontSize:11,color:'#9B98B8',marginTop:5}}>{activeCount} active question{activeCount!==1?'s':''}</div>
+              </div>
+              <span style={{color:'#C8C0B0',fontSize:20}}>›</span>
+            </div>
+          )
+        })}
+      </div>
+      {selectedUser&&(
+        <UserProfileModal
+          user={selectedUser}
+          questions={questions}
+          allSchedules={schedules}
+          defaultSchedule={defaultSchedule}
+          onClose={()=>setSelectedUser(null)}
+        />
+      )}
+    </div>
+  )
+}
+
+// ── Invites View ──────────────────────────────────────────────────────────────
 function InvitesView() {
   const [invites,setInvites]=useState([]); const [loading,setLoading]=useState(true); const [copied,setCopied]=useState(null)
   const [name,setName]=useState(''); const [email,setEmail]=useState(''); const [creating,setCreating]=useState(false); const [done,setDone]=useState(null); const [showForm,setShowForm]=useState(false)
 
-  useEffect(()=>{
-    const unsub=onSnapshot(collection(db,'invites'),snap=>{setInvites(snap.docs.map(d=>({id:d.id,...d.data()}))); setLoading(false)})
-    return unsub
-  },[])
+  useEffect(()=>{ const unsub=onSnapshot(collection(db,'invites'),snap=>{setInvites(snap.docs.map(d=>({id:d.id,...d.data()}))); setLoading(false)}); return unsub },[])
 
   async function create() {
     setCreating(true)
     const code=makeCode()
-    const inv={code,name:name.trim(),email:email.trim(),used:false,userId:null,createdAt:today()}
-    await setDoc(doc(db,'invites',code),inv)
-    setDone(inv); setCreating(false)
+    await setDoc(doc(db,'invites',code),{code,name:name.trim(),email:email.trim(),used:false,userId:null,createdAt:today()})
+    setDone({code,name:name.trim(),email:email.trim()}); setCreating(false)
   }
 
   function copy(code){navigator.clipboard?.writeText(code); setCopied(code); setTimeout(()=>setCopied(null),2000)}
@@ -131,8 +502,7 @@ function InvitesView() {
         </div>
       )}
       {loading&&<div style={{display:'flex',justifyContent:'center',padding:40}}><Spin/></div>}
-      {!loading&&pending.length>0&&<>
-        <div style={{fontSize:11,fontWeight:700,color:'#9B98B8',letterSpacing:1.5,textTransform:'uppercase',marginBottom:12}}>Pending</div>
+      {!loading&&pending.length>0&&<><div style={{fontSize:11,fontWeight:700,color:'#9B98B8',letterSpacing:1.5,textTransform:'uppercase',marginBottom:12}}>Pending</div>
         {pending.map(inv=>(
           <div key={inv.id} style={{background:'#fff',borderRadius:16,padding:'16px 20px',border:'1.5px solid #E8E3DA',marginBottom:10,display:'flex',alignItems:'center',gap:14}}>
             <div style={{width:38,height:38,borderRadius:10,background:'#DBEAFE',display:'flex',alignItems:'center',justifyContent:'center',fontSize:16,flexShrink:0}}>✉</div>
@@ -144,8 +514,7 @@ function InvitesView() {
           </div>
         ))}
       </>}
-      {!loading&&used.length>0&&<div style={{marginTop:pending.length?20:0}}>
-        <div style={{fontSize:11,fontWeight:700,color:'#9B98B8',letterSpacing:1.5,textTransform:'uppercase',marginBottom:12}}>Accepted</div>
+      {!loading&&used.length>0&&<div style={{marginTop:pending.length?20:0}}><div style={{fontSize:11,fontWeight:700,color:'#9B98B8',letterSpacing:1.5,textTransform:'uppercase',marginBottom:12}}>Accepted</div>
         {used.map(inv=>(
           <div key={inv.id} style={{background:'#fff',borderRadius:16,padding:'14px 20px',border:'1.5px solid #E8E3DA',marginBottom:10,display:'flex',alignItems:'center',gap:14,opacity:.65}}>
             <div style={{width:38,height:38,borderRadius:10,background:'#D1FAE5',display:'flex',alignItems:'center',justifyContent:'center',fontSize:16,flexShrink:0}}>✓</div>
@@ -158,16 +527,14 @@ function InvitesView() {
   )
 }
 
+// ── Questions View ────────────────────────────────────────────────────────────
 function QuestionsView() {
   const [questions,setQuestions]=useState([]); const [loading,setLoading]=useState(true)
   const [editing,setEditing]=useState(null); const [showForm,setShowForm]=useState(false)
   const [catFilter,setCatFilter]=useState('All'); const [search,setSearch]=useState('')
   const [form,setForm]=useState({type:'scale',text:'',scaleMin:0,scaleMax:100,scaleMinLabel:'Not at all',scaleMaxLabel:'More than I ever have',options:'',category:'General',mechanism:''}); const [saving,setSaving]=useState(false)
 
-  useEffect(()=>{
-    const unsub=onSnapshot(collection(db,'questions'),snap=>{setQuestions(snap.docs.map(d=>({id:d.id,...d.data()}))); setLoading(false)})
-    return unsub
-  },[])
+  useEffect(()=>{ const unsub=onSnapshot(collection(db,'questions'),snap=>{setQuestions(snap.docs.map(d=>({id:d.id,...d.data()}))); setLoading(false)}); return unsub },[])
 
   function openNew(){setEditing(null);setForm({type:'scale',text:'',scaleMin:0,scaleMax:100,scaleMinLabel:'Not at all',scaleMaxLabel:'More than I ever have',options:'',category:'General',mechanism:''});setShowForm(true)}
   function openEdit(q){setEditing(q);setForm({...q,options:q.options?.join('\n')||''});setShowForm(true)}
@@ -181,7 +548,6 @@ function QuestionsView() {
   }
 
   async function del(id){await deleteDoc(doc(db,'questions',id))}
-
   const cats=['All',...Array.from(new Set(questions.map(q=>q.category||'General')))]
   const filtered=questions.filter(q=>{const mc=catFilter==='All'||(q.category||'General')===catFilter;const ms=!search||q.text?.toLowerCase().includes(search.toLowerCase())||(q.mechanism||'').toLowerCase().includes(search.toLowerCase());return mc&&ms})
 
@@ -192,9 +558,7 @@ function QuestionsView() {
         <button onClick={openNew} style={{background:'#1A1A2E',color:'#E8E4FF',border:'none',borderRadius:14,padding:'11px 20px',fontSize:14,fontWeight:700,cursor:'pointer'}}>+ New Question</button>
       </div>
       <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search questions or mechanisms…" style={{...inp,marginBottom:14}}/>
-      <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:20}}>
-        {cats.map(c=><button key={c} onClick={()=>setCatFilter(c)} style={{padding:'6px 14px',borderRadius:20,border:`1.5px solid ${catFilter===c?'#1A1A2E':'#E5E0D8'}`,background:catFilter===c?'#1A1A2E':'#fff',color:catFilter===c?'#E8E4FF':'#9B98B8',fontSize:12,fontWeight:600,cursor:'pointer',whiteSpace:'nowrap'}}>{c}</button>)}
-      </div>
+      <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:20}}>{cats.map(c=><button key={c} onClick={()=>setCatFilter(c)} style={{padding:'6px 14px',borderRadius:20,border:`1.5px solid ${catFilter===c?'#1A1A2E':'#E5E0D8'}`,background:catFilter===c?'#1A1A2E':'#fff',color:catFilter===c?'#E8E4FF':'#9B98B8',fontSize:12,fontWeight:600,cursor:'pointer',whiteSpace:'nowrap'}}>{c}</button>)}</div>
       {showForm&&(
         <div style={{background:'#fff',borderRadius:20,padding:24,border:'1.5px solid #E8E3DA',marginBottom:20,animation:'fadeUp .3s ease'}}>
           <h3 style={{fontWeight:700,fontSize:16,color:'#1A1A2E',marginBottom:16}}>{editing?'Edit Question':'New Question'}</h3>
@@ -228,15 +592,16 @@ function QuestionsView() {
             </div>
           </div>
         ))}
-        {!loading&&filtered.length===0&&<div style={{textAlign:'center',padding:'60px 20px',color:'#C8C0B0'}}><div style={{fontSize:40,marginBottom:12}}>◈</div><p style={{fontSize:15,fontWeight:500}}>{questions.length===0?'No questions yet — create your first one above':'No questions match your filter'}</p></div>}
+        {!loading&&filtered.length===0&&<div style={{textAlign:'center',padding:'60px 20px',color:'#C8C0B0'}}><div style={{fontSize:40,marginBottom:12}}>◈</div><p style={{fontSize:15,fontWeight:500}}>{questions.length===0?'No questions yet':'No questions match your filter'}</p></div>}
       </div>
     </div>
   )
 }
 
+// ── Schedule View ─────────────────────────────────────────────────────────────
 function ScheduleView() {
   const [questions,setQuestions]=useState([]); const [users,setUsers]=useState([]); const [schedules,setSchedules]=useState([]); const [loading,setLoading]=useState(true); const [showForm,setShowForm]=useState(false); const [saving,setSaving]=useState(false)
-  const [form,setForm]=useState({questionId:'',userId:'all',time:'08:00',repeat:'Daily',days:[],interval:4,startDate:today()})
+  const [form,setForm]=useState({questionId:'',userId:'all',time:'08:00',repeat:'Daily',days:[],interval:4,startDate:today(),mode:'time'})
 
   useEffect(()=>{
     const u1=onSnapshot(collection(db,'questions'),s=>{setQuestions(s.docs.map(d=>({id:d.id,...d.data()})))})
@@ -249,17 +614,16 @@ function ScheduleView() {
 
   async function addSched(){
     setSaving(true)
-    const ref=await addDoc(collection(db,'schedules'),{...form,interval:form.repeat==='Custom interval'?+form.interval:null,active:true})
+    const ref=await addDoc(collection(db,'schedules'),{...form,interval:form.mode==='interval'?+form.interval:null,active:true})
     await updateDoc(doc(db,'schedules',ref.id),{id:ref.id})
     setShowForm(false); setSaving(false)
   }
   async function toggle(id,active){await updateDoc(doc(db,'schedules',id),{active:!active})}
   async function del(id){await deleteDoc(doc(db,'schedules',id))}
-  function toggleDay(d){setForm(f=>({...f,days:f.days.includes(d)?f.days.filter(x=>x!==d):[...f.days,d]}))}
   function qText(id){return questions.find(q=>q.id===id)?.text||'Unknown question'}
   function qType(id){return questions.find(q=>q.id===id)?.type||'scale'}
   function uLabel(id){return id==='all'?'All users':users.find(u=>u.id===id)?.name||id}
-  function rLabel(s){if(s.repeat==='Custom interval')return`Every ${s.interval}h`;if(s.repeat==='Weekly'&&s.days?.length)return`Weekly · ${s.days.join(', ')}`;return s.repeat}
+  function rLabel(s){if(s.mode==='interval')return`Every ${s.interval}h from ${s.time}`;if(s.repeat==='Weekly'&&s.days?.length)return`Weekly · ${s.days.join(', ')}`;return`${s.repeat} at ${s.time}`}
   const active=schedules.filter(s=>s.active),paused=schedules.filter(s=>!s.active)
 
   const SCard=({s,isActive})=>(
@@ -268,7 +632,7 @@ function ScheduleView() {
         <div style={{flex:1}}>
           <div style={{display:'flex',gap:6,alignItems:'center',marginBottom:6,flexWrap:'wrap'}}><TBadge type={qType(s.questionId)}/><span style={{fontSize:11,color:isActive?'#1A6644':'#92400E',background:isActive?'#D1FAE5':'#FEF3C7',borderRadius:20,padding:'2px 8px',fontWeight:600}}>{isActive?'Active':'Paused'}</span></div>
           <p style={{fontSize:14,color:'#1A1A2E',fontWeight:500,marginBottom:8,lineHeight:1.4}}>{qText(s.questionId).slice(0,80)}{qText(s.questionId).length>80?'…':''}</p>
-          <div style={{display:'flex',gap:12,flexWrap:'wrap'}}>{[{i:'◷',v:`${s.time} · ${rLabel(s)}`},{i:'◎',v:uLabel(s.userId)},{i:'▷',v:`From ${s.startDate}`}].map(({i,v})=><span key={v} style={{fontSize:11,color:'#9B98B8',display:'flex',alignItems:'center',gap:4}}><span style={{color:'#C8C0B0'}}>{i}</span>{v}</span>)}</div>
+          <div style={{display:'flex',gap:12,flexWrap:'wrap'}}>{[{i:'◷',v:rLabel(s)},{i:'◎',v:uLabel(s.userId)},{i:'▷',v:`From ${s.startDate}`}].map(({i,v})=><span key={v} style={{fontSize:11,color:'#9B98B8',display:'flex',alignItems:'center',gap:4}}><span style={{color:'#C8C0B0'}}>{i}</span>{v}</span>)}</div>
         </div>
         <div style={{display:'flex',gap:6,flexShrink:0}}>
           <button onClick={()=>toggle(s.id,s.active)} style={{padding:'6px 12px',borderRadius:8,border:'1.5px solid #E5E0D8',background:'#fff',color:'#6B6888',fontSize:11,fontWeight:600,cursor:'pointer'}}>{isActive?'Pause':'Resume'}</button>
@@ -289,11 +653,11 @@ function ScheduleView() {
           <h3 style={{fontWeight:700,fontSize:16,color:'#1A1A2E',marginBottom:16}}>New Schedule</h3>
           <Field label="Question"><select value={form.questionId} onChange={e=>setForm(f=>({...f,questionId:e.target.value}))} style={inp}>{questions.map(q=><option key={q.id} value={q.id}>{q.text?.length>60?q.text.slice(0,60)+'…':q.text}</option>)}</select></Field>
           <Field label="Send To"><select value={form.userId} onChange={e=>setForm(f=>({...f,userId:e.target.value}))} style={inp}><option value="all">All Active Users</option>{users.filter(u=>u.status==='active').map(u=><option key={u.id} value={u.id}>{u.name}</option>)}</select></Field>
-          <div style={{display:'flex',gap:12,marginBottom:18}}>{[['Send Time','time','time'],['Start Date','date','startDate']].map(([l,t,k])=><div key={k} style={{flex:1}}><Lbl>{l}</Lbl><input type={t} value={form[k]} onChange={e=>setForm(f=>({...f,[k]:e.target.value}))} style={inp}/></div>)}</div>
-          <Field label="Repeat"><div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>{REPEATS.map(r=><button key={r} onClick={()=>setForm(f=>({...f,repeat:r}))} style={{padding:'10px 12px',borderRadius:10,border:`1.5px solid ${form.repeat===r?'#6C63FF':'#E5E0D8'}`,background:form.repeat===r?'#F0EEFF':'#FAFAF8',color:form.repeat===r?'#6C63FF':'#9B98B8',fontSize:13,fontWeight:600,cursor:'pointer'}}>{r}</button>)}</div></Field>
-          {form.repeat==='Weekly'&&<Field label="Days"><div style={{display:'flex',gap:6}}>{DAYS.map(d=><button key={d} onClick={()=>toggleDay(d)} style={{flex:1,padding:'8px 4px',borderRadius:8,border:`1.5px solid ${form.days.includes(d)?'#6C63FF':'#E5E0D8'}`,background:form.days.includes(d)?'#6C63FF':'#FAFAF8',color:form.days.includes(d)?'#fff':'#9B98B8',fontSize:11,fontWeight:600,cursor:'pointer'}}>{d}</button>)}</div></Field>}
-          {form.repeat==='Custom interval'&&<Field label="Every N Hours"><div style={{display:'flex',alignItems:'center',gap:12}}><input type="range" min={1} max={24} value={form.interval} onChange={e=>setForm(f=>({...f,interval:e.target.value}))} style={{flex:1,accentColor:'#6C63FF'}}/><span style={{fontWeight:700,fontSize:16,color:'#1A1A2E',minWidth:40}}>{form.interval}h</span></div></Field>}
-          <div style={{display:'flex',gap:10}}>
+          <Field label="Start Date"><input type="date" value={form.startDate} onChange={e=>setForm(f=>({...f,startDate:e.target.value}))} style={inp}/></Field>
+          <Field label="Timing">
+            <ScheduleEntryEditor entry={form} onChange={e=>setForm(f=>({...f,...e}))}/>
+          </Field>
+          <div style={{display:'flex',gap:10,marginTop:8}}>
             <button onClick={()=>setShowForm(false)} style={{flex:1,padding:11,borderRadius:12,border:'1.5px solid #E5E0D8',background:'#fff',color:'#9B98B8',fontSize:14,fontWeight:600,cursor:'pointer'}}>Cancel</button>
             <button onClick={addSched} disabled={saving} style={{flex:2,padding:11,borderRadius:12,border:'none',background:'#1A1A2E',color:'#E8E4FF',fontSize:14,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>{saving?<Spin/>:'Add to Schedule'}</button>
           </div>
@@ -307,37 +671,26 @@ function ScheduleView() {
   )
 }
 
-function UsersView() {
-  const [users,setUsers]=useState([]); const [schedules,setSchedules]=useState([]); const [loading,setLoading]=useState(true)
-  useEffect(()=>{
-    const u1=onSnapshot(collection(db,'users'),s=>{setUsers(s.docs.map(d=>({id:d.id,...d.data()})));setLoading(false)})
-    const u2=onSnapshot(collection(db,'schedules'),s=>{setSchedules(s.docs.map(d=>({id:d.id,...d.data()})))})
-    return()=>{u1();u2()}
-  },[])
-  return (
-    <div>
-      <div style={{marginBottom:28}}><h2 style={{fontFamily:"'Playfair Display',serif",fontWeight:800,fontSize:24,color:'#1A1A2E'}}>Users</h2><p style={{fontSize:13,color:'#9B98B8',marginTop:4}}>{users.length} enrolled patient{users.length!==1?'s':''}</p></div>
-      {loading&&<div style={{display:'flex',justifyContent:'center',padding:40}}><Spin/></div>}
-      {!loading&&users.length===0&&<div style={{textAlign:'center',padding:'60px 20px',color:'#C8C0B0'}}><div style={{fontSize:40,marginBottom:12}}>◎</div><p style={{fontSize:15,fontWeight:500}}>No users yet — send an invite to get started</p></div>}
-      <div style={{display:'flex',flexDirection:'column',gap:10}}>
-        {users.map(u=>{
-          const qc=schedules.filter(s=>(s.userId===u.id||s.userId==='all')&&s.active).length
-          return(<div key={u.id} style={{background:'#fff',borderRadius:18,padding:'18px 22px',border:'1.5px solid #E8E3DA',display:'flex',alignItems:'center',gap:16}}>
-            <div style={{width:42,height:42,borderRadius:14,background:'#F0EEFF',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:800,fontSize:16,color:'#6C63FF',flexShrink:0}}>{u.name?.split(' ').map(n=>n[0]).join('')||'?'}</div>
-            <div style={{flex:1}}><div style={{fontWeight:600,fontSize:15,color:'#1A1A2E'}}>{u.name}</div><div style={{fontSize:12,color:'#9B98B8',marginTop:2}}>{u.email} · Joined {u.joinedDate}</div></div>
-            <div style={{textAlign:'right',flexShrink:0}}><Badge status={u.status||'active'}/><div style={{fontSize:11,color:'#9B98B8',marginTop:5}}>{qc} active question{qc!==1?'s':''}</div></div>
-          </div>)
-        })}
-      </div>
-    </div>
-  )
-}
-
+// ── Root ──────────────────────────────────────────────────────────────────────
 export default function AdminApp() {
   const [authed,setAuthed]=useState(null); const [view,setView]=useState('questions')
-  useEffect(()=>{const unsub=onAuthStateChanged(auth,u=>setAuthed(!!u)); return unsub},[])
+  const [questions,setQuestions]=useState([])
+
+  useEffect(()=>{
+    const unsub=onAuthStateChanged(auth,u=>setAuthed(!!u))
+    return unsub
+  },[])
+
+  // Load questions globally so UsersView and DefaultScheduleView share them
+  useEffect(()=>{
+    if(!authed)return
+    const unsub=onSnapshot(collection(db,'questions'),snap=>{setQuestions(snap.docs.map(d=>({id:d.id,...d.data()})))})
+    return unsub
+  },[authed])
+
   if(authed===null)return<div style={{minHeight:'100vh',background:'#1A1A2E',display:'flex',alignItems:'center',justifyContent:'center'}}><style>{G}</style><Spin/></div>
   if(!authed)return<AdminLogin onLogin={()=>setAuthed(true)}/>
+
   return(
     <div style={{display:'flex',minHeight:'100vh',background:'#F4F1EC'}}>
       <style>{G}</style>
@@ -345,7 +698,8 @@ export default function AdminApp() {
       <div style={{flex:1,padding:'40px 44px',overflowY:'auto'}}>
         {view==='questions'&&<QuestionsView/>}
         {view==='schedule'&&<ScheduleView/>}
-        {view==='users'&&<UsersView/>}
+        {view==='default'&&<DefaultScheduleView questions={questions}/>}
+        {view==='users'&&<UsersView questions={questions}/>}
         {view==='invites'&&<InvitesView/>}
       </div>
     </div>
