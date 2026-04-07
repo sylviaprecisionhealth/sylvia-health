@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { db, auth } from './firebase.js'
 import {
   collection, doc, getDoc, setDoc, addDoc, updateDoc, deleteDoc,
-  onSnapshot, query, where, orderBy
+  onSnapshot, query, where
 } from 'firebase/firestore'
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth'
 import {
@@ -380,9 +380,11 @@ function MainApp({user,onLogout}){
   useEffect(()=>{
     const u1=onSnapshot(collection(db,'questions'),s=>{setQuestions(s.docs.map(d=>({id:d.id,...d.data()})))})
     const u2=onSnapshot(collection(db,'schedules'),s=>{setSchedules(s.docs.map(d=>({id:d.id,...d.data()})))})
-    const u3=onSnapshot(query(collection(db,'moodEntries'),where('userId','==',user.id),orderBy('date','asc')),s=>{setEntries(s.docs.map(d=>({id:d.id,...d.data()})))})
-    const u4=onSnapshot(query(collection(db,'responses'),where('userId','==',user.id),where('date','==',today())),s=>{
-      const r={}; s.docs.forEach(d=>{const data=d.data(); if(!r[data.questionId])r[data.questionId]=data.answer}); setResponses(r)
+    const u3=onSnapshot(query(collection(db,'moodEntries'),where('userId','==',user.id)),s=>{
+      setEntries(s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.date>b.date?1:-1))
+    })
+    const u4=onSnapshot(query(collection(db,'responses'),where('userId','==',user.id)),s=>{
+      const r={}; s.docs.forEach(d=>{const data=d.data(); if(data.date===today()&&!r[data.questionId])r[data.questionId]=data.answer}); setResponses(r)
     })
     return()=>{u1();u2();u3();u4()}
   },[user.id])
