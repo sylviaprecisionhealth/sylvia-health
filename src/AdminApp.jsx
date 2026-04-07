@@ -220,6 +220,36 @@ function DefaultScheduleView({questions}) {
   )
 }
 
+// ── Schedule Row (extracted to avoid hooks-in-map) ────────────────────────────
+function ScheduleRow({s, q, saving, onSave, onToggle, onRemove}) {
+  const [editing, setEditing] = useState(false)
+  const [entry, setEntry] = useState({time:s.time, repeat:s.repeat, interval:s.interval, mode:s.mode||'time'})
+  return (
+    <div style={{background:'#fff',borderRadius:14,padding:'14px 16px',border:`1.5px solid ${s.active?'#E8E3DA':'#F0EDE8'}`,marginBottom:8,opacity:s.active?1:.6}}>
+      <div style={{display:'flex',alignItems:'flex-start',gap:10}}>
+        <div style={{flex:1}}>
+          <div style={{display:'flex',gap:6,marginBottom:4,flexWrap:'wrap'}}>
+            <TBadge type={q.type}/>
+            <span style={{fontSize:11,color:s.active?'#1A6644':'#92400E',background:s.active?'#D1FAE5':'#FEF3C7',borderRadius:20,padding:'2px 8px',fontWeight:600}}>{s.active?'Active':'Paused'}</span>
+          </div>
+          <p style={{fontSize:13,color:'#1A1A2E',fontWeight:500,margin:'0 0 6px',lineHeight:1.4}}>{q.text.length>70?q.text.slice(0,70)+'…':q.text}</p>
+          <div style={{fontSize:11,color:'#9B98B8'}}>{s.mode==='interval'?`Every ${s.interval}h from ${s.time}`:`Daily at ${s.time}`}</div>
+          {editing&&<ScheduleEntryEditor entry={entry} onChange={e=>setEntry(e)}/>}
+        </div>
+        <div style={{display:'flex',gap:5,flexShrink:0,flexWrap:'wrap',justifyContent:'flex-end'}}>
+          {editing?(
+            <button onClick={async()=>{await onSave(s.id,entry);setEditing(false)}} style={{padding:'5px 10px',borderRadius:8,border:'none',background:'#1A1A2E',color:'#fff',fontSize:11,fontWeight:600,cursor:'pointer',display:'flex',alignItems:'center',gap:4}}>{saving===s.id?<Spin/>:'Save'}</button>
+          ):(
+            <button onClick={()=>setEditing(true)} style={{padding:'5px 10px',borderRadius:8,border:'1.5px solid #E5E0D8',background:'#fff',color:'#6B6888',fontSize:11,fontWeight:600,cursor:'pointer'}}>Edit</button>
+          )}
+          <button onClick={()=>onToggle(s)} style={{padding:'5px 10px',borderRadius:8,border:'1.5px solid #E5E0D8',background:'#fff',color:'#6B6888',fontSize:11,fontWeight:600,cursor:'pointer'}}>{s.active?'Pause':'Resume'}</button>
+          <button onClick={()=>onRemove(s)} style={{padding:'5px 8px',borderRadius:8,border:'1.5px solid #FEE2E2',background:'#fff',color:'#EF4444',fontSize:11,cursor:'pointer'}}>✕</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── User Profile Modal ────────────────────────────────────────────────────────
 function UserProfileModal({user, questions, onClose}) {
   const [liveSchedules, setLiveSchedules] = useState([])
@@ -373,29 +403,7 @@ function UserProfileModal({user, questions, onClose}) {
               {userSchedules.filter(s=>!s.isDefaultSession).map(s=>{
                 const q=qInfo(s.questionId)
                 if(!q)return null
-                const [editing,setEditing]=useState(false)
-                const [entry,setEntry]=useState({time:s.time,repeat:s.repeat,interval:s.interval,mode:s.mode||'time'})
-                return(
-                  <div key={s.id} style={{background:'#fff',borderRadius:14,padding:'14px 16px',border:`1.5px solid ${s.active?'#E8E3DA':'#F0EDE8'}`,marginBottom:8,opacity:s.active?1:.6}}>
-                    <div style={{display:'flex',alignItems:'flex-start',gap:10}}>
-                      <div style={{flex:1}}>
-                        <div style={{display:'flex',gap:6,marginBottom:4,flexWrap:'wrap'}}><TBadge type={q.type}/><span style={{fontSize:11,color:s.active?'#1A6644':'#92400E',background:s.active?'#D1FAE5':'#FEF3C7',borderRadius:20,padding:'2px 8px',fontWeight:600}}>{s.active?'Active':'Paused'}</span></div>
-                        <p style={{fontSize:13,color:'#1A1A2E',fontWeight:500,margin:'0 0 6px',lineHeight:1.4}}>{q.text.length>70?q.text.slice(0,70)+'…':q.text}</p>
-                        <div style={{fontSize:11,color:'#9B98B8'}}>{s.mode==='interval'?`Every ${s.interval}h from ${s.time}`:`Daily at ${s.time}`}</div>
-                        {editing&&<ScheduleEntryEditor entry={entry} onChange={e=>setEntry(e)}/>}
-                      </div>
-                      <div style={{display:'flex',gap:5,flexShrink:0,flexWrap:'wrap',justifyContent:'flex-end'}}>
-                        {editing?(
-                          <button onClick={async()=>{await saveScheduleEdit(s.id,entry);setEditing(false)}} style={{padding:'5px 10px',borderRadius:8,border:'none',background:'#1A1A2E',color:'#fff',fontSize:11,fontWeight:600,cursor:'pointer',display:'flex',alignItems:'center',gap:4}}>{saving===s.id?<Spin/>:'Save'}</button>
-                        ):(
-                          <button onClick={()=>setEditing(true)} style={{padding:'5px 10px',borderRadius:8,border:'1.5px solid #E5E0D8',background:'#fff',color:'#6B6888',fontSize:11,fontWeight:600,cursor:'pointer'}}>Edit</button>
-                        )}
-                        <button onClick={()=>toggleSchedule(s)} style={{padding:'5px 10px',borderRadius:8,border:'1.5px solid #E5E0D8',background:'#fff',color:'#6B6888',fontSize:11,fontWeight:600,cursor:'pointer'}}>{s.active?'Pause':'Resume'}</button>
-                        <button onClick={()=>removeSchedule(s)} style={{padding:'5px 8px',borderRadius:8,border:'1.5px solid #FEE2E2',background:'#fff',color:'#EF4444',fontSize:11,cursor:'pointer'}}>✕</button>
-                      </div>
-                    </div>
-                  </div>
-                )
+                return <ScheduleRow key={s.id} s={s} q={q} saving={saving} onSave={saveScheduleEdit} onToggle={toggleSchedule} onRemove={removeSchedule}/>
               })}
             </>}
           </>}
