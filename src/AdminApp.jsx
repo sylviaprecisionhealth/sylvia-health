@@ -56,7 +56,7 @@ function AdminLogin({onLogin}) {
 
 // ── Sidebar ───────────────────────────────────────────────────────────────────
 function Sidebar({active,setActive,onLogout}) {
-  const nav=[{id:'questions',label:'Questions',icon:'◈'},{id:'schedule',label:'Schedule',icon:'◷'},{id:'default',label:'Default Schedule',icon:'★'},{id:'users',label:'Users',icon:'◎'},{id:'invites',label:'Invites',icon:'✉'}]
+  const nav=[{id:'questions',label:'Questions',icon:'◈'},{id:'schedule',label:'Schedule',icon:'◷'},{id:'default',label:'Default Schedule',icon:'★'},{id:'users',label:'Users',icon:'◎'},{id:'responses',label:'Responses',icon:'◉'},{id:'invites',label:'Invites',icon:'✉'}]
   return (
     <div style={{width:230,background:'#1A1A2E',minHeight:'100vh',display:'flex',flexDirection:'column',padding:'28px 0',flexShrink:0}}>
       <div style={{padding:'0 20px 28px'}}>
@@ -671,6 +671,234 @@ function ScheduleView() {
   )
 }
 
+// ── Responses View ────────────────────────────────────────────────────────────
+function ResponsesView({questions}) {
+  const [users,setUsers]       = useState([])
+  const [responses,setResponses] = useState([])
+  const [loading,setLoading]   = useState(true)
+  const [selectedUser,setSelectedUser] = useState(null)
+  const [dateFrom,setDateFrom] = useState('')
+  const [dateTo,setDateTo]     = useState('')
+
+  useEffect(()=>{
+    const u1=onSnapshot(collection(db,'users'),s=>{setUsers(s.docs.map(d=>({id:d.id,...d.data()})))})
+    const u2=onSnapshot(collection(db,'responses'),s=>{setResponses(s.docs.map(d=>({id:d.id,...d.data()})));setLoading(false)})
+    return()=>{u1();u2()}
+  },[])
+
+  function qInfo(id){return questions.find(q=>q.id===id)}
+
+  // Filter responses for selected user + date range
+  const userResponses = selectedUser
+    ? responses.filter(r=>{
+        if(r.userId!==selectedUser.id) return false
+        if(r.answer==='__skipped__') return false
+        if(dateFrom && r.date < dateFrom) return false
+        if(dateTo   && r.date > dateTo)   return false
+        return true
+      }).sort((a,b)=>a.ts>b.ts?-1:1)
+    : []
+
+  // Group by question for chart data (scale questions only)
+  function getChartData(qId) {
+    return userResponses
+      .filter(r=>r.questionId===qId)
+      .map(r=>({date:r.date, value:+r.answer}))
+      .sort((a,b)=>a.date>b.date?1:-1)
+  }
+
+  // Simple SVG line chart
+  function MiniChart({data, color='#6C63FF', q}) {
+    if(data.length < 2) return <div style={{fontSize:12,color:'#C8C0B0',padding:'8px 0'}}>Not enough data points yet.</div>
+    const W=420, H=80, PX=8, PY=10
+    const vals = data.map(d=>d.value)
+    const min = Math.min(...vals), max = Math.max(...vals)
+    const range = max-min || 1
+    const xs = data.map((_,i)=>PX+(i/(data.length-1))*(W-PX*2))
+    const ys = data.map(d=>PY+((max-d.value)/range)*(H-PY*2))
+    const path = xs.map((x,i)=>`${i===0?'M':'L'}${x},${ys[i]}`).join(' ')
+    const area = path+` L${xs[xs.length-1]},${H-PY} L${xs[0]},${H-PY} Z`
+    return(
+      <div>
+        <svg viewBox={`0 0 ${W} ${H}`} style={{width:'100%',height:80}}>
+          <defs>
+            <linearGradient id={`cg-${qId}`} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={color} stopOpacity=".25"/>
+              <stop offset="100%" stopColor={color} stopOpacity="0"/>
+            </linearGradient>
+          </defs>
+          <path d={area} fill={`url(#cg-${qId})`}/>
+          <path d={path} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          {xs.map((x,i)=>(
+            <g key={i}>
+              <circle cx={x} cy={ys[i]} r="3.5" fill={color} stroke="#fff" strokeWidth="1.5"/>
+              <title>{data[i].date}: {data[i].value}</title>
+            </g>
+          ))}
+        </svg>
+        <div style={{display:'flex',justifyContent:'space-between',marginTop:2}}>
+          <span style={{fontSize:10,color:'#C8C0B0'}}>{data[0]?.date}</span>
+          <span style={{fontSize:10,color:'#C8C0B0'}}>{data[data.length-1]?.date}</span>
+        </div>
+      </div>
+    )
+  }
+
+  // CSV export
+  function exportCSV() {
+    if(!selectedUser||!userResponses.length) return
+    const rows = [['Date','Time','Question','Category','Type','Answer']]
+    userResponses.forEach(r=>{
+      const q=qInfo(r.questionId)
+      rows.push([
+        r.date,
+        r.ts ? new Date(r.ts).toLocaleTimeString() : '',
+        q?.text||r.questionId,
+        q?.category||'',
+        q?.type||'',
+        r.answer
+      ])
+    })
+    const csv = rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n')
+    const blob = new Blob([csv],{type:'text/csv'})
+    const url  = URL.createObjectURL(blob)
+    const a    = document.createElement('a')
+    a.href = url
+    a.download = `${selectedUser.name.replace(/ /g,'_')}_responses_${today()}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  // Group userResponses by question
+  const byQuestion = {}
+  userResponses.forEach(r=>{
+    if(!byQuestion[r.questionId]) byQuestion[r.questionId]=[]
+    byQuestion[r.questionId].push(r)
+  })
+
+  const scaleColors = ['#6C63FF','#6ECB8A','#F6C549','#F2857A','#7BB8F5','#B48FE8']
+
+  return (
+    <div>
+      {/* Header */}
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:28}}>
+        <div>
+          <h2 style={{fontFamily:"'Playfair Display',serif",fontWeight:800,fontSize:24,color:'#1A1A2E'}}>Responses</h2>
+          <p style={{fontSize:13,color:'#9B98B8',marginTop:4}}>Click a patient to view their response history</p>
+        </div>
+        {selectedUser&&userResponses.length>0&&(
+          <button onClick={exportCSV} style={{background:'#1A6644',color:'#fff',border:'none',borderRadius:14,padding:'11px 20px',fontSize:14,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',gap:8}}>
+            ↓ Export CSV
+          </button>
+        )}
+      </div>
+
+      {/* User list */}
+      {!selectedUser&&<>
+        {loading&&<div style={{display:'flex',justifyContent:'center',padding:40}}><Spin/></div>}
+        {!loading&&users.length===0&&<div style={{textAlign:'center',padding:'60px 20px',color:'#C8C0B0'}}><div style={{fontSize:40,marginBottom:12}}>◎</div><p style={{fontSize:15}}>No users yet</p></div>}
+        <div style={{display:'flex',flexDirection:'column',gap:10}}>
+          {users.map(u=>{
+            const count=responses.filter(r=>r.userId===u.id&&r.answer!=='__skipped__').length
+            const last=responses.filter(r=>r.userId===u.id).sort((a,b)=>a.ts>b.ts?-1:1)[0]
+            return(
+              <div key={u.id} onClick={()=>setSelectedUser(u)} style={{background:'#fff',borderRadius:18,padding:'18px 22px',border:'1.5px solid #E8E3DA',display:'flex',alignItems:'center',gap:16,cursor:'pointer'}}>
+                <div style={{width:42,height:42,borderRadius:14,background:'#F0EEFF',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:800,fontSize:16,color:'#6C63FF',flexShrink:0}}>{u.name?.split(' ').map(n=>n[0]).join('')||'?'}</div>
+                <div style={{flex:1}}>
+                  <div style={{fontWeight:600,fontSize:15,color:'#1A1A2E'}}>{u.name}</div>
+                  <div style={{fontSize:12,color:'#9B98B8',marginTop:2}}>{count} response{count!==1?'s':''}{last?` · Last: ${last.date}`:' · No responses yet'}</div>
+                </div>
+                <span style={{color:'#C8C0B0',fontSize:20}}>›</span>
+              </div>
+            )
+          })}
+        </div>
+      </>}
+
+      {/* User detail view */}
+      {selectedUser&&<>
+        {/* Back + filters */}
+        <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:20,flexWrap:'wrap'}}>
+          <button onClick={()=>{setSelectedUser(null);setDateFrom('');setDateTo('')}} style={{background:'none',border:'1.5px solid #E5E0D8',borderRadius:10,padding:'8px 14px',fontSize:13,color:'#6B6888',cursor:'pointer',fontWeight:600}}>← All Users</button>
+          <div style={{display:'flex',alignItems:'center',gap:8,background:'#fff',borderRadius:12,padding:'8px 14px',border:'1.5px solid #E5E0D8'}}>
+            <div style={{width:36,height:36,borderRadius:10,background:'#F0EEFF',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:800,fontSize:14,color:'#6C63FF'}}>{selectedUser.name?.split(' ').map(n=>n[0]).join('')||'?'}</div>
+            <div><div style={{fontWeight:600,fontSize:14,color:'#1A1A2E'}}>{selectedUser.name}</div><div style={{fontSize:11,color:'#9B98B8'}}>{userResponses.length} response{userResponses.length!==1?'s':''}</div></div>
+          </div>
+          <div style={{display:'flex',alignItems:'center',gap:8,marginLeft:'auto'}}>
+            <div style={{fontSize:12,color:'#9B98B8'}}>From</div>
+            <input type="date" value={dateFrom} onChange={e=>setDateFrom(e.target.value)} style={{border:'1.5px solid #E5E0D8',borderRadius:8,padding:'6px 10px',fontSize:12,color:'#1A1A2E',background:'#fff'}}/>
+            <div style={{fontSize:12,color:'#9B98B8'}}>To</div>
+            <input type="date" value={dateTo} onChange={e=>setDateTo(e.target.value)} style={{border:'1.5px solid #E5E0D8',borderRadius:8,padding:'6px 10px',fontSize:12,color:'#1A1A2E',background:'#fff'}}/>
+          </div>
+        </div>
+
+        {userResponses.length===0&&<div style={{textAlign:'center',padding:'60px 20px',color:'#C8C0B0'}}><div style={{fontSize:40,marginBottom:12}}>◈</div><p style={{fontSize:15}}>No responses yet{(dateFrom||dateTo)?' in this date range':''}</p></div>}
+
+        {userResponses.length>0&&<>
+          {/* Charts — scale questions only */}
+          {Object.keys(byQuestion).filter(qId=>{
+            const q=qInfo(qId); return q?.type==='scale' && byQuestion[qId].length>=2
+          }).length>0&&(
+            <div style={{background:'#fff',borderRadius:20,padding:24,border:'1.5px solid #E8E3DA',marginBottom:20}}>
+              <div style={{fontSize:11,fontWeight:700,color:'#9B98B8',letterSpacing:1.5,textTransform:'uppercase',marginBottom:16}}>Scale Trends</div>
+              {Object.keys(byQuestion).filter(qId=>qInfo(qId)?.type==='scale').map((qId,idx)=>{
+                const q=qInfo(qId)
+                const data=getChartData(qId)
+                if(data.length<1)return null
+                const color=scaleColors[idx%scaleColors.length]
+                const latest=data[data.length-1]?.value
+                const avg=(data.reduce((s,d)=>s+d.value,0)/data.length).toFixed(1)
+                return(
+                  <div key={qId} style={{marginBottom:24,paddingBottom:24,borderBottom:'1px solid #F4F1EC'}}>
+                    <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10}}>
+                      <p style={{fontSize:13,color:'#1A1A2E',fontWeight:600,margin:0,flex:1,lineHeight:1.4}}>{q?.text?.length>80?q.text.slice(0,80)+'…':q?.text}</p>
+                      <div style={{display:'flex',gap:16,flexShrink:0,marginLeft:12}}>
+                        <div style={{textAlign:'center'}}><div style={{fontFamily:"'Playfair Display',serif",fontWeight:700,fontSize:20,color}}>{latest}</div><div style={{fontSize:10,color:'#C8C0B0'}}>Latest</div></div>
+                        <div style={{textAlign:'center'}}><div style={{fontFamily:"'Playfair Display',serif",fontWeight:700,fontSize:20,color:'#9B98B8'}}>{avg}</div><div style={{fontSize:10,color:'#C8C0B0'}}>Avg</div></div>
+                      </div>
+                    </div>
+                    <MiniChart data={data} color={color} q={q} qId={qId}/>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+
+          {/* Full response table */}
+          <div style={{background:'#fff',borderRadius:20,padding:24,border:'1.5px solid #E8E3DA'}}>
+            <div style={{fontSize:11,fontWeight:700,color:'#9B98B8',letterSpacing:1.5,textTransform:'uppercase',marginBottom:16}}>All Responses ({userResponses.length})</div>
+            <div style={{overflowX:'auto'}}>
+              <table style={{width:'100%',borderCollapse:'collapse',fontSize:13}}>
+                <thead>
+                  <tr style={{borderBottom:'2px solid #F4F1EC'}}>
+                    {['Date','Time','Question','Category','Answer'].map(h=>(
+                      <th key={h} style={{textAlign:'left',padding:'8px 12px',fontSize:11,fontWeight:700,color:'#9B98B8',letterSpacing:.5,whiteSpace:'nowrap'}}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {userResponses.map((r,i)=>{
+                    const q=qInfo(r.questionId)
+                    return(
+                      <tr key={r.id} style={{borderBottom:'1px solid #F4F1EC',background:i%2===0?'#FAFAF8':'#fff'}}>
+                        <td style={{padding:'10px 12px',color:'#6B6888',whiteSpace:'nowrap'}}>{r.date}</td>
+                        <td style={{padding:'10px 12px',color:'#9B98B8',whiteSpace:'nowrap'}}>{r.ts?new Date(r.ts).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):'-'}</td>
+                        <td style={{padding:'10px 12px',color:'#1A1A2E',maxWidth:280}}><div style={{lineHeight:1.4}}>{q?.text||r.questionId}</div></td>
+                        <td style={{padding:'10px 12px',whiteSpace:'nowrap'}}>{q?.category?<span style={{fontSize:11,color:'#6D28D9',background:'#EDE9FE',borderRadius:20,padding:'2px 8px',fontWeight:600}}>{q.category}</span>:'-'}</td>
+                        <td style={{padding:'10px 12px',fontWeight:600,color:'#1A1A2E',whiteSpace:'nowrap'}}>{r.answer}</td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>}
+      </>}
+    </div>
+  )
+}
+
 // ── Root ──────────────────────────────────────────────────────────────────────
 export default function AdminApp() {
   const [authed,setAuthed]=useState(null); const [view,setView]=useState('questions')
@@ -700,6 +928,7 @@ export default function AdminApp() {
         {view==='schedule'&&<ScheduleView/>}
         {view==='default'&&<DefaultScheduleView questions={questions}/>}
         {view==='users'&&<UsersView questions={questions}/>}
+        {view==='responses'&&<ResponsesView questions={questions}/>}
         {view==='invites'&&<InvitesView/>}
       </div>
     </div>
