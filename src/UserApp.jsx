@@ -194,6 +194,7 @@ function SessionScreen({questions, userId, sessionTime, resumeIdx, onComplete, o
   const [textVal,setTextVal]   = useState('')
   const [choice,setChoice]     = useState(null)
   const [scaleVal,setScaleVal] = useState(null)
+  const [scaleTouched,setScaleTouched] = useState(false)
   const [saving,setSaving]     = useState(false)
   const [answered,setAnswered] = useState(resumeIdx||0)
 
@@ -202,11 +203,11 @@ function SessionScreen({questions, userId, sessionTime, resumeIdx, onComplete, o
   const pct   = Math.round((idx/total)*100)
 
   useEffect(()=>{
-    setTextVal(''); setChoice(null)
+    setTextVal(''); setChoice(null); setScaleTouched(false)
     if(q) setScaleVal(Math.round((q.scaleMin+q.scaleMax)/2))
   },[idx])
 
-  const canNext = q?.type==='scale' || (q?.type==='text'&&textVal.trim()) || (q?.type==='choice'&&choice!==null)
+  const canNext = (q?.type==='scale'&&scaleTouched) || (q?.type==='text'&&textVal.trim()) || (q?.type==='choice'&&choice!==null)
 
   async function saveAndNext() {
     if(!q||!canNext) return
@@ -257,15 +258,18 @@ function SessionScreen({questions, userId, sessionTime, resumeIdx, onComplete, o
           <p style={{fontFamily:"'Playfair Display',serif",color:'#E8E4FF',fontSize:20,lineHeight:1.5,fontWeight:600,marginBottom:24}}>{q.text}</p>
 
           {q.type==='scale'&&(
-            <div style={{background:'#0d1120',borderRadius:20,padding:24,border:'1px solid #1e2640'}}>
+            <div style={{background:'#0d1120',borderRadius:20,padding:24,border:`1px solid ${scaleTouched?'#6C63FF44':'#1e2640'}`}}>
               <div style={{display:'flex',justifyContent:'center',marginBottom:16}}>
-                <span style={{fontFamily:"'Playfair Display',serif",fontSize:52,fontWeight:700,color:'#6C63FF'}}>{scaleVal}</span>
+                <span style={{fontFamily:"'Playfair Display',serif",fontSize:52,fontWeight:700,color:scaleTouched?'#6C63FF':'#3a3a5c'}}>{scaleVal}</span>
               </div>
-              <input type="range" min={q.scaleMin} max={q.scaleMax} value={scaleVal||0} onChange={e=>setScaleVal(+e.target.value)} style={{width:'100%',accentColor:'#6C63FF',marginBottom:10}}/>
+              <input type="range" min={q.scaleMin} max={q.scaleMax} value={scaleVal||0}
+                onChange={e=>{ setScaleVal(+e.target.value); setScaleTouched(true) }}
+                style={{width:'100%',accentColor:'#6C63FF',marginBottom:10}}/>
               <div style={{display:'flex',justifyContent:'space-between'}}>
                 <span style={{fontSize:12,color:'#6B6888'}}>{q.scaleMinLabel||q.scaleMin}</span>
                 <span style={{fontSize:12,color:'#6B6888'}}>{q.scaleMaxLabel||q.scaleMax}</span>
               </div>
+              {!scaleTouched&&<p style={{fontSize:12,color:'#4a4a6a',textAlign:'center',marginTop:12}}>Move the slider to answer</p>}
             </div>
           )}
           {q.type==='choice'&&(
@@ -411,18 +415,28 @@ function MainApp({user, onLogout}) {
           {showNotifBanner&&<NotifBanner onDismiss={()=>setShowNotifBanner(false)}/>}
           {sessionBanner&&<SessionBanner sessionTime={sessionBanner} onStart={()=>startSession(sessionBanner)}/>}
 
-          {!scheduleExpired&&mySchedules.length>0&&!sessionBanner&&(
-            <div style={{background:'linear-gradient(135deg,#1a1f3a,#0f1525)',border:'1px solid #6C63FF44',borderRadius:20,padding:'18px 20px',marginBottom:16,display:'flex',alignItems:'center',gap:14}}>
-              <div style={{flex:1}}>
-                <div style={{color:'#E8E4FF',fontWeight:700,fontSize:15,marginBottom:4}}>{activeSessionQs.length} questions ready</div>
-                <div style={{color:'#6B6888',fontSize:12}}>
-                  Sessions at 9am · 12pm · 3pm · 6pm · 9pm
-                  {daysRemaining!==null&&<span style={{color:'#A89FFF',marginLeft:8}}>· {daysRemaining} day{daysRemaining!==1?'s':''} left</span>}
+          {!scheduleExpired&&mySchedules.length>0&&!sessionBanner&&(()=>{
+            const resumeKey = getResumeKey('manual')
+            const savedIdx = localStorage.getItem(resumeKey)
+            const resumePos = savedIdx ? parseInt(savedIdx,10) : 0
+            const isResume = !!savedIdx && resumePos > 0
+            const remaining = activeSessionQs.length - resumePos
+            return (
+              <div style={{background:'linear-gradient(135deg,#1a1f3a,#0f1525)',border:'1px solid #6C63FF44',borderRadius:20,padding:'18px 20px',marginBottom:16,display:'flex',alignItems:'center',gap:14}}>
+                <div style={{flex:1}}>
+                  <div style={{color:'#E8E4FF',fontWeight:700,fontSize:15,marginBottom:4}}>
+                    {isResume ? `${remaining} question${remaining!==1?'s':''} remaining` : `${activeSessionQs.length} questions ready`}
+                  </div>
+                  <div style={{color:'#6B6888',fontSize:12}}>
+                    {isResume ? <span style={{color:'#A89FFF'}}>Session in progress · tap to continue</span> : <>Sessions at 9am · 12pm · 3pm · 6pm · 9pm{daysRemaining!==null&&<span style={{color:'#A89FFF',marginLeft:8}}>· {daysRemaining} day{daysRemaining!==1?'s':''} left</span>}</>}
+                  </div>
                 </div>
+                <button onClick={()=>startSession('manual')} style={{background:'linear-gradient(135deg,#6C63FF,#4A42CC)',color:'#fff',border:'none',borderRadius:12,padding:'11px 18px',fontSize:14,fontWeight:700,cursor:'pointer',flexShrink:0}}>
+                  {isResume ? 'Resume' : 'Start Now'}
+                </button>
               </div>
-              <button onClick={()=>startSession('manual')} style={{background:'linear-gradient(135deg,#6C63FF,#4A42CC)',color:'#fff',border:'none',borderRadius:12,padding:'11px 18px',fontSize:14,fontWeight:700,cursor:'pointer',flexShrink:0}}>Start Now</button>
-            </div>
-          )}
+            )
+          })()}
 
           {mySchedules.length===0&&schedules.length>0&&(
             <div style={{background:'#0d1120',border:'1px solid #1e2640',borderRadius:16,padding:'14px 16px',marginBottom:16}}>
