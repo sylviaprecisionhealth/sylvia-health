@@ -7,11 +7,11 @@ import {
 import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth'
 
 const G = `
-  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&family=Playfair+Display:wght@700;800&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
   *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-  body{background:#F4F1EC;font-family:'DM Sans',sans-serif}
+  body{background:#F4F1EC;font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased}
   ::-webkit-scrollbar{width:4px} ::-webkit-scrollbar-thumb{background:#C8C0B0;border-radius:4px}
-  input,textarea,select{font-family:'DM Sans',sans-serif} input:focus,textarea:focus,select:focus{outline:none}
+  input,textarea,select{font-family:'Inter',sans-serif} input:focus,textarea:focus,select:focus{outline:none}
   @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
   @keyframes pop{from{opacity:0;transform:scale(0.96)}to{opacity:1;transform:scale(1)}}
   @keyframes spin{to{transform:rotate(360deg)}}
@@ -44,7 +44,7 @@ function AdminLogin({onLogin}) {
     <div style={{minHeight:'100vh',background:'#1A1A2E',display:'flex',alignItems:'center',justifyContent:'center',padding:24}}>
       <style>{G}</style>
       <div style={{background:'#fff',borderRadius:24,padding:36,width:'100%',maxWidth:400,boxShadow:'0 32px 80px rgba(0,0,0,.3)',animation:'pop .3s ease'}}>
-        <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:28}}><Logo/><div><div style={{fontFamily:"'Playfair Display',serif",fontWeight:800,fontSize:20,color:'#1A1A2E'}}>Sylvia</div><div style={{fontSize:11,color:'#9B98B8'}}>Admin Console</div></div></div>
+        <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:28}}><Logo/><div><div style={{fontFamily:"'Inter',sans-serif",fontWeight:800,fontSize:20,color:'#1A1A2E'}}>Sylvia</div><div style={{fontSize:11,color:'#9B98B8'}}>Admin Console</div></div></div>
         <Field label="Email"><input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="admin@example.com" style={inp} onKeyDown={e=>e.key==='Enter'&&login()}/></Field>
         <Field label="Password"><input type="password" value={pw} onChange={e=>setPw(e.target.value)} placeholder="••••••••" style={inp} onKeyDown={e=>e.key==='Enter'&&login()}/></Field>
         {err&&<p style={{color:'#EF4444',fontSize:12,marginBottom:12,lineHeight:1.5}}>{err}</p>}
@@ -60,7 +60,7 @@ function Sidebar({active,setActive,onLogout}) {
   return (
     <div style={{width:230,background:'#1A1A2E',minHeight:'100vh',display:'flex',flexDirection:'column',padding:'28px 0',flexShrink:0}}>
       <div style={{padding:'0 20px 28px'}}>
-        <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:14}}><Logo/><div><div style={{fontFamily:"'Playfair Display',serif",fontWeight:800,fontSize:22,color:'#E8E4FF',letterSpacing:-0.3}}>Sylvia</div><div style={{fontSize:11,color:'#6B6888',marginTop:2}}>Precision Health</div></div></div>
+        <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:14}}><Logo/><div><div style={{fontFamily:"'Inter',sans-serif",fontWeight:800,fontSize:22,color:'#E8E4FF',letterSpacing:-0.3}}>Sylvia</div><div style={{fontSize:11,color:'#6B6888',marginTop:2}}>Precision Health</div></div></div>
         <div style={{fontSize:10,color:'#4A4A72',background:'#FFFFFF0A',borderRadius:6,padding:'3px 10px',display:'inline-block',letterSpacing:1,textTransform:'uppercase'}}>Admin Console</div>
       </div>
       <div style={{flex:1,padding:'0 12px'}}>
@@ -174,7 +174,7 @@ function DefaultScheduleView({questions}) {
     <div>
       <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',marginBottom:8}}>
         <div>
-          <h2 style={{fontFamily:"'Playfair Display',serif",fontWeight:800,fontSize:24,color:'#1A1A2E'}}>Default Schedule</h2>
+          <h2 style={{fontFamily:"'Inter',sans-serif",fontWeight:800,fontSize:24,color:'#1A1A2E'}}>Default Schedule</h2>
           <p style={{fontSize:13,color:'#9B98B8',marginTop:4}}>{items.length} questions selected · Apply to any user in one click from the Users tab</p>
         </div>
         <button onClick={saveDefault} disabled={saving} style={{background:saved?'#1A6644':'#1A1A2E',color:'#E8E4FF',border:'none',borderRadius:14,padding:'11px 20px',fontSize:14,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',gap:8,flexShrink:0}}>
@@ -325,7 +325,7 @@ function UserProfileModal({user, questions, onClose}) {
           <div style={{display:'flex',alignItems:'center',gap:14}}>
             <div style={{width:46,height:46,borderRadius:14,background:'#F0EEFF',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:800,fontSize:18,color:'#6C63FF',flexShrink:0}}>{user.name?.split(' ').map(n=>n[0]).join('')||'?'}</div>
             <div style={{flex:1}}>
-              <div style={{fontFamily:"'Playfair Display',serif",fontWeight:700,fontSize:20,color:'#E8E4FF'}}>{user.name}</div>
+              <div style={{fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:20,color:'#E8E4FF'}}>{user.name}</div>
               <div style={{fontSize:12,color:'#6B6888',marginTop:2}}>{user.email} · Joined {user.joinedDate}</div>
             </div>
             <button onClick={onClose} style={{background:'#FFFFFF1A',border:'none',color:'#E8E4FF',borderRadius:10,padding:'8px 14px',fontSize:13,cursor:'pointer'}}>Close</button>
@@ -408,7 +408,7 @@ function UsersView({questions}) {
   return (
     <div>
       <div style={{marginBottom:28}}>
-        <h2 style={{fontFamily:"'Playfair Display',serif",fontWeight:800,fontSize:24,color:'#1A1A2E'}}>Users</h2>
+        <h2 style={{fontFamily:"'Inter',sans-serif",fontWeight:800,fontSize:24,color:'#1A1A2E'}}>Users</h2>
         <p style={{fontSize:13,color:'#9B98B8',marginTop:4}}>{users.length} enrolled patient{users.length!==1?'s':''} · Click a user to manage their schedule</p>
       </div>
       {loading&&<div style={{display:'flex',justifyContent:'center',padding:40}}><Spin/></div>}
@@ -465,7 +465,7 @@ function InvitesView() {
   return (
     <div>
       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:28}}>
-        <div><h2 style={{fontFamily:"'Playfair Display',serif",fontWeight:800,fontSize:24,color:'#1A1A2E'}}>Patient Invites</h2><p style={{fontSize:13,color:'#9B98B8',marginTop:4}}>{pending.length} pending · {used.length} accepted</p></div>
+        <div><h2 style={{fontFamily:"'Inter',sans-serif",fontWeight:800,fontSize:24,color:'#1A1A2E'}}>Patient Invites</h2><p style={{fontSize:13,color:'#9B98B8',marginTop:4}}>{pending.length} pending · {used.length} accepted</p></div>
         <button onClick={()=>{setShowForm(true);setDone(null);setName('');setEmail('')}} style={{background:'#1A1A2E',color:'#E8E4FF',border:'none',borderRadius:14,padding:'11px 20px',fontSize:14,fontWeight:700,cursor:'pointer'}}>+ New Invite</button>
       </div>
       {showForm&&!done&&(
@@ -485,7 +485,7 @@ function InvitesView() {
           <div style={{fontWeight:700,fontSize:16,color:'#1A1A2E'}}>{done.name}</div>
           <div style={{fontSize:12,color:'#9B98B8',marginBottom:16}}>{done.email}</div>
           <div style={{background:'#1A1A2E',borderRadius:12,padding:'14px 20px',display:'inline-block',marginBottom:12}}>
-            <span style={{fontFamily:"'Playfair Display',serif",fontWeight:800,fontSize:22,color:'#A89FFF',letterSpacing:3}}>{done.code}</span>
+            <span style={{fontFamily:"'Inter',sans-serif",fontWeight:800,fontSize:22,color:'#A89FFF',letterSpacing:3}}>{done.code}</span>
           </div>
           <p style={{fontSize:12,color:'#C8C0B0',marginBottom:16}}>Share this code — patient enters it in the Sylvia app to register</p>
           <div style={{display:'flex',gap:10,justifyContent:'center'}}>
@@ -547,7 +547,7 @@ function QuestionsView() {
   return (
     <div>
       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:20}}>
-        <div><h2 style={{fontFamily:"'Playfair Display',serif",fontWeight:800,fontSize:24,color:'#1A1A2E'}}>Question Bank</h2><p style={{fontSize:13,color:'#9B98B8',marginTop:4}}>{filtered.length} of {questions.length} questions</p></div>
+        <div><h2 style={{fontFamily:"'Inter',sans-serif",fontWeight:800,fontSize:24,color:'#1A1A2E'}}>Question Bank</h2><p style={{fontSize:13,color:'#9B98B8',marginTop:4}}>{filtered.length} of {questions.length} questions</p></div>
         <button onClick={openNew} style={{background:'#1A1A2E',color:'#E8E4FF',border:'none',borderRadius:14,padding:'11px 20px',fontSize:14,fontWeight:700,cursor:'pointer'}}>+ New Question</button>
       </div>
       <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search questions or mechanisms…" style={{...inp,marginBottom:14}}/>
@@ -638,7 +638,7 @@ function ScheduleView() {
   return (
     <div>
       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:28}}>
-        <div><h2 style={{fontFamily:"'Playfair Display',serif",fontWeight:800,fontSize:24,color:'#1A1A2E'}}>Schedule</h2><p style={{fontSize:13,color:'#9B98B8',marginTop:4}}>{active.length} active · {paused.length} paused</p></div>
+        <div><h2 style={{fontFamily:"'Inter',sans-serif",fontWeight:800,fontSize:24,color:'#1A1A2E'}}>Schedule</h2><p style={{fontSize:13,color:'#9B98B8',marginTop:4}}>{active.length} active · {paused.length} paused</p></div>
         <button onClick={()=>setShowForm(true)} disabled={!questions.length} style={{background:questions.length?'#1A1A2E':'#E5E0D8',color:questions.length?'#E8E4FF':'#9B98B8',border:'none',borderRadius:14,padding:'11px 20px',fontSize:14,fontWeight:700,cursor:questions.length?'pointer':'default'}}>+ Add Schedule</button>
       </div>
       {showForm&&(
@@ -776,7 +776,7 @@ function ResponsesView({questions}) {
       {/* Header */}
       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:28}}>
         <div>
-          <h2 style={{fontFamily:"'Playfair Display',serif",fontWeight:800,fontSize:24,color:'#1A1A2E'}}>Responses</h2>
+          <h2 style={{fontFamily:"'Inter',sans-serif",fontWeight:800,fontSize:24,color:'#1A1A2E'}}>Responses</h2>
           <p style={{fontSize:13,color:'#9B98B8',marginTop:4}}>Click a patient to view their response history</p>
         </div>
         {selectedUser&&userResponses.length>0&&(
@@ -846,8 +846,8 @@ function ResponsesView({questions}) {
                     <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10}}>
                       <p style={{fontSize:13,color:'#1A1A2E',fontWeight:600,margin:0,flex:1,lineHeight:1.4}}>{q?.text?.length>80?q.text.slice(0,80)+'…':q?.text}</p>
                       <div style={{display:'flex',gap:16,flexShrink:0,marginLeft:12}}>
-                        <div style={{textAlign:'center'}}><div style={{fontFamily:"'Playfair Display',serif",fontWeight:700,fontSize:20,color}}>{latest}</div><div style={{fontSize:10,color:'#C8C0B0'}}>Latest</div></div>
-                        <div style={{textAlign:'center'}}><div style={{fontFamily:"'Playfair Display',serif",fontWeight:700,fontSize:20,color:'#9B98B8'}}>{avg}</div><div style={{fontSize:10,color:'#C8C0B0'}}>Avg</div></div>
+                        <div style={{textAlign:'center'}}><div style={{fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:20,color}}>{latest}</div><div style={{fontSize:10,color:'#C8C0B0'}}>Latest</div></div>
+                        <div style={{textAlign:'center'}}><div style={{fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:20,color:'#9B98B8'}}>{avg}</div><div style={{fontSize:10,color:'#C8C0B0'}}>Avg</div></div>
                       </div>
                     </div>
                     <MiniChart data={data} color={color} q={q} qId={qId}/>
