@@ -16,8 +16,8 @@ import {
 } from './notifications.js'
 
 const G = `
-  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&family=Playfair+Display:wght@600;700;800&display=swap');
-  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0} body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
   ::-webkit-scrollbar{display:none} body{margin:0;background:#080A16}
   @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
   @keyframes pop{from{opacity:0;transform:scale(0.96)}to{opacity:1;transform:scale(1)}}
@@ -35,11 +35,11 @@ const Spin = () => <div style={{width:20,height:20,border:'2px solid #1e2640',bo
 // ── Welcome ───────────────────────────────────────────────────────────────────
 function WelcomeScreen({onLogin, onRegister}) {
   return (
-    <div style={{minHeight:'100vh',background:'#080A16',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:32,fontFamily:"'DM Sans',sans-serif"}}>
+    <div style={{minHeight:'100vh',background:'#080A16',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:32,fontFamily:"-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif"}}>
       <style>{G}</style>
       <div style={{animation:'fadeUp .6s ease',textAlign:'center',maxWidth:320,width:'100%'}}>
         <div style={{fontSize:11,color:'#4a4a6a',letterSpacing:3,textTransform:'uppercase',marginBottom:10}}>Welcome to</div>
-        <h1 style={{fontFamily:"'Playfair Display',serif",color:'#E8E4FF',fontSize:42,fontWeight:800,lineHeight:1,marginBottom:8,letterSpacing:-1}}>Sylvia</h1>
+        <h1 style={{fontFamily:"-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif",color:'#E8E4FF',fontSize:42,fontWeight:800,lineHeight:1,marginBottom:8,letterSpacing:-1}}>Sylvia</h1>
         <p style={{color:'#6B6888',fontSize:14,lineHeight:1.7,marginBottom:48}}>Precision Health — your personal wellness companion, guided by your care team.</p>
         <div style={{display:'flex',flexDirection:'column',gap:12}}>
           <button onClick={onRegister} style={{background:'linear-gradient(135deg,#6C63FF,#4A42CC)',color:'#fff',border:'none',borderRadius:16,padding:'15px',fontSize:15,fontWeight:700,cursor:'pointer'}}>Get Started</button>
@@ -83,18 +83,18 @@ function RegisterScreen({onBack, onSuccess}) {
     setLoading(false)
   }
 
-  const fs = {width:'100%',background:'#0d1120',border:'1.5px solid #1e2640',borderRadius:12,padding:'14px 16px',color:'#E8E4FF',fontSize:14,fontFamily:"'DM Sans',sans-serif"}
+  const fs = {width:'100%',background:'#0d1120',border:'1.5px solid #1e2640',borderRadius:12,padding:'14px 16px',color:'#E8E4FF',fontSize:14,fontFamily:"-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif"}
 
   return (
-    <div style={{minHeight:'100vh',background:'#080A16',display:'flex',flexDirection:'column',padding:24,fontFamily:"'DM Sans',sans-serif"}}>
+    <div style={{minHeight:'100vh',background:'#080A16',display:'flex',flexDirection:'column',padding:24,fontFamily:"-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif"}}>
       <style>{G}</style>
       <button onClick={onBack} style={{background:'none',border:'none',color:'#6B6888',fontSize:14,cursor:'pointer',alignSelf:'flex-start',marginBottom:24,marginTop:20}}>← Back</button>
       {step===0 && (
         <div style={{flex:1,display:'flex',flexDirection:'column',justifyContent:'center',animation:'fadeUp .4s ease'}}>
           <div style={{fontSize:11,color:'#4a4a6a',letterSpacing:2,textTransform:'uppercase',marginBottom:8}}>Step 1 of 2</div>
-          <h2 style={{fontFamily:"'Playfair Display',serif",color:'#E8E4FF',fontSize:26,marginBottom:8}}>Enter Invite Code</h2>
+          <h2 style={{fontFamily:"-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif",color:'#E8E4FF',fontSize:26,marginBottom:8}}>Enter Invite Code</h2>
           <p style={{color:'#6B6888',fontSize:14,marginBottom:32,lineHeight:1.6}}>Your provider will have shared a unique code with you.</p>
-          <input value={code} onChange={e=>setCode(e.target.value.toUpperCase())} placeholder="SYLVIA-XXXXXX" onKeyDown={e=>e.key==='Enter'&&checkCode()} style={{background:'#0d1120',border:`1.5px solid ${codeErr?'#F2857A':'#1e2640'}`,borderRadius:14,padding:'16px 18px',color:'#E8E4FF',fontSize:18,fontFamily:"'Playfair Display',serif",fontWeight:700,letterSpacing:3,textAlign:'center',marginBottom:codeErr?8:24,width:'100%'}}/>
+          <input value={code} onChange={e=>setCode(e.target.value.toUpperCase())} placeholder="SYLVIA-XXXXXX" onKeyDown={e=>e.key==='Enter'&&checkCode()} style={{background:'#0d1120',border:`1.5px solid ${codeErr?'#F2857A':'#1e2640'}`,borderRadius:14,padding:'16px 18px',color:'#E8E4FF',fontSize:18,fontFamily:"-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif",fontWeight:700,letterSpacing:3,textAlign:'center',marginBottom:codeErr?8:24,width:'100%'}}/>
           {codeErr && <p style={{color:'#F2857A',fontSize:13,marginBottom:16,textAlign:'center'}}>{codeErr}</p>}
           <button onClick={checkCode} disabled={!code.trim()||loading} style={{background:code.trim()?'linear-gradient(135deg,#6C63FF,#4A42CC)':'#1e2640',color:code.trim()?'#fff':'#3a3a5c',border:'none',borderRadius:14,padding:15,fontSize:15,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>{loading?<Spin/>:'Verify Code →'}</button>
         </div>
@@ -102,7 +102,7 @@ function RegisterScreen({onBack, onSuccess}) {
       {step===1 && (
         <div style={{flex:1,display:'flex',flexDirection:'column',justifyContent:'center',animation:'fadeUp .4s ease'}}>
           <div style={{fontSize:11,color:'#4a4a6a',letterSpacing:2,textTransform:'uppercase',marginBottom:8}}>Step 2 of 2</div>
-          <h2 style={{fontFamily:"'Playfair Display',serif",color:'#E8E4FF',fontSize:26,marginBottom:28}}>Create Your Account</h2>
+          <h2 style={{fontFamily:"-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif",color:'#E8E4FF',fontSize:26,marginBottom:28}}>Create Your Account</h2>
           {[['Full Name','text',name,setName,'Your name'],['Email','email',email,setEmail,'Your email'],['Password','password',pw,setPw,'Min 6 characters']].map(([l,t,v,s,p])=>(
             <div key={l} style={{marginBottom:14}}>
               <div style={{fontSize:11,color:'#4a4a6a',letterSpacing:1,textTransform:'uppercase',marginBottom:6}}>{l}</div>
@@ -130,16 +130,16 @@ function LoginScreen({onBack, onSuccess}) {
     setLoading(false)
   }
   return (
-    <div style={{minHeight:'100vh',background:'#080A16',display:'flex',flexDirection:'column',padding:24,fontFamily:"'DM Sans',sans-serif"}}>
+    <div style={{minHeight:'100vh',background:'#080A16',display:'flex',flexDirection:'column',padding:24,fontFamily:"-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif"}}>
       <style>{G}</style>
       <button onClick={onBack} style={{background:'none',border:'none',color:'#6B6888',fontSize:14,cursor:'pointer',alignSelf:'flex-start',marginBottom:24,marginTop:20}}>← Back</button>
       <div style={{flex:1,display:'flex',flexDirection:'column',justifyContent:'center',animation:'fadeUp .4s ease'}}>
-        <h2 style={{fontFamily:"'Playfair Display',serif",color:'#E8E4FF',fontSize:28,marginBottom:8}}>Sign In</h2>
+        <h2 style={{fontFamily:"-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif",color:'#E8E4FF',fontSize:28,marginBottom:8}}>Sign In</h2>
         <p style={{color:'#6B6888',fontSize:14,marginBottom:32}}>Welcome back to Sylvia.</p>
         {[['Email','email',email,setEmail,'your@email.com'],['Password','password',pw,setPw,'••••••••']].map(([l,t,v,s,p])=>(
           <div key={l} style={{marginBottom:14}}>
             <div style={{fontSize:11,color:'#4a4a6a',letterSpacing:1,textTransform:'uppercase',marginBottom:6}}>{l}</div>
-            <input type={t} value={v} onChange={e=>s(e.target.value)} placeholder={p} onKeyDown={e=>e.key==='Enter'&&login()} style={{width:'100%',background:'#0d1120',border:'1.5px solid #1e2640',borderRadius:12,padding:'14px 16px',color:'#E8E4FF',fontSize:14,fontFamily:"'DM Sans',sans-serif"}}/>
+            <input type={t} value={v} onChange={e=>s(e.target.value)} placeholder={p} onKeyDown={e=>e.key==='Enter'&&login()} style={{width:'100%',background:'#0d1120',border:'1.5px solid #1e2640',borderRadius:12,padding:'14px 16px',color:'#E8E4FF',fontSize:14,fontFamily:"-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif"}}/>
           </div>
         ))}
         {err && <p style={{color:'#F2857A',fontSize:12,marginBottom:12}}>{err}</p>}
@@ -235,7 +235,7 @@ function SessionScreen({questions, userId, sessionTime, resumeIdx, onComplete, o
   if(!q) return null
 
   return (
-    <div style={{minHeight:'100vh',background:'#080A16',display:'flex',flexDirection:'column',fontFamily:"'DM Sans',sans-serif"}}>
+    <div style={{minHeight:'100vh',background:'#080A16',display:'flex',flexDirection:'column',fontFamily:"-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif"}}>
       <style>{G}</style>
       <div style={{padding:'52px 20px 16px',maxWidth:480,margin:'0 auto',width:'100%'}}>
         <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:12}}>
@@ -255,12 +255,12 @@ function SessionScreen({questions, userId, sessionTime, resumeIdx, onComplete, o
             {q.type==='text'&&<span style={{fontSize:11,color:'#6ECB8A',background:'#6ECB8A22',borderRadius:20,padding:'3px 10px',fontWeight:600}}>☰ Open</span>}
             {q.category&&q.category!=='General'&&<span style={{fontSize:11,color:'#A89FFF',background:'#6C63FF22',borderRadius:20,padding:'3px 10px',fontWeight:600,marginLeft:6}}>{q.category}</span>}
           </div>
-          <p style={{fontFamily:"'Playfair Display',serif",color:'#E8E4FF',fontSize:20,lineHeight:1.5,fontWeight:600,marginBottom:24}}>{q.text}</p>
+          <p style={{fontFamily:"-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif",color:'#E8E4FF',fontSize:20,lineHeight:1.5,fontWeight:600,marginBottom:24}}>{q.text}</p>
 
           {q.type==='scale'&&(
             <div style={{background:'#0d1120',borderRadius:20,padding:24,border:`1px solid ${scaleTouched?'#6C63FF44':'#1e2640'}`}}>
               <div style={{display:'flex',justifyContent:'center',marginBottom:16}}>
-                <span style={{fontFamily:"'Playfair Display',serif",fontSize:52,fontWeight:700,color:scaleTouched?'#6C63FF':'#3a3a5c'}}>{scaleVal}</span>
+                <span style={{fontFamily:"-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif",fontSize:52,fontWeight:700,color:scaleTouched?'#6C63FF':'#3a3a5c'}}>{scaleVal}</span>
               </div>
               <input type="range" min={q.scaleMin} max={q.scaleMax} value={scaleVal||0}
                 onChange={e=>{ setScaleVal(+e.target.value); setScaleTouched(true) }}
@@ -275,12 +275,12 @@ function SessionScreen({questions, userId, sessionTime, resumeIdx, onComplete, o
           {q.type==='choice'&&(
             <div style={{display:'flex',flexDirection:'column',gap:10}}>
               {q.options?.map(o=>(
-                <button key={o} onClick={()=>setChoice(o)} style={{padding:'16px 18px',borderRadius:14,border:`2px solid ${choice===o?'#6C63FF':'#1e2640'}`,background:choice===o?'#6C63FF22':'#0d1120',color:choice===o?'#A89FFF':'#9B98B8',fontSize:15,cursor:'pointer',textAlign:'left',fontFamily:"'DM Sans',sans-serif",fontWeight:choice===o?600:400}}>{o}</button>
+                <button key={o} onClick={()=>setChoice(o)} style={{padding:'16px 18px',borderRadius:14,border:`2px solid ${choice===o?'#6C63FF':'#1e2640'}`,background:choice===o?'#6C63FF22':'#0d1120',color:choice===o?'#A89FFF':'#9B98B8',fontSize:15,cursor:'pointer',textAlign:'left',fontFamily:"-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif",fontWeight:choice===o?600:400}}>{o}</button>
               ))}
             </div>
           )}
           {q.type==='text'&&(
-            <textarea value={textVal} onChange={e=>setTextVal(e.target.value)} rows={4} placeholder="Type your response here…" style={{width:'100%',background:'#0d1120',border:'1.5px solid #1e2640',borderRadius:14,padding:'14px 16px',color:'#E8E4FF',fontSize:14,fontFamily:"'DM Sans',sans-serif",lineHeight:1.6,resize:'none'}}/>
+            <textarea value={textVal} onChange={e=>setTextVal(e.target.value)} rows={4} placeholder="Type your response here…" style={{width:'100%',background:'#0d1120',border:'1.5px solid #1e2640',borderRadius:14,padding:'14px 16px',color:'#E8E4FF',fontSize:14,fontFamily:"-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif",lineHeight:1.6,resize:'none'}}/>
           )}
         </div>
       </div>
@@ -300,11 +300,11 @@ function SessionScreen({questions, userId, sessionTime, resumeIdx, onComplete, o
 // ── Session Complete ───────────────────────────────────────────────────────────
 function SessionCompleteScreen({answered, total, onHome}) {
   return (
-    <div style={{minHeight:'100vh',background:'#080A16',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:32,fontFamily:"'DM Sans',sans-serif",textAlign:'center'}}>
+    <div style={{minHeight:'100vh',background:'#080A16',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:32,fontFamily:"-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif",textAlign:'center'}}>
       <style>{G}</style>
       <div style={{animation:'fadeUp .5s ease'}}>
         <div style={{fontSize:64,marginBottom:20}}>✦</div>
-        <h2 style={{fontFamily:"'Playfair Display',serif",color:'#E8E4FF',fontSize:28,fontWeight:700,marginBottom:8}}>Session Complete</h2>
+        <h2 style={{fontFamily:"-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif",color:'#E8E4FF',fontSize:28,fontWeight:700,marginBottom:8}}>Session Complete</h2>
         <p style={{color:'#6B6888',fontSize:15,lineHeight:1.7,marginBottom:8}}>You answered {answered} of {total} questions.</p>
         <p style={{color:'#4a4a6a',fontSize:13,marginBottom:40}}>Next session: {nextSessionTime()}</p>
         <button onClick={onHome} style={{background:'linear-gradient(135deg,#6C63FF,#4A42CC)',color:'#fff',border:'none',borderRadius:16,padding:'16px 40px',fontSize:16,fontWeight:700,cursor:'pointer'}}>Back to Home</button>
@@ -396,13 +396,13 @@ function MainApp({user, onLogout}) {
   const firstName = user.name?.split(' ')[0]||'there'
 
   return (
-    <div style={{minHeight:'100vh',background:'#080A16',fontFamily:"'DM Sans',sans-serif",paddingBottom:80}}>
+    <div style={{minHeight:'100vh',background:'#080A16',fontFamily:"-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif",paddingBottom:80}}>
       <style>{G}</style>
       <div style={{padding:'52px 20px 20px',maxWidth:480,margin:'0 auto'}}>
         <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
           <div>
             <div style={{fontSize:11,color:'#4a4a6a',letterSpacing:2,textTransform:'uppercase',marginBottom:4}}>Sylvia Precision Health</div>
-            <h1 style={{fontFamily:"'Playfair Display',serif",color:'#E8E4FF',fontSize:26,margin:0,fontWeight:700}}>
+            <h1 style={{fontFamily:"-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif",color:'#E8E4FF',fontSize:26,margin:0,fontWeight:700}}>
               {tab==='home'?`Hello, ${firstName}`:'Session History'}
             </h1>
           </div>
