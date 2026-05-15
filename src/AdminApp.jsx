@@ -15,6 +15,10 @@ const G = `
   @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
   @keyframes pop{from{opacity:0;transform:scale(0.96)}to{opacity:1;transform:scale(1)}}
   @keyframes spin{to{transform:rotate(360deg)}}
+  @media(max-width:768px){
+    input,textarea,select{font-size:max(16px,1em)!important}
+    button{min-height:44px}
+  }
 `
 
 const Q_TYPES = [{id:'scale',label:'Scale',icon:'▬'},{id:'choice',label:'Multiple Choice',icon:'◉'},{id:'text',label:'Free Text',icon:'☰'}]
@@ -22,6 +26,11 @@ const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
 const REPEATS = ['One-time','Daily','Weekly','Custom interval']
 function makeCode(){const c='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';return'SYLVIA-'+Array.from({length:6},()=>c[Math.floor(Math.random()*c.length)]).join('')}
 function today(){return new Date().toISOString().split('T')[0]}
+function useMobile(){
+  const [m,setM]=useState(window.innerWidth<768)
+  useEffect(()=>{const h=()=>setM(window.innerWidth<768);window.addEventListener('resize',h);return()=>window.removeEventListener('resize',h)},[])
+  return m
+}
 
 const Spin = () => <div style={{width:18,height:18,border:'2px solid #E5E0D8',borderTop:'2px solid #6C63FF',borderRadius:'50%',animation:'spin .7s linear infinite',flexShrink:0}}/>
 const Badge = ({status}) => { const m={active:['#1A6644','#D1FAE5'],paused:['#92400E','#FEF3C7']}; const [c,bg]=m[status]||['#374151','#F3F4F6']; return <span style={{fontSize:11,fontWeight:600,color:c,background:bg,borderRadius:20,padding:'3px 10px',textTransform:'capitalize'}}>{status}</span> }
@@ -55,33 +64,42 @@ function AdminLogin({onLogin}) {
 }
 
 // ── Sidebar ───────────────────────────────────────────────────────────────────
-function Sidebar({active,setActive,onLogout}) {
+function Sidebar({active,setActive,onLogout,open,onClose}) {
+  const isMobile=useMobile()
+  useEffect(()=>{
+    if(isMobile) document.body.style.overflow=open?'hidden':''
+    return()=>{document.body.style.overflow=''}
+  },[open,isMobile])
   const nav=[{id:'questions',label:'Questions',icon:'◈'},{id:'schedule',label:'Schedule',icon:'◷'},{id:'default',label:'Default Schedule',icon:'★'},{id:'users',label:'Users',icon:'◎'},{id:'responses',label:'Responses',icon:'◉'},{id:'invites',label:'Invites',icon:'✉'}]
   return (
-    <div style={{width:230,background:'#1A1A2E',minHeight:'100vh',display:'flex',flexDirection:'column',padding:'28px 0',flexShrink:0}}>
-      <div style={{padding:'0 20px 28px'}}>
-        <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:14}}><Logo/><div><div style={{fontFamily:"'Inter',sans-serif",fontWeight:800,fontSize:22,color:'#E8E4FF',letterSpacing:-0.3}}>Sylvia</div><div style={{fontSize:11,color:'#6B6888',marginTop:2}}>Precision Health</div></div></div>
-        <div style={{fontSize:10,color:'#4A4A72',background:'#FFFFFF0A',borderRadius:6,padding:'3px 10px',display:'inline-block',letterSpacing:1,textTransform:'uppercase'}}>Admin Console</div>
+    <>
+      {isMobile&&open&&<div onClick={onClose} style={{position:'fixed',inset:0,background:'rgba(0,0,0,.5)',zIndex:99,backdropFilter:'blur(2px)'}}/>}
+      <div style={{width:230,background:'#1A1A2E',minHeight:'100vh',display:'flex',flexDirection:'column',padding:'28px 0',flexShrink:0,...(isMobile&&{position:'fixed',top:0,left:0,height:'100%',zIndex:100,transform:open?'translateX(0)':'translateX(-100%)',transition:'transform .25s ease',boxShadow:open?'4px 0 32px rgba(0,0,0,.4)':'none'})}}>
+        <div style={{padding:'0 20px 28px'}}>
+          <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:14}}><Logo/><div><div style={{fontFamily:"'Inter',sans-serif",fontWeight:800,fontSize:22,color:'#E8E4FF',letterSpacing:-0.3}}>Sylvia</div><div style={{fontSize:11,color:'#6B6888',marginTop:2}}>Precision Health</div></div></div>
+          <div style={{fontSize:10,color:'#4A4A72',background:'#FFFFFF0A',borderRadius:6,padding:'3px 10px',display:'inline-block',letterSpacing:1,textTransform:'uppercase'}}>Admin Console</div>
+        </div>
+        <div style={{flex:1,padding:'0 12px'}}>
+          {nav.map(n=>(
+            <button key={n.id} onClick={()=>{setActive(n.id);if(isMobile)onClose()}} style={{width:'100%',display:'flex',alignItems:'center',gap:10,padding:'11px 14px',borderRadius:12,border:'none',cursor:'pointer',marginBottom:4,background:active===n.id?'#FFFFFF12':'transparent',transition:'background .15s'}}>
+              <span style={{fontSize:16,color:active===n.id?'#A89FFF':'#4A4A72'}}>{n.icon}</span>
+              <span style={{fontWeight:active===n.id?600:400,fontSize:14,color:active===n.id?'#E8E4FF':'#6B6888'}}>{n.label}</span>
+              {active===n.id&&<div style={{marginLeft:'auto',width:5,height:5,borderRadius:'50%',background:'#A89FFF'}}/>}
+            </button>
+          ))}
+        </div>
+        <div style={{padding:'16px 20px 0',borderTop:'1px solid #FFFFFF0A'}}>
+          <button onClick={onLogout} style={{background:'none',border:'none',color:'#4A4A72',fontSize:12,cursor:'pointer',padding:0}}>Sign out</button>
+        </div>
       </div>
-      <div style={{flex:1,padding:'0 12px'}}>
-        {nav.map(n=>(
-          <button key={n.id} onClick={()=>setActive(n.id)} style={{width:'100%',display:'flex',alignItems:'center',gap:10,padding:'11px 14px',borderRadius:12,border:'none',cursor:'pointer',marginBottom:4,background:active===n.id?'#FFFFFF12':'transparent',transition:'background .15s'}}>
-            <span style={{fontSize:16,color:active===n.id?'#A89FFF':'#4A4A72'}}>{n.icon}</span>
-            <span style={{fontWeight:active===n.id?600:400,fontSize:14,color:active===n.id?'#E8E4FF':'#6B6888'}}>{n.label}</span>
-            {active===n.id&&<div style={{marginLeft:'auto',width:5,height:5,borderRadius:'50%',background:'#A89FFF'}}/>}
-          </button>
-        ))}
-      </div>
-      <div style={{padding:'16px 20px 0',borderTop:'1px solid #FFFFFF0A'}}>
-        <button onClick={onLogout} style={{background:'none',border:'none',color:'#4A4A72',fontSize:12,cursor:'pointer',padding:0}}>Sign out</button>
-      </div>
-    </div>
+    </>
   )
 }
 
 // ── Schedule Entry Editor (reusable) ──────────────────────────────────────────
 function ScheduleEntryEditor({entry, onChange}) {
-  const [mode, setMode] = useState(entry.mode || 'time') // 'time' or 'interval'
+  const [mode, setMode] = useState(entry.mode || 'time')
+  const isMobile=useMobile()
   return (
     <div style={{background:'#FAFAF8',borderRadius:12,padding:14,border:'1px solid #E5E0D8',marginTop:10}}>
       <div style={{display:'flex',gap:8,marginBottom:12}}>
@@ -93,7 +111,7 @@ function ScheduleEntryEditor({entry, onChange}) {
         ))}
       </div>
       {mode==='time' && (
-        <div style={{display:'flex',gap:10}}>
+        <div style={{display:'flex',gap:10,flexDirection:isMobile?'column':'row'}}>
           <div style={{flex:1}}>
             <div style={{fontSize:11,color:'#9B98B8',marginBottom:4}}>Send time</div>
             <input type="time" value={entry.time||'08:00'} onChange={e=>onChange({...entry,time:e.target.value,mode:'time',repeat:'Daily'})} style={{...inp,padding:'8px 10px',borderRadius:8}}/>
@@ -108,7 +126,7 @@ function ScheduleEntryEditor({entry, onChange}) {
       )}
       {mode==='interval' && (
         <div>
-          <div style={{display:'flex',gap:10,marginBottom:10}}>
+          <div style={{display:'flex',gap:10,marginBottom:10,flexDirection:isMobile?'column':'row'}}>
             <div style={{flex:1}}>
               <div style={{fontSize:11,color:'#9B98B8',marginBottom:4}}>Start time</div>
               <input type="time" value={entry.time||'08:00'} onChange={e=>onChange({...entry,time:e.target.value,mode:'interval',repeat:'Custom interval'})} style={{...inp,padding:'8px 10px',borderRadius:8}}/>
@@ -529,6 +547,7 @@ function QuestionsView() {
   const [form,setForm]=useState({type:'scale',text:'',scaleMin:0,scaleMax:100,scaleMinLabel:'Not at all',scaleMaxLabel:'More than I ever have',options:'',category:'General',mechanism:'',folder:'Book EMA'})
   const [saving,setSaving]=useState(false)
   const [assignTarget,setAssignTarget]=useState(null); const [assigning,setAssigning]=useState(null); const [assignSuccess,setAssignSuccess]=useState(null)
+  const isMobile=useMobile()
 
   useEffect(()=>{
     const u1=onSnapshot(collection(db,'questions'),snap=>{setQuestions(snap.docs.map(d=>({id:d.id,...d.data()}))); setLoading(false)})
@@ -586,7 +605,7 @@ function QuestionsView() {
       <h3 style={{fontWeight:700,fontSize:16,color:'#1A1A2E',marginBottom:16}}>{editing?'Edit Question':'New Question'}</h3>
       <Field label="Type"><div style={{display:'flex',gap:8}}>{Q_TYPES.map(qt=><button key={qt.id} onClick={()=>setForm(f=>({...f,type:qt.id}))} style={{flex:1,padding:'10px 8px',borderRadius:12,border:`2px solid ${form.type===qt.id?'#6C63FF':'#E5E0D8'}`,background:form.type===qt.id?'#F0EEFF':'#FAFAF8',cursor:'pointer',textAlign:'center'}}><div style={{fontSize:16,marginBottom:4,color:form.type===qt.id?'#6C63FF':'#9B98B8'}}>{qt.icon}</div><div style={{fontSize:11,fontWeight:600,color:form.type===qt.id?'#6C63FF':'#9B98B8'}}>{qt.label}</div></button>)}</div></Field>
       <Field label="Question Text"><textarea value={form.text} onChange={e=>setForm(f=>({...f,text:e.target.value}))} rows={3} placeholder="Enter question…" style={{...inp,lineHeight:1.6,resize:'none'}}/></Field>
-      {form.type==='scale'&&<div style={{background:'#FAFAF8',borderRadius:14,padding:16,border:'1px solid #E5E0D8',marginBottom:18}}><Lbl>Scale Range</Lbl><div style={{display:'flex',gap:12,marginBottom:12}}>{[['Min','scaleMin'],['Max','scaleMax']].map(([l,k])=><div key={k} style={{flex:1}}><div style={{fontSize:11,color:'#9B98B8',marginBottom:4}}>{l}</div><input type="number" value={form[k]} onChange={e=>setForm(f=>({...f,[k]:e.target.value}))} style={{...inp,padding:'8px 10px',borderRadius:8}}/></div>)}</div><div style={{display:'flex',gap:12}}>{[['Min Label','scaleMinLabel','e.g. Not at all'],['Max Label','scaleMaxLabel','e.g. Extremely']].map(([l,k,p])=><div key={k} style={{flex:1}}><div style={{fontSize:11,color:'#9B98B8',marginBottom:4}}>{l}</div><input value={form[k]} onChange={e=>setForm(f=>({...f,[k]:e.target.value}))} placeholder={p} style={{...inp,padding:'8px 10px',borderRadius:8,fontSize:13}}/></div>)}</div></div>}
+      {form.type==='scale'&&<div style={{background:'#FAFAF8',borderRadius:14,padding:16,border:'1px solid #E5E0D8',marginBottom:18}}><Lbl>Scale Range</Lbl><div style={{display:'flex',gap:12,marginBottom:12,flexDirection:isMobile?'column':'row'}}>{[['Min','scaleMin'],['Max','scaleMax']].map(([l,k])=><div key={k} style={{flex:1}}><div style={{fontSize:11,color:'#9B98B8',marginBottom:4}}>{l}</div><input type="number" value={form[k]} onChange={e=>setForm(f=>({...f,[k]:e.target.value}))} style={{...inp,padding:'8px 10px',borderRadius:8}}/></div>)}</div><div style={{display:'flex',gap:12,flexDirection:isMobile?'column':'row'}}>{[['Min Label','scaleMinLabel','e.g. Not at all'],['Max Label','scaleMaxLabel','e.g. Extremely']].map(([l,k,p])=><div key={k} style={{flex:1}}><div style={{fontSize:11,color:'#9B98B8',marginBottom:4}}>{l}</div><input value={form[k]} onChange={e=>setForm(f=>({...f,[k]:e.target.value}))} placeholder={p} style={{...inp,padding:'8px 10px',borderRadius:8,fontSize:13}}/></div>)}</div></div>}
       {form.type==='choice'&&<Field label="Options (one per line)"><textarea value={form.options} onChange={e=>setForm(f=>({...f,options:e.target.value}))} rows={5} placeholder={'Very well\nWell\nOkay\nPoorly\nTerribly'} style={{...inp,lineHeight:1.8,resize:'none'}}/></Field>}
       <Field label="Folder"><input value={form.folder||''} onChange={e=>setForm(f=>({...f,folder:e.target.value}))} placeholder="e.g. Book EMA" style={inp}/></Field>
       <Field label="Category"><input value={form.category} onChange={e=>setForm(f=>({...f,category:e.target.value}))} placeholder="e.g. Cognitive Mechanisms" style={inp}/></Field>
@@ -1032,6 +1051,8 @@ function ResponsesView({questions}) {
 export default function AdminApp() {
   const [authed,setAuthed]=useState(null); const [view,setView]=useState('questions')
   const [questions,setQuestions]=useState([])
+  const [sidebarOpen,setSidebarOpen]=useState(false)
+  const isMobile=useMobile()
 
   useEffect(()=>{
     const unsub=onAuthStateChanged(auth,u=>setAuthed(!!u))
@@ -1051,14 +1072,22 @@ export default function AdminApp() {
   return(
     <div style={{display:'flex',minHeight:'100vh',background:'#F4F1EC'}}>
       <style>{G}</style>
-      <Sidebar active={view} setActive={setView} onLogout={()=>signOut(auth)}/>
-      <div style={{flex:1,padding:'40px 44px',overflowY:'auto'}}>
-        {view==='questions'&&<QuestionsView/>}
-        {view==='schedule'&&<ScheduleView/>}
-        {view==='default'&&<DefaultScheduleView questions={questions}/>}
-        {view==='users'&&<UsersView questions={questions}/>}
-        {view==='responses'&&<ResponsesView questions={questions}/>}
-        {view==='invites'&&<InvitesView/>}
+      <Sidebar active={view} setActive={setView} onLogout={()=>signOut(auth)} open={sidebarOpen} onClose={()=>setSidebarOpen(false)}/>
+      <div style={{flex:1,overflowY:'auto',minWidth:0,padding:isMobile?0:'40px 44px'}}>
+        {isMobile&&(
+          <div style={{display:'flex',alignItems:'center',gap:12,padding:'14px 16px',background:'#fff',borderBottom:'1px solid #E8E3DA',position:'sticky',top:0,zIndex:50}}>
+            <button onClick={()=>setSidebarOpen(true)} style={{background:'none',border:'1.5px solid #E5E0D8',borderRadius:10,padding:0,width:44,height:44,cursor:'pointer',fontSize:20,color:'#1A1A2E',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>☰</button>
+            <div style={{fontFamily:"'Inter',sans-serif",fontWeight:800,fontSize:18,color:'#1A1A2E'}}>Sylvia Admin</div>
+          </div>
+        )}
+        <div style={{padding:isMobile?'16px':'0'}}>
+          {view==='questions'&&<QuestionsView/>}
+          {view==='schedule'&&<ScheduleView/>}
+          {view==='default'&&<DefaultScheduleView questions={questions}/>}
+          {view==='users'&&<UsersView questions={questions}/>}
+          {view==='responses'&&<ResponsesView questions={questions}/>}
+          {view==='invites'&&<InvitesView/>}
+        </div>
       </div>
     </div>
   )
