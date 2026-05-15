@@ -528,7 +528,7 @@ function QuestionsView() {
   const [catFilter,setCatFilter]=useState('All'); const [search,setSearch]=useState('')
   const [form,setForm]=useState({type:'scale',text:'',scaleMin:0,scaleMax:100,scaleMinLabel:'Not at all',scaleMaxLabel:'More than I ever have',options:'',category:'General',mechanism:'',folder:'Book EMA'})
   const [saving,setSaving]=useState(false)
-  const [showAssign,setShowAssign]=useState(false); const [assigning,setAssigning]=useState(null); const [assignSuccess,setAssignSuccess]=useState(null)
+  const [assignTarget,setAssignTarget]=useState(null); const [assigning,setAssigning]=useState(null); const [assignSuccess,setAssignSuccess]=useState(null)
 
   useEffect(()=>{
     const u1=onSnapshot(collection(db,'questions'),snap=>{setQuestions(snap.docs.map(d=>({id:d.id,...d.data()}))); setLoading(false)})
@@ -569,7 +569,7 @@ function QuestionsView() {
       const endDate=end.toISOString().split('T')[0]
       for(const time of DEFAULT_TIMES){
         const ref=await addDoc(collection(db,'schedules'),{
-          questionId:'__FOLDER__',folder:selectedFolder,userId:user.id,
+          questionId:'__FOLDER__',folder:assignTarget,userId:user.id,
           time,repeat:'Daily',interval:null,mode:'time',
           startDate,endDate,durationDays:15,active:true,isFolderSession:true
         })
@@ -598,10 +598,43 @@ function QuestionsView() {
     </div>
   )
 
+  // ── Assign Modal (shared by both views) ──────────────────────────────────────
+  const AssignModal = assignTarget && (
+    <div style={{position:'fixed',inset:0,background:'rgba(10,10,20,.7)',backdropFilter:'blur(6px)',zIndex:200,display:'flex',alignItems:'center',justifyContent:'center',padding:20}}>
+      <div style={{background:'#F4F1EC',borderRadius:24,width:'100%',maxWidth:480,boxShadow:'0 32px 80px rgba(0,0,0,.2)',animation:'pop .25s ease',maxHeight:'80vh',display:'flex',flexDirection:'column'}}>
+        <div style={{background:'#1A1A2E',borderRadius:'24px 24px 0 0',padding:'24px 28px',display:'flex',alignItems:'center',justifyContent:'space-between',flexShrink:0}}>
+          <div>
+            <div style={{fontWeight:700,fontSize:18,color:'#E8E4FF'}}>Assign to Patient</div>
+            <div style={{fontSize:12,color:'#6B6888',marginTop:3}}>"{assignTarget}" · 5 sessions/day · 15 days</div>
+          </div>
+          <button onClick={()=>{setAssignTarget(null);setAssignSuccess(null)}} style={{background:'#FFFFFF1A',border:'none',color:'#E8E4FF',borderRadius:10,padding:'8px 14px',fontSize:13,cursor:'pointer'}}>Close</button>
+        </div>
+        <div style={{padding:'20px 24px',overflowY:'auto'}}>
+          {users.length===0&&<div style={{textAlign:'center',padding:30,color:'#C8C0B0'}}>No patients found.</div>}
+          <div style={{display:'flex',flexDirection:'column',gap:10}}>
+            {users.map(u=>(
+              <div key={u.id} style={{background:'#fff',borderRadius:16,padding:'14px 18px',border:`1.5px solid ${assignSuccess===u.id?'#6ECB8A':'#E8E3DA'}`,display:'flex',alignItems:'center',gap:12,transition:'border-color .2s'}}>
+                <div style={{width:40,height:40,borderRadius:12,background:'#F0EEFF',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:700,fontSize:15,color:'#6C63FF',flexShrink:0}}>{u.name?.split(' ').map(n=>n[0]).join('')||'?'}</div>
+                <div style={{flex:1}}>
+                  <div style={{fontWeight:600,fontSize:14,color:'#1A1A2E'}}>{u.name}</div>
+                  <div style={{fontSize:12,color:'#9B98B8'}}>{u.email}</div>
+                </div>
+                <button onClick={()=>assignFolderToUser(u)} disabled={!!assigning} style={{padding:'8px 16px',borderRadius:10,border:'none',background:assignSuccess===u.id?'#1A6644':'#6C63FF',color:'#fff',fontSize:12,fontWeight:700,cursor:assigning?'default':'pointer',display:'flex',alignItems:'center',gap:6,flexShrink:0}}>
+                  {assigning===u.id?<Spin/>:assignSuccess===u.id?'✓ Assigned':'Assign'}
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+
   // ── Folder List View ──────────────────────────────────────────────────────────
   if(!selectedFolder){
     return(
       <div>
+        {AssignModal}
         <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:24}}>
           <div>
             <h2 style={{fontFamily:"'Inter',sans-serif",fontWeight:800,fontSize:24,color:'#1A1A2E'}}>Question Bank</h2>
@@ -624,11 +657,15 @@ function QuestionsView() {
                   <span style={{color:'#C8C0B0',fontSize:18}}>→</span>
                 </div>
                 <div style={{fontWeight:700,fontSize:17,color:'#1A1A2E',marginBottom:4}}>{f}</div>
-                <div style={{fontSize:13,color:'#9B98B8',marginBottom:topCats.length?12:0}}>{qs.length} question{qs.length!==1?'s':''}</div>
-                {topCats.length>0&&<div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+                <div style={{fontSize:13,color:'#9B98B8',marginBottom:12}}>{qs.length} question{qs.length!==1?'s':''}</div>
+                {topCats.length>0&&<div style={{display:'flex',gap:6,flexWrap:'wrap',marginBottom:14}}>
                   {topCats.map(([c,n])=><span key={c} style={{fontSize:10,fontWeight:600,color:'#6D28D9',background:'#EDE9FE',borderRadius:20,padding:'2px 8px'}}>{c} · {n}</span>)}
                   {Object.keys(catCounts).length>2&&<span style={{fontSize:10,color:'#C8C0B0',alignSelf:'center'}}>+{Object.keys(catCounts).length-2} more</span>}
                 </div>}
+                <button onClick={e=>{e.stopPropagation();setAssignTarget(f);setAssignSuccess(null)}}
+                  style={{marginTop:'auto',padding:'8px 0',borderRadius:10,border:'1.5px solid #6C63FF',background:'#F0EEFF',color:'#6C63FF',fontSize:12,fontWeight:700,cursor:'pointer',width:'100%'}}>
+                  Assign to Patient
+                </button>
               </div>
             )
           })}
@@ -649,36 +686,7 @@ function QuestionsView() {
 
   return(
     <div>
-      {showAssign&&(
-        <div style={{position:'fixed',inset:0,background:'rgba(10,10,20,.7)',backdropFilter:'blur(6px)',zIndex:200,display:'flex',alignItems:'center',justifyContent:'center',padding:20}}>
-          <div style={{background:'#F4F1EC',borderRadius:24,width:'100%',maxWidth:480,boxShadow:'0 32px 80px rgba(0,0,0,.2)',animation:'pop .25s ease',maxHeight:'80vh',display:'flex',flexDirection:'column'}}>
-            <div style={{background:'#1A1A2E',borderRadius:'24px 24px 0 0',padding:'24px 28px',display:'flex',alignItems:'center',justifyContent:'space-between',flexShrink:0}}>
-              <div>
-                <div style={{fontWeight:700,fontSize:18,color:'#E8E4FF'}}>Assign to Patient</div>
-                <div style={{fontSize:12,color:'#6B6888',marginTop:3}}>"{selectedFolder}" · 5 sessions/day · 15 days</div>
-              </div>
-              <button onClick={()=>setShowAssign(false)} style={{background:'#FFFFFF1A',border:'none',color:'#E8E4FF',borderRadius:10,padding:'8px 14px',fontSize:13,cursor:'pointer'}}>Close</button>
-            </div>
-            <div style={{padding:'20px 24px',overflowY:'auto'}}>
-              {users.length===0&&<div style={{textAlign:'center',padding:30,color:'#C8C0B0'}}>No patients found.</div>}
-              <div style={{display:'flex',flexDirection:'column',gap:10}}>
-                {users.map(u=>(
-                  <div key={u.id} style={{background:'#fff',borderRadius:16,padding:'14px 18px',border:`1.5px solid ${assignSuccess===u.id?'#6ECB8A':'#E8E3DA'}`,display:'flex',alignItems:'center',gap:12,transition:'border-color .2s'}}>
-                    <div style={{width:40,height:40,borderRadius:12,background:'#F0EEFF',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:700,fontSize:15,color:'#6C63FF',flexShrink:0}}>{u.name?.split(' ').map(n=>n[0]).join('')||'?'}</div>
-                    <div style={{flex:1}}>
-                      <div style={{fontWeight:600,fontSize:14,color:'#1A1A2E'}}>{u.name}</div>
-                      <div style={{fontSize:12,color:'#9B98B8'}}>{u.email}</div>
-                    </div>
-                    <button onClick={()=>assignFolderToUser(u)} disabled={!!assigning} style={{padding:'8px 16px',borderRadius:10,border:'none',background:assignSuccess===u.id?'#1A6644':'#6C63FF',color:'#fff',fontSize:12,fontWeight:700,cursor:assigning?'default':'pointer',display:'flex',alignItems:'center',gap:6,flexShrink:0}}>
-                      {assigning===u.id?<Spin/>:assignSuccess===u.id?'✓ Assigned':'Assign'}
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {AssignModal}
 
       <div style={{display:'flex',alignItems:'center',gap:14,marginBottom:24,flexWrap:'wrap'}}>
         <button onClick={()=>{setSelectedFolder(null);setShowForm(false)}} style={{background:'none',border:'1.5px solid #E5E0D8',borderRadius:10,padding:'8px 14px',fontSize:13,color:'#6B6888',cursor:'pointer',fontWeight:600,flexShrink:0}}>← Folders</button>
@@ -686,7 +694,7 @@ function QuestionsView() {
           <h2 style={{fontFamily:"'Inter',sans-serif",fontWeight:800,fontSize:22,color:'#1A1A2E',margin:0}}>{selectedFolder}</h2>
           <p style={{fontSize:13,color:'#9B98B8',margin:'2px 0 0'}}>{filtered.length} of {folderQs.length} questions</p>
         </div>
-        <button onClick={()=>setShowAssign(true)} style={{background:'#6C63FF',color:'#fff',border:'none',borderRadius:14,padding:'11px 20px',fontSize:14,fontWeight:700,cursor:'pointer',flexShrink:0}}>Assign to Patient</button>
+        <button onClick={()=>{setAssignTarget(selectedFolder);setAssignSuccess(null)}} style={{background:'#6C63FF',color:'#fff',border:'none',borderRadius:14,padding:'11px 20px',fontSize:14,fontWeight:700,cursor:'pointer',flexShrink:0}}>Assign to Patient</button>
         <button onClick={openNew} style={{background:'#1A1A2E',color:'#E8E4FF',border:'none',borderRadius:14,padding:'11px 20px',fontSize:14,fontWeight:700,cursor:'pointer',flexShrink:0}}>+ New Question</button>
       </div>
 
