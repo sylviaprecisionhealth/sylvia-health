@@ -7,11 +7,11 @@ import {
 import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth'
 
 const G = `
-  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&display=swap');
   *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-  body{background:#F4F1EC;font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased}
-  ::-webkit-scrollbar{width:4px} ::-webkit-scrollbar-thumb{background:#C8C0B0;border-radius:4px}
-  input,textarea,select{font-family:'Inter',sans-serif} input:focus,textarea:focus,select:focus{outline:none}
+  body{background:#F5EFE8;font-family:system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased}
+  ::-webkit-scrollbar{width:4px} ::-webkit-scrollbar-thumb{background:#C8B8A8;border-radius:4px}
+  input,textarea,select{font-family:system-ui,-apple-system,sans-serif} input:focus,textarea:focus,select:focus{outline:none}
   @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
   @keyframes pop{from{opacity:0;transform:scale(0.96)}to{opacity:1;transform:scale(1)}}
   @keyframes spin{to{transform:rotate(360deg)}}
@@ -32,13 +32,26 @@ function useMobile(){
   return m
 }
 
-const Spin = () => <div style={{width:18,height:18,border:'2px solid #E5E0D8',borderTop:'2px solid #6C63FF',borderRadius:'50%',animation:'spin .7s linear infinite',flexShrink:0}}/>
+const Spin = () => <div style={{width:18,height:18,border:'2px solid #E5E0D8',borderTop:'2px solid #8B3A2A',borderRadius:'50%',animation:'spin .7s linear infinite',flexShrink:0}}/>
 const Badge = ({status}) => { const m={active:['#1A6644','#D1FAE5'],paused:['#92400E','#FEF3C7']}; const [c,bg]=m[status]||['#374151','#F3F4F6']; return <span style={{fontSize:11,fontWeight:600,color:c,background:bg,borderRadius:20,padding:'3px 10px',textTransform:'capitalize'}}>{status}</span> }
-const TBadge = ({type}) => { const m={scale:['#1D4ED8','#DBEAFE'],choice:['#6D28D9','#EDE9FE'],text:['#065F46','#D1FAE5']}; const [c,bg]=m[type]||['#374151','#F3F4F6']; const t=Q_TYPES.find(q=>q.id===type); return <span style={{fontSize:11,fontWeight:600,color:c,background:bg,borderRadius:20,padding:'3px 10px'}}>{t?.icon} {t?.label}</span> }
-const Lbl = ({children}) => <label style={{fontSize:11,fontWeight:600,color:'#6B6888',letterSpacing:1,textTransform:'uppercase',display:'block',marginBottom:8}}>{children}</label>
+const TBadge = ({type}) => { const m={scale:['#8B6914','#FEF3CD'],choice:['#8B3A2A','#FBF0E8'],text:['#065F46','#D1FAE5']}; const [c,bg]=m[type]||['#374151','#F3F4F6']; const t=Q_TYPES.find(q=>q.id===type); return <span style={{fontSize:11,fontWeight:600,color:c,background:bg,borderRadius:20,padding:'3px 10px'}}>{t?.icon} {t?.label}</span> }
+const Lbl = ({children}) => <label style={{fontSize:11,fontWeight:600,color:'#7A6355',letterSpacing:1,textTransform:'uppercase',display:'block',marginBottom:8}}>{children}</label>
 const Field = ({label,children}) => <div style={{marginBottom:18}}><Lbl>{label}</Lbl>{children}</div>
-const inp = {border:'1.5px solid #E5E0D8',borderRadius:12,padding:'11px 14px',fontSize:14,color:'#1A1A2E',background:'#FAFAF8',width:'100%'}
-const Logo = () => <svg width="36" height="36" viewBox="0 0 44 44" fill="none"><rect width="44" height="44" rx="11" fill="#6C63FF" fillOpacity=".18"/><circle cx="22" cy="22" r="8" stroke="#A89FFF" strokeWidth="1.5" fill="none"/><circle cx="22" cy="22" r="3" fill="#A89FFF"/><line x1="22" y1="9" x2="22" y2="14" stroke="#6C63FF" strokeWidth="1.5" strokeLinecap="round"/><line x1="22" y1="30" x2="22" y2="35" stroke="#6C63FF" strokeWidth="1.5" strokeLinecap="round"/><line x1="9" y1="22" x2="14" y2="22" stroke="#6C63FF" strokeWidth="1.5" strokeLinecap="round"/><line x1="30" y1="22" x2="35" y2="22" stroke="#6C63FF" strokeWidth="1.5" strokeLinecap="round"/></svg>
+const inp = {border:'1.5px solid #E5E0D8',borderRadius:12,padding:'11px 14px',fontSize:14,color:'#1A0F0A',background:'#FAF6F0',width:'100%'}
+const Logo = () => (
+  <svg viewBox="0 0 100 100" width="36" height="36" xmlns="http://www.w3.org/2000/svg">
+    <polygon points="50,8 88,71 12,71" fill="none" stroke="#8B6914" strokeWidth="3.5"/>
+    <polygon points="50,92 12,29 88,29" fill="none" stroke="#6B4C7A" strokeWidth="3.5"/>
+    <circle cx="50" cy="8" r="4" fill="#8B6914"/>
+    <circle cx="88" cy="29" r="4" fill="#8B6914"/>
+    <circle cx="88" cy="71" r="4" fill="#8B6914"/>
+    <circle cx="50" cy="92" r="4" fill="#8B6914"/>
+    <circle cx="12" cy="71" r="4" fill="#8B6914"/>
+    <circle cx="12" cy="29" r="4" fill="#8B6914"/>
+    <circle cx="50" cy="50" r="16" fill="none" stroke="#8B6914" strokeWidth="2.5"/>
+    <text x="50" y="57" fontFamily="Georgia,serif" fontSize="20" fill="#8B6914" textAnchor="middle">S</text>
+  </svg>
+)
 
 // ── Admin Login ───────────────────────────────────────────────────────────────
 function AdminLogin({onLogin}) {
@@ -50,14 +63,14 @@ function AdminLogin({onLogin}) {
     setLoading(false)
   }
   return (
-    <div style={{minHeight:'100vh',background:'#1A1A2E',display:'flex',alignItems:'center',justifyContent:'center',padding:24}}>
+    <div style={{minHeight:'100vh',background:'#1A0F0A',display:'flex',alignItems:'center',justifyContent:'center',padding:24}}>
       <style>{G}</style>
       <div style={{background:'#fff',borderRadius:24,padding:36,width:'100%',maxWidth:400,boxShadow:'0 32px 80px rgba(0,0,0,.3)',animation:'pop .3s ease'}}>
-        <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:28}}><Logo/><div><div style={{fontFamily:"'Inter',sans-serif",fontWeight:800,fontSize:20,color:'#1A1A2E'}}>Sylvia</div><div style={{fontSize:11,color:'#9B98B8'}}>Admin Console</div></div></div>
+        <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:28}}><Logo/><div><div style={{fontFamily:"'Playfair Display',serif",fontWeight:800,fontSize:20,color:'#1A0F0A'}}>Sylvia</div><div style={{fontSize:11,color:'#9B8878'}}>Admin Console</div></div></div>
         <Field label="Email"><input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="admin@example.com" style={inp} onKeyDown={e=>e.key==='Enter'&&login()}/></Field>
         <Field label="Password"><input type="password" value={pw} onChange={e=>setPw(e.target.value)} placeholder="••••••••" style={inp} onKeyDown={e=>e.key==='Enter'&&login()}/></Field>
         {err&&<p style={{color:'#EF4444',fontSize:12,marginBottom:12,lineHeight:1.5}}>{err}</p>}
-        <button onClick={login} disabled={loading} style={{width:'100%',padding:13,borderRadius:12,border:'none',background:'#1A1A2E',color:'#E8E4FF',fontSize:15,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>{loading?<Spin/>:'Sign In →'}</button>
+        <button onClick={login} disabled={loading} style={{width:'100%',padding:13,borderRadius:12,border:'none',background:'#1A0F0A',color:'#F5EFE8',fontSize:15,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>{loading?<Spin/>:'Sign In →'}</button>
       </div>
     </div>
   )
@@ -74,22 +87,22 @@ function Sidebar({active,setActive,onLogout,open,onClose}) {
   return (
     <>
       {isMobile&&open&&<div onClick={onClose} style={{position:'fixed',inset:0,background:'rgba(0,0,0,.5)',zIndex:99,backdropFilter:'blur(2px)'}}/>}
-      <div style={{width:230,background:'#1A1A2E',minHeight:'100vh',display:'flex',flexDirection:'column',padding:'28px 0',flexShrink:0,...(isMobile&&{position:'fixed',top:0,left:0,height:'100%',zIndex:100,transform:open?'translateX(0)':'translateX(-100%)',transition:'transform .25s ease',boxShadow:open?'4px 0 32px rgba(0,0,0,.4)':'none'})}}>
+      <div style={{width:230,background:'#1A0F0A',minHeight:'100vh',display:'flex',flexDirection:'column',padding:'28px 0',flexShrink:0,...(isMobile&&{position:'fixed',top:0,left:0,height:'100%',zIndex:100,transform:open?'translateX(0)':'translateX(-100%)',transition:'transform .25s ease',boxShadow:open?'4px 0 32px rgba(0,0,0,.4)':'none'})}}>
         <div style={{padding:'0 20px 28px'}}>
-          <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:14}}><Logo/><div><div style={{fontFamily:"'Inter',sans-serif",fontWeight:800,fontSize:22,color:'#E8E4FF',letterSpacing:-0.3}}>Sylvia</div><div style={{fontSize:11,color:'#6B6888',marginTop:2}}>Precision Health</div></div></div>
-          <div style={{fontSize:10,color:'#4A4A72',background:'#FFFFFF0A',borderRadius:6,padding:'3px 10px',display:'inline-block',letterSpacing:1,textTransform:'uppercase'}}>Admin Console</div>
+          <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:14}}><Logo/><div><div style={{fontFamily:"'Playfair Display',serif",fontWeight:800,fontSize:22,color:'#F5EFE8',letterSpacing:-0.3}}>Sylvia</div><div style={{fontSize:11,color:'#7A6355',marginTop:2}}>Precision Health</div></div></div>
+          <div style={{fontSize:10,color:'#6B4C3A',background:'#FFFFFF0A',borderRadius:6,padding:'3px 10px',display:'inline-block',letterSpacing:1,textTransform:'uppercase'}}>Admin Console</div>
         </div>
         <div style={{flex:1,padding:'0 12px'}}>
           {nav.map(n=>(
             <button key={n.id} onClick={()=>{setActive(n.id);if(isMobile)onClose()}} style={{width:'100%',display:'flex',alignItems:'center',gap:10,padding:'11px 14px',borderRadius:12,border:'none',cursor:'pointer',marginBottom:4,background:active===n.id?'#FFFFFF12':'transparent',transition:'background .15s'}}>
-              <span style={{fontSize:16,color:active===n.id?'#A89FFF':'#4A4A72'}}>{n.icon}</span>
-              <span style={{fontWeight:active===n.id?600:400,fontSize:14,color:active===n.id?'#E8E4FF':'#6B6888'}}>{n.label}</span>
-              {active===n.id&&<div style={{marginLeft:'auto',width:5,height:5,borderRadius:'50%',background:'#A89FFF'}}/>}
+              <span style={{fontSize:16,color:active===n.id?'#D4956A':'#6B4C3A'}}>{n.icon}</span>
+              <span style={{fontWeight:active===n.id?600:400,fontSize:14,color:active===n.id?'#F5EFE8':'#7A6355'}}>{n.label}</span>
+              {active===n.id&&<div style={{marginLeft:'auto',width:5,height:5,borderRadius:'50%',background:'#D4956A'}}/>}
             </button>
           ))}
         </div>
         <div style={{padding:'16px 20px 0',borderTop:'1px solid #FFFFFF0A'}}>
-          <button onClick={onLogout} style={{background:'none',border:'none',color:'#4A4A72',fontSize:12,cursor:'pointer',padding:0}}>Sign out</button>
+          <button onClick={onLogout} style={{background:'none',border:'none',color:'#6B4C3A',fontSize:12,cursor:'pointer',padding:0}}>Sign out</button>
         </div>
       </div>
     </>
@@ -101,11 +114,11 @@ function ScheduleEntryEditor({entry, onChange}) {
   const [mode, setMode] = useState(entry.mode || 'time')
   const isMobile=useMobile()
   return (
-    <div style={{background:'#FAFAF8',borderRadius:12,padding:14,border:'1px solid #E5E0D8',marginTop:10}}>
+    <div style={{background:'#FAF6F0',borderRadius:12,padding:14,border:'1px solid #E5E0D8',marginTop:10}}>
       <div style={{display:'flex',gap:8,marginBottom:12}}>
         {[['time','At a specific time'],['interval','At an interval']].map(([m,l])=>(
           <button key={m} onClick={()=>{setMode(m);onChange({...entry,mode:m})}}
-            style={{flex:1,padding:'8px 10px',borderRadius:10,border:`1.5px solid ${mode===m?'#6C63FF':'#E5E0D8'}`,background:mode===m?'#F0EEFF':'#fff',color:mode===m?'#6C63FF':'#9B98B8',fontSize:12,fontWeight:600,cursor:'pointer'}}>
+            style={{flex:1,padding:'8px 10px',borderRadius:10,border:`1.5px solid ${mode===m?'#8B3A2A':'#E5E0D8'}`,background:mode===m?'#FBF0E8':'#fff',color:mode===m?'#8B3A2A':'#9B8878',fontSize:12,fontWeight:600,cursor:'pointer'}}>
             {l}
           </button>
         ))}
@@ -113,11 +126,11 @@ function ScheduleEntryEditor({entry, onChange}) {
       {mode==='time' && (
         <div style={{display:'flex',gap:10,flexDirection:isMobile?'column':'row'}}>
           <div style={{flex:1}}>
-            <div style={{fontSize:11,color:'#9B98B8',marginBottom:4}}>Send time</div>
+            <div style={{fontSize:11,color:'#9B8878',marginBottom:4}}>Send time</div>
             <input type="time" value={entry.time||'08:00'} onChange={e=>onChange({...entry,time:e.target.value,mode:'time',repeat:'Daily'})} style={{...inp,padding:'8px 10px',borderRadius:8}}/>
           </div>
           <div style={{flex:1}}>
-            <div style={{fontSize:11,color:'#9B98B8',marginBottom:4}}>Repeat</div>
+            <div style={{fontSize:11,color:'#9B8878',marginBottom:4}}>Repeat</div>
             <select value={entry.repeat||'Daily'} onChange={e=>onChange({...entry,repeat:e.target.value})} style={{...inp,padding:'8px 10px',borderRadius:8}}>
               {REPEATS.map(r=><option key={r} value={r}>{r}</option>)}
             </select>
@@ -128,15 +141,15 @@ function ScheduleEntryEditor({entry, onChange}) {
         <div>
           <div style={{display:'flex',gap:10,marginBottom:10,flexDirection:isMobile?'column':'row'}}>
             <div style={{flex:1}}>
-              <div style={{fontSize:11,color:'#9B98B8',marginBottom:4}}>Start time</div>
+              <div style={{fontSize:11,color:'#9B8878',marginBottom:4}}>Start time</div>
               <input type="time" value={entry.time||'08:00'} onChange={e=>onChange({...entry,time:e.target.value,mode:'interval',repeat:'Custom interval'})} style={{...inp,padding:'8px 10px',borderRadius:8}}/>
             </div>
             <div style={{flex:1}}>
-              <div style={{fontSize:11,color:'#9B98B8',marginBottom:4}}>Every N hours</div>
+              <div style={{fontSize:11,color:'#9B8878',marginBottom:4}}>Every N hours</div>
               <input type="number" min={1} max={24} value={entry.interval||4} onChange={e=>onChange({...entry,interval:+e.target.value,repeat:'Custom interval',mode:'interval'})} style={{...inp,padding:'8px 10px',borderRadius:8}}/>
             </div>
           </div>
-          <div style={{fontSize:11,color:'#9B98B8'}}>Sends every {entry.interval||4} hour{(entry.interval||4)!==1?'s':''} starting at {entry.time||'08:00'}</div>
+          <div style={{fontSize:11,color:'#9B8878'}}>Sends every {entry.interval||4} hour{(entry.interval||4)!==1?'s':''} starting at {entry.time||'08:00'}</div>
         </div>
       )}
     </div>
@@ -192,22 +205,22 @@ function DefaultScheduleView({questions}) {
     <div>
       <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',marginBottom:8}}>
         <div>
-          <h2 style={{fontFamily:"'Inter',sans-serif",fontWeight:800,fontSize:24,color:'#1A1A2E'}}>Default Schedule</h2>
-          <p style={{fontSize:13,color:'#9B98B8',marginTop:4}}>{items.length} questions selected · Apply to any user in one click from the Users tab</p>
+          <h2 style={{fontFamily:"'Playfair Display',serif",fontWeight:800,fontSize:24,color:'#1A0F0A'}}>Default Schedule</h2>
+          <p style={{fontSize:13,color:'#9B8878',marginTop:4}}>{items.length} questions selected · Apply to any user in one click from the Users tab</p>
         </div>
-        <button onClick={saveDefault} disabled={saving} style={{background:saved?'#1A6644':'#1A1A2E',color:'#E8E4FF',border:'none',borderRadius:14,padding:'11px 20px',fontSize:14,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',gap:8,flexShrink:0}}>
+        <button onClick={saveDefault} disabled={saving} style={{background:saved?'#1A6644':'#1A0F0A',color:'#F5EFE8',border:'none',borderRadius:14,padding:'11px 20px',fontSize:14,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',gap:8,flexShrink:0}}>
           {saving?<Spin/>:saved?'Saved ✓':'Save Default'}
         </button>
       </div>
 
-      <div style={{background:'#DBEAFE',borderRadius:12,padding:'12px 16px',marginBottom:20}}>
-        <div style={{fontSize:12,color:'#1D4ED8',fontWeight:600,marginBottom:2}}>How this works</div>
-        <div style={{fontSize:12,color:'#1D4ED8',lineHeight:1.6}}>Select questions below and set a time or interval for each. Save, then go to Users → click a patient → "Apply Default Schedule" to assign this bundle to them instantly.</div>
+      <div style={{background:'#FEF3CD',borderRadius:12,padding:'12px 16px',marginBottom:20}}>
+        <div style={{fontSize:12,color:'#8B6914',fontWeight:600,marginBottom:2}}>How this works</div>
+        <div style={{fontSize:12,color:'#8B6914',lineHeight:1.6}}>Select questions below and set a time or interval for each. Save, then go to Users → click a patient → "Apply Default Schedule" to assign this bundle to them instantly.</div>
       </div>
 
       <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search questions…" style={{...inp,marginBottom:12}}/>
       <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:20}}>
-        {cats.map(c=><button key={c} onClick={()=>setCatFilter(c)} style={{padding:'5px 12px',borderRadius:20,border:`1.5px solid ${catFilter===c?'#1A1A2E':'#E5E0D8'}`,background:catFilter===c?'#1A1A2E':'#fff',color:catFilter===c?'#E8E4FF':'#9B98B8',fontSize:11,fontWeight:600,cursor:'pointer',whiteSpace:'nowrap'}}>{c}</button>)}
+        {cats.map(c=><button key={c} onClick={()=>setCatFilter(c)} style={{padding:'5px 12px',borderRadius:20,border:`1.5px solid ${catFilter===c?'#1A0F0A':'#E5E0D8'}`,background:catFilter===c?'#1A0F0A':'#fff',color:catFilter===c?'#F5EFE8':'#9B8878',fontSize:11,fontWeight:600,cursor:'pointer',whiteSpace:'nowrap'}}>{c}</button>)}
       </div>
 
       {loading&&<div style={{display:'flex',justifyContent:'center',padding:40}}><Spin/></div>}
@@ -216,17 +229,17 @@ function DefaultScheduleView({questions}) {
           const selected = isSelected(q.id)
           const entry = items.find(i=>i.questionId===q.id)
           return (
-            <div key={q.id} style={{background:'#fff',borderRadius:16,padding:'16px 18px',border:`1.5px solid ${selected?'#6C63FF':'#E8E3DA'}`,transition:'border-color .2s'}}>
+            <div key={q.id} style={{background:'#fff',borderRadius:16,padding:'16px 18px',border:`1.5px solid ${selected?'#8B3A2A':'#E8E3DA'}`,transition:'border-color .2s'}}>
               <div style={{display:'flex',alignItems:'flex-start',gap:12}}>
-                <div onClick={()=>toggleQuestion(q)} style={{width:22,height:22,borderRadius:6,border:`2px solid ${selected?'#6C63FF':'#D1D5DB'}`,background:selected?'#6C63FF':'#fff',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0,marginTop:2}}>
+                <div onClick={()=>toggleQuestion(q)} style={{width:22,height:22,borderRadius:6,border:`2px solid ${selected?'#8B3A2A':'#D1D5DB'}`,background:selected?'#8B3A2A':'#fff',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0,marginTop:2}}>
                   {selected&&<span style={{color:'#fff',fontSize:13,fontWeight:700}}>✓</span>}
                 </div>
                 <div style={{flex:1}}>
                   <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:4,flexWrap:'wrap'}}>
                     <TBadge type={q.type}/>
-                    {q.category&&q.category!=='General'&&<span style={{fontSize:11,color:'#6D28D9',background:'#EDE9FE',borderRadius:20,padding:'2px 8px',fontWeight:600}}>{q.category}</span>}
+                    {q.category&&q.category!=='General'&&<span style={{fontSize:11,color:'#8B3A2A',background:'#FBF0E8',borderRadius:20,padding:'2px 8px',fontWeight:600}}>{q.category}</span>}
                   </div>
-                  <p style={{fontSize:14,color:'#1A1A2E',lineHeight:1.4,fontWeight:500,margin:0,cursor:'pointer'}} onClick={()=>toggleQuestion(q)}>{q.text}</p>
+                  <p style={{fontSize:14,color:'#1A0F0A',lineHeight:1.4,fontWeight:500,margin:0,cursor:'pointer'}} onClick={()=>toggleQuestion(q)}>{q.text}</p>
                   {selected&&entry&&<ScheduleEntryEditor entry={entry} onChange={e=>updateEntry(q.id,e)}/>}
                 </div>
               </div>
@@ -250,17 +263,17 @@ function ScheduleRow({s, q, saving, onSave, onToggle, onRemove}) {
             <TBadge type={q.type}/>
             <span style={{fontSize:11,color:s.active?'#1A6644':'#92400E',background:s.active?'#D1FAE5':'#FEF3C7',borderRadius:20,padding:'2px 8px',fontWeight:600}}>{s.active?'Active':'Paused'}</span>
           </div>
-          <p style={{fontSize:13,color:'#1A1A2E',fontWeight:500,margin:'0 0 6px',lineHeight:1.4}}>{q.text.length>70?q.text.slice(0,70)+'…':q.text}</p>
-          <div style={{fontSize:11,color:'#9B98B8'}}>{s.mode==='interval'?`Every ${s.interval}h from ${s.time}`:`Daily at ${s.time}`}</div>
+          <p style={{fontSize:13,color:'#1A0F0A',fontWeight:500,margin:'0 0 6px',lineHeight:1.4}}>{q.text.length>70?q.text.slice(0,70)+'…':q.text}</p>
+          <div style={{fontSize:11,color:'#9B8878'}}>{s.mode==='interval'?`Every ${s.interval}h from ${s.time}`:`Daily at ${s.time}`}</div>
           {editing&&<ScheduleEntryEditor entry={entry} onChange={e=>setEntry(e)}/>}
         </div>
         <div style={{display:'flex',gap:5,flexShrink:0,flexWrap:'wrap',justifyContent:'flex-end'}}>
           {editing?(
-            <button onClick={async()=>{await onSave(s.id,entry);setEditing(false)}} style={{padding:'5px 10px',borderRadius:8,border:'none',background:'#1A1A2E',color:'#fff',fontSize:11,fontWeight:600,cursor:'pointer',display:'flex',alignItems:'center',gap:4}}>{saving===s.id?<Spin/>:'Save'}</button>
+            <button onClick={async()=>{await onSave(s.id,entry);setEditing(false)}} style={{padding:'5px 10px',borderRadius:8,border:'none',background:'#1A0F0A',color:'#fff',fontSize:11,fontWeight:600,cursor:'pointer',display:'flex',alignItems:'center',gap:4}}>{saving===s.id?<Spin/>:'Save'}</button>
           ):(
-            <button onClick={()=>setEditing(true)} style={{padding:'5px 10px',borderRadius:8,border:'1.5px solid #E5E0D8',background:'#fff',color:'#6B6888',fontSize:11,fontWeight:600,cursor:'pointer'}}>Edit</button>
+            <button onClick={()=>setEditing(true)} style={{padding:'5px 10px',borderRadius:8,border:'1.5px solid #E5E0D8',background:'#fff',color:'#7A6355',fontSize:11,fontWeight:600,cursor:'pointer'}}>Edit</button>
           )}
-          <button onClick={()=>onToggle(s)} style={{padding:'5px 10px',borderRadius:8,border:'1.5px solid #E5E0D8',background:'#fff',color:'#6B6888',fontSize:11,fontWeight:600,cursor:'pointer'}}>{s.active?'Pause':'Resume'}</button>
+          <button onClick={()=>onToggle(s)} style={{padding:'5px 10px',borderRadius:8,border:'1.5px solid #E5E0D8',background:'#fff',color:'#7A6355',fontSize:11,fontWeight:600,cursor:'pointer'}}>{s.active?'Pause':'Resume'}</button>
           <button onClick={()=>onRemove(s)} style={{padding:'5px 8px',borderRadius:8,border:'1.5px solid #FEE2E2',background:'#fff',color:'#EF4444',fontSize:11,cursor:'pointer'}}>✕</button>
         </div>
       </div>
@@ -338,45 +351,45 @@ function UserProfileModal({user, questions, onClose}) {
 
   return (
     <div style={{position:'fixed',inset:0,background:'rgba(10,10,20,.7)',backdropFilter:'blur(6px)',zIndex:200,display:'flex',alignItems:'flex-start',justifyContent:'center',padding:20,overflowY:'auto'}}>
-      <div style={{background:'#F4F1EC',borderRadius:24,width:'100%',maxWidth:620,boxShadow:'0 32px 80px rgba(0,0,0,.2)',animation:'pop .25s ease',marginTop:20,marginBottom:20}}>
-        <div style={{background:'#1A1A2E',borderRadius:'24px 24px 0 0',padding:'24px 28px'}}>
+      <div style={{background:'#F5EFE8',borderRadius:24,width:'100%',maxWidth:620,boxShadow:'0 32px 80px rgba(0,0,0,.2)',animation:'pop .25s ease',marginTop:20,marginBottom:20}}>
+        <div style={{background:'#1A0F0A',borderRadius:'24px 24px 0 0',padding:'24px 28px'}}>
           <div style={{display:'flex',alignItems:'center',gap:14}}>
-            <div style={{width:46,height:46,borderRadius:14,background:'#F0EEFF',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:800,fontSize:18,color:'#6C63FF',flexShrink:0}}>{user.name?.split(' ').map(n=>n[0]).join('')||'?'}</div>
+            <div style={{width:46,height:46,borderRadius:14,background:'#FBF0E8',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:800,fontSize:18,color:'#8B3A2A',flexShrink:0}}>{user.name?.split(' ').map(n=>n[0]).join('')||'?'}</div>
             <div style={{flex:1}}>
-              <div style={{fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:20,color:'#E8E4FF'}}>{user.name}</div>
-              <div style={{fontSize:12,color:'#6B6888',marginTop:2}}>{user.email} · Joined {user.joinedDate}</div>
+              <div style={{fontFamily:"'Playfair Display',serif",fontWeight:700,fontSize:20,color:'#F5EFE8'}}>{user.name}</div>
+              <div style={{fontSize:12,color:'#7A6355',marginTop:2}}>{user.email} · Joined {user.joinedDate}</div>
             </div>
-            <button onClick={onClose} style={{background:'#FFFFFF1A',border:'none',color:'#E8E4FF',borderRadius:10,padding:'8px 14px',fontSize:13,cursor:'pointer'}}>Close</button>
+            <button onClick={onClose} style={{background:'#FFFFFF1A',border:'none',color:'#F5EFE8',borderRadius:10,padding:'8px 14px',fontSize:13,cursor:'pointer'}}>Close</button>
           </div>
-          <button onClick={applyDefault} disabled={applying} style={{marginTop:16,width:'100%',background:applySuccess?'#1A6644':'linear-gradient(135deg,#6C63FF,#4A42CC)',color:'#fff',border:'none',borderRadius:12,padding:'11px',fontSize:14,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:8,transition:'background .3s'}}>
+          <button onClick={applyDefault} disabled={applying} style={{marginTop:16,width:'100%',background:applySuccess?'#1A6644':'linear-gradient(135deg,#8B3A2A,#6B2C1E)',color:'#fff',border:'none',borderRadius:12,padding:'11px',fontSize:14,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:8,transition:'background .3s'}}>
             {applying?<><Spin/> Applying…</>:applySuccess?'✓ Applied — 5×/day for 15 days':'⚡ Apply Default Schedule (15 days · 5×/day · all 92 questions)'}
           </button>
-          {defaultSched&&daysLeft!==null&&<div style={{marginTop:8,fontSize:12,color:'#A89FFF',textAlign:'center'}}>{daysLeft>0?`${daysLeft} day${daysLeft!==1?'s':''} remaining · ends ${defaultSched.endDate}`:'Schedule has ended'}</div>}
+          {defaultSched&&daysLeft!==null&&<div style={{marginTop:8,fontSize:12,color:'#D4956A',textAlign:'center'}}>{daysLeft>0?`${daysLeft} day${daysLeft!==1?'s':''} remaining · ends ${defaultSched.endDate}`:'Schedule has ended'}</div>}
         </div>
 
         <div style={{padding:'20px 24px'}}>
           <div style={{display:'flex',gap:8,marginBottom:20}}>
             {[['active',`Active Schedule (${userSchedules.length})`],['add','Add Questions']].map(([t,l])=>(
-              <button key={t} onClick={()=>setTab(t)} style={{flex:1,padding:'10px',borderRadius:12,border:`1.5px solid ${tab===t?'#1A1A2E':'#E5E0D8'}`,background:tab===t?'#1A1A2E':'#fff',color:tab===t?'#E8E4FF':'#9B98B8',fontSize:13,fontWeight:600,cursor:'pointer'}}>{l}</button>
+              <button key={t} onClick={()=>setTab(t)} style={{flex:1,padding:'10px',borderRadius:12,border:`1.5px solid ${tab===t?'#1A0F0A':'#E5E0D8'}`,background:tab===t?'#1A0F0A':'#fff',color:tab===t?'#F5EFE8':'#9B8878',fontSize:13,fontWeight:600,cursor:'pointer'}}>{l}</button>
             ))}
           </div>
 
           {tab==='active'&&<>
             {userSchedules.length===0&&<div style={{textAlign:'center',padding:'40px 20px',color:'#C8C0B0'}}><p style={{fontSize:15}}>No schedule assigned yet.</p><p style={{fontSize:13,marginTop:4}}>Click the button above to apply the default schedule.</p></div>}
             {userSchedules.length>0&&<>
-              <div style={{fontSize:11,fontWeight:700,color:'#9B98B8',letterSpacing:1.5,textTransform:'uppercase',marginBottom:10}}>
+              <div style={{fontSize:11,fontWeight:700,color:'#9B8878',letterSpacing:1.5,textTransform:'uppercase',marginBottom:10}}>
                 {userSchedules.some(s=>s.isDefaultSession)?'Default Schedule (All 92 Questions)':'Individual Schedules'}
               </div>
               {userSchedules.filter(s=>s.isDefaultSession).length>0&&(
                 <div style={{background:'#fff',borderRadius:14,padding:'16px',border:'1.5px solid #E8E3DA',marginBottom:12}}>
                   <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:8}}>
                     <div>
-                      <div style={{fontWeight:600,fontSize:14,color:'#1A1A2E'}}>All 92 Questions · 5 sessions/day</div>
-                      <div style={{fontSize:12,color:'#9B98B8',marginTop:2}}>9:00 AM · 12:00 PM · 3:00 PM · 6:00 PM · 9:00 PM</div>
+                      <div style={{fontWeight:600,fontSize:14,color:'#1A0F0A'}}>All 92 Questions · 5 sessions/day</div>
+                      <div style={{fontSize:12,color:'#9B8878',marginTop:2}}>9:00 AM · 12:00 PM · 3:00 PM · 6:00 PM · 9:00 PM</div>
                     </div>
                     <span style={{fontSize:11,color:'#1A6644',background:'#D1FAE5',borderRadius:20,padding:'3px 10px',fontWeight:600}}>Active</span>
                   </div>
-                  {defaultSched&&<div style={{fontSize:12,color:'#9B98B8',marginBottom:12}}>{defaultSched.startDate} → {defaultSched.endDate} ({daysLeft>0?`${daysLeft} days left`:'ended'})</div>}
+                  {defaultSched&&<div style={{fontSize:12,color:'#9B8878',marginBottom:12}}>{defaultSched.startDate} → {defaultSched.endDate} ({daysLeft>0?`${daysLeft} days left`:'ended'})</div>}
                   <button onClick={()=>{ if(window.confirm('Remove this schedule?')) userSchedules.forEach(s=>removeSchedule(s)) }} style={{padding:'6px 14px',borderRadius:8,border:'1.5px solid #FEE2E2',background:'#fff',color:'#EF4444',fontSize:12,fontWeight:600,cursor:'pointer'}}>Remove Schedule</button>
                 </div>
               )}
@@ -390,15 +403,15 @@ function UserProfileModal({user, questions, onClose}) {
 
           {tab==='add'&&<>
             <input value={addSearch} onChange={e=>setAddSearch(e.target.value)} placeholder="Search questions to add…" style={{...inp,marginBottom:12}}/>
-            <p style={{fontSize:12,color:'#9B98B8',marginBottom:14}}>Click any question to add it to this patient's schedule.</p>
+            <p style={{fontSize:12,color:'#9B8878',marginBottom:14}}>Click any question to add it to this patient's schedule.</p>
             <div style={{display:'flex',flexDirection:'column',gap:8,maxHeight:400,overflowY:'auto'}}>
               {availableToAdd.map(q=>(
                 <div key={q.id} onClick={()=>addQuestion(q)} style={{background:'#fff',borderRadius:12,padding:'12px 14px',border:'1.5px solid #E8E3DA',display:'flex',alignItems:'center',gap:10,cursor:'pointer'}}>
                   <div style={{flex:1}}>
-                    <div style={{display:'flex',gap:6,marginBottom:4,flexWrap:'wrap'}}><TBadge type={q.type}/>{q.category&&q.category!=='General'&&<span style={{fontSize:11,color:'#6D28D9',background:'#EDE9FE',borderRadius:20,padding:'2px 8px',fontWeight:600}}>{q.category}</span>}</div>
-                    <p style={{fontSize:13,color:'#1A1A2E',fontWeight:500,margin:0,lineHeight:1.4}}>{q.text.length>80?q.text.slice(0,80)+'…':q.text}</p>
+                    <div style={{display:'flex',gap:6,marginBottom:4,flexWrap:'wrap'}}><TBadge type={q.type}/>{q.category&&q.category!=='General'&&<span style={{fontSize:11,color:'#8B3A2A',background:'#FBF0E8',borderRadius:20,padding:'2px 8px',fontWeight:600}}>{q.category}</span>}</div>
+                    <p style={{fontSize:13,color:'#1A0F0A',fontWeight:500,margin:0,lineHeight:1.4}}>{q.text.length>80?q.text.slice(0,80)+'…':q.text}</p>
                   </div>
-                  <span style={{color:'#6C63FF',fontSize:20,flexShrink:0}}>+</span>
+                  <span style={{color:'#8B3A2A',fontSize:20,flexShrink:0}}>+</span>
                 </div>
               ))}
               {availableToAdd.length===0&&<div style={{textAlign:'center',padding:30,color:'#C8C0B0'}}><p>No more questions to add.</p></div>}
@@ -426,8 +439,8 @@ function UsersView({questions}) {
   return (
     <div>
       <div style={{marginBottom:28}}>
-        <h2 style={{fontFamily:"'Inter',sans-serif",fontWeight:800,fontSize:24,color:'#1A1A2E'}}>Users</h2>
-        <p style={{fontSize:13,color:'#9B98B8',marginTop:4}}>{users.length} enrolled patient{users.length!==1?'s':''} · Click a user to manage their schedule</p>
+        <h2 style={{fontFamily:"'Playfair Display',serif",fontWeight:800,fontSize:24,color:'#1A0F0A'}}>Users</h2>
+        <p style={{fontSize:13,color:'#9B8878',marginTop:4}}>{users.length} enrolled patient{users.length!==1?'s':''} · Click a user to manage their schedule</p>
       </div>
       {loading&&<div style={{display:'flex',justifyContent:'center',padding:40}}><Spin/></div>}
       {!loading&&users.length===0&&<div style={{textAlign:'center',padding:'60px 20px',color:'#C8C0B0'}}><div style={{fontSize:40,marginBottom:12}}>◎</div><p style={{fontSize:15,fontWeight:500}}>No users yet — send an invite to get started</p></div>}
@@ -437,14 +450,14 @@ function UsersView({questions}) {
           const activeCount=userScheds.filter(s=>s.active).length
           return(
             <div key={u.id} onClick={()=>setSelectedUser(u)} style={{background:'#fff',borderRadius:18,padding:'18px 22px',border:'1.5px solid #E8E3DA',display:'flex',alignItems:'center',gap:16,cursor:'pointer',transition:'box-shadow .2s',boxShadow:'0 1px 3px rgba(0,0,0,.04)'}}>
-              <div style={{width:42,height:42,borderRadius:14,background:'#F0EEFF',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:800,fontSize:16,color:'#6C63FF',flexShrink:0}}>{u.name?.split(' ').map(n=>n[0]).join('')||'?'}</div>
+              <div style={{width:42,height:42,borderRadius:14,background:'#FBF0E8',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:800,fontSize:16,color:'#8B3A2A',flexShrink:0}}>{u.name?.split(' ').map(n=>n[0]).join('')||'?'}</div>
               <div style={{flex:1}}>
-                <div style={{fontWeight:600,fontSize:15,color:'#1A1A2E'}}>{u.name}</div>
-                <div style={{fontSize:12,color:'#9B98B8',marginTop:2}}>{u.email} · Joined {u.joinedDate}</div>
+                <div style={{fontWeight:600,fontSize:15,color:'#1A0F0A'}}>{u.name}</div>
+                <div style={{fontSize:12,color:'#9B8878',marginTop:2}}>{u.email} · Joined {u.joinedDate}</div>
               </div>
               <div style={{textAlign:'right',flexShrink:0}}>
                 <Badge status={u.status||'active'}/>
-                <div style={{fontSize:11,color:'#9B98B8',marginTop:5}}>{activeCount} active question{activeCount!==1?'s':''}</div>
+                <div style={{fontSize:11,color:'#9B8878',marginTop:5}}>{activeCount} active question{activeCount!==1?'s':''}</div>
               </div>
               <span style={{color:'#C8C0B0',fontSize:20}}>›</span>
             </div>
@@ -483,53 +496,53 @@ function InvitesView() {
   return (
     <div>
       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:28}}>
-        <div><h2 style={{fontFamily:"'Inter',sans-serif",fontWeight:800,fontSize:24,color:'#1A1A2E'}}>Patient Invites</h2><p style={{fontSize:13,color:'#9B98B8',marginTop:4}}>{pending.length} pending · {used.length} accepted</p></div>
-        <button onClick={()=>{setShowForm(true);setDone(null);setName('');setEmail('')}} style={{background:'#1A1A2E',color:'#E8E4FF',border:'none',borderRadius:14,padding:'11px 20px',fontSize:14,fontWeight:700,cursor:'pointer'}}>+ New Invite</button>
+        <div><h2 style={{fontFamily:"'Playfair Display',serif",fontWeight:800,fontSize:24,color:'#1A0F0A'}}>Patient Invites</h2><p style={{fontSize:13,color:'#9B8878',marginTop:4}}>{pending.length} pending · {used.length} accepted</p></div>
+        <button onClick={()=>{setShowForm(true);setDone(null);setName('');setEmail('')}} style={{background:'#1A0F0A',color:'#F5EFE8',border:'none',borderRadius:14,padding:'11px 20px',fontSize:14,fontWeight:700,cursor:'pointer'}}>+ New Invite</button>
       </div>
       {showForm&&!done&&(
         <div style={{background:'#fff',borderRadius:20,padding:24,border:'1.5px solid #E8E3DA',marginBottom:20,animation:'fadeUp .3s ease'}}>
-          <h3 style={{fontWeight:700,fontSize:16,color:'#1A1A2E',marginBottom:16}}>New Invite</h3>
+          <h3 style={{fontWeight:700,fontSize:16,color:'#1A0F0A',marginBottom:16}}>New Invite</h3>
           <Field label="Patient Name"><input value={name} onChange={e=>setName(e.target.value)} placeholder="e.g. Jordan Ellis" style={inp}/></Field>
           <Field label="Email"><input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="jordan@example.com" style={inp}/></Field>
           <div style={{display:'flex',gap:10}}>
-            <button onClick={()=>setShowForm(false)} style={{flex:1,padding:11,borderRadius:12,border:'1.5px solid #E5E0D8',background:'#fff',color:'#9B98B8',fontSize:14,fontWeight:600,cursor:'pointer'}}>Cancel</button>
-            <button onClick={create} disabled={!valid||creating} style={{flex:2,padding:11,borderRadius:12,border:'none',background:valid?'#1A1A2E':'#E5E0D8',color:valid?'#E8E4FF':'#9B98B8',fontSize:14,fontWeight:700,cursor:valid?'pointer':'default',display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>{creating?<Spin/>:'Generate Code'}</button>
+            <button onClick={()=>setShowForm(false)} style={{flex:1,padding:11,borderRadius:12,border:'1.5px solid #E5E0D8',background:'#fff',color:'#9B8878',fontSize:14,fontWeight:600,cursor:'pointer'}}>Cancel</button>
+            <button onClick={create} disabled={!valid||creating} style={{flex:2,padding:11,borderRadius:12,border:'none',background:valid?'#1A0F0A':'#E5E0D8',color:valid?'#F5EFE8':'#9B8878',fontSize:14,fontWeight:700,cursor:valid?'pointer':'default',display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>{creating?<Spin/>:'Generate Code'}</button>
           </div>
         </div>
       )}
       {showForm&&done&&(
         <div style={{background:'#fff',borderRadius:20,padding:24,border:'1.5px solid #E8E3DA',marginBottom:20,textAlign:'center'}}>
-          <div style={{fontSize:11,color:'#9B98B8',marginBottom:6,letterSpacing:1}}>INVITE CREATED FOR</div>
-          <div style={{fontWeight:700,fontSize:16,color:'#1A1A2E'}}>{done.name}</div>
-          <div style={{fontSize:12,color:'#9B98B8',marginBottom:16}}>{done.email}</div>
-          <div style={{background:'#1A1A2E',borderRadius:12,padding:'14px 20px',display:'inline-block',marginBottom:12}}>
-            <span style={{fontFamily:"'Inter',sans-serif",fontWeight:800,fontSize:22,color:'#A89FFF',letterSpacing:3}}>{done.code}</span>
+          <div style={{fontSize:11,color:'#9B8878',marginBottom:6,letterSpacing:1}}>INVITE CREATED FOR</div>
+          <div style={{fontWeight:700,fontSize:16,color:'#1A0F0A'}}>{done.name}</div>
+          <div style={{fontSize:12,color:'#9B8878',marginBottom:16}}>{done.email}</div>
+          <div style={{background:'#1A0F0A',borderRadius:12,padding:'14px 20px',display:'inline-block',marginBottom:12}}>
+            <span style={{fontFamily:"'Playfair Display',serif",fontWeight:800,fontSize:22,color:'#D4956A',letterSpacing:3}}>{done.code}</span>
           </div>
           <p style={{fontSize:12,color:'#C8C0B0',marginBottom:16}}>Share this code — patient enters it in the Sylvia app to register</p>
           <div style={{display:'flex',gap:10,justifyContent:'center'}}>
-            <button onClick={()=>copy(done.code)} style={{padding:'8px 20px',borderRadius:10,border:'1.5px solid #E5E0D8',background:copied===done.code?'#D1FAE5':'#fff',color:copied===done.code?'#1A6644':'#6B6888',fontSize:13,fontWeight:600,cursor:'pointer'}}>{copied===done.code?'Copied!':'Copy Code'}</button>
-            <button onClick={()=>{setShowForm(false);setDone(null)}} style={{padding:'8px 20px',borderRadius:10,border:'none',background:'#1A1A2E',color:'#E8E4FF',fontSize:13,fontWeight:700,cursor:'pointer'}}>Done</button>
+            <button onClick={()=>copy(done.code)} style={{padding:'8px 20px',borderRadius:10,border:'1.5px solid #E5E0D8',background:copied===done.code?'#D1FAE5':'#fff',color:copied===done.code?'#1A6644':'#7A6355',fontSize:13,fontWeight:600,cursor:'pointer'}}>{copied===done.code?'Copied!':'Copy Code'}</button>
+            <button onClick={()=>{setShowForm(false);setDone(null)}} style={{padding:'8px 20px',borderRadius:10,border:'none',background:'#1A0F0A',color:'#F5EFE8',fontSize:13,fontWeight:700,cursor:'pointer'}}>Done</button>
           </div>
         </div>
       )}
       {loading&&<div style={{display:'flex',justifyContent:'center',padding:40}}><Spin/></div>}
-      {!loading&&pending.length>0&&<><div style={{fontSize:11,fontWeight:700,color:'#9B98B8',letterSpacing:1.5,textTransform:'uppercase',marginBottom:12}}>Pending</div>
+      {!loading&&pending.length>0&&<><div style={{fontSize:11,fontWeight:700,color:'#9B8878',letterSpacing:1.5,textTransform:'uppercase',marginBottom:12}}>Pending</div>
         {pending.map(inv=>(
           <div key={inv.id} style={{background:'#fff',borderRadius:16,padding:'16px 20px',border:'1.5px solid #E8E3DA',marginBottom:10,display:'flex',alignItems:'center',gap:14}}>
-            <div style={{width:38,height:38,borderRadius:10,background:'#DBEAFE',display:'flex',alignItems:'center',justifyContent:'center',fontSize:16,flexShrink:0}}>✉</div>
-            <div style={{flex:1}}><div style={{fontWeight:600,fontSize:14,color:'#1A1A2E'}}>{inv.name}</div><div style={{fontSize:12,color:'#9B98B8',marginTop:2}}>{inv.email} · {inv.createdAt}</div></div>
+            <div style={{width:38,height:38,borderRadius:10,background:'#FEF3CD',display:'flex',alignItems:'center',justifyContent:'center',fontSize:16,flexShrink:0}}>✉</div>
+            <div style={{flex:1}}><div style={{fontWeight:600,fontSize:14,color:'#1A0F0A'}}>{inv.name}</div><div style={{fontSize:12,color:'#9B8878',marginTop:2}}>{inv.email} · {inv.createdAt}</div></div>
             <div style={{display:'flex',alignItems:'center',gap:8,flexShrink:0}}>
-              <div style={{background:'#F4F1EC',borderRadius:8,padding:'5px 10px',fontWeight:700,fontSize:12,color:'#6B6888',letterSpacing:1.5}}>{inv.code}</div>
-              <button onClick={()=>copy(inv.code)} style={{padding:'5px 10px',borderRadius:8,border:'1.5px solid #E5E0D8',background:copied===inv.code?'#D1FAE5':'#fff',color:copied===inv.code?'#1A6644':'#6B6888',fontSize:11,fontWeight:600,cursor:'pointer'}}>{copied===inv.code?'✓':'Copy'}</button>
+              <div style={{background:'#F5EFE8',borderRadius:8,padding:'5px 10px',fontWeight:700,fontSize:12,color:'#7A6355',letterSpacing:1.5}}>{inv.code}</div>
+              <button onClick={()=>copy(inv.code)} style={{padding:'5px 10px',borderRadius:8,border:'1.5px solid #E5E0D8',background:copied===inv.code?'#D1FAE5':'#fff',color:copied===inv.code?'#1A6644':'#7A6355',fontSize:11,fontWeight:600,cursor:'pointer'}}>{copied===inv.code?'✓':'Copy'}</button>
             </div>
           </div>
         ))}
       </>}
-      {!loading&&used.length>0&&<div style={{marginTop:pending.length?20:0}}><div style={{fontSize:11,fontWeight:700,color:'#9B98B8',letterSpacing:1.5,textTransform:'uppercase',marginBottom:12}}>Accepted</div>
+      {!loading&&used.length>0&&<div style={{marginTop:pending.length?20:0}}><div style={{fontSize:11,fontWeight:700,color:'#9B8878',letterSpacing:1.5,textTransform:'uppercase',marginBottom:12}}>Accepted</div>
         {used.map(inv=>(
           <div key={inv.id} style={{background:'#fff',borderRadius:16,padding:'14px 20px',border:'1.5px solid #E8E3DA',marginBottom:10,display:'flex',alignItems:'center',gap:14,opacity:.65}}>
             <div style={{width:38,height:38,borderRadius:10,background:'#D1FAE5',display:'flex',alignItems:'center',justifyContent:'center',fontSize:16,flexShrink:0}}>✓</div>
-            <div style={{flex:1}}><div style={{fontWeight:600,fontSize:14,color:'#1A1A2E'}}>{inv.name}</div><div style={{fontSize:12,color:'#9B98B8',marginTop:2}}>{inv.email}</div></div>
+            <div style={{flex:1}}><div style={{fontWeight:600,fontSize:14,color:'#1A0F0A'}}>{inv.name}</div><div style={{fontSize:12,color:'#9B8878',marginTop:2}}>{inv.email}</div></div>
             <Badge status="active"/>
           </div>
         ))}
@@ -602,17 +615,17 @@ function QuestionsView() {
   // Shared form panel
   const FormPanel=(
     <div style={{background:'#fff',borderRadius:20,padding:24,border:'1.5px solid #E8E3DA',marginBottom:20,animation:'fadeUp .3s ease'}}>
-      <h3 style={{fontWeight:700,fontSize:16,color:'#1A1A2E',marginBottom:16}}>{editing?'Edit Question':'New Question'}</h3>
-      <Field label="Type"><div style={{display:'flex',gap:8}}>{Q_TYPES.map(qt=><button key={qt.id} onClick={()=>setForm(f=>({...f,type:qt.id}))} style={{flex:1,padding:'10px 8px',borderRadius:12,border:`2px solid ${form.type===qt.id?'#6C63FF':'#E5E0D8'}`,background:form.type===qt.id?'#F0EEFF':'#FAFAF8',cursor:'pointer',textAlign:'center'}}><div style={{fontSize:16,marginBottom:4,color:form.type===qt.id?'#6C63FF':'#9B98B8'}}>{qt.icon}</div><div style={{fontSize:11,fontWeight:600,color:form.type===qt.id?'#6C63FF':'#9B98B8'}}>{qt.label}</div></button>)}</div></Field>
+      <h3 style={{fontWeight:700,fontSize:16,color:'#1A0F0A',marginBottom:16}}>{editing?'Edit Question':'New Question'}</h3>
+      <Field label="Type"><div style={{display:'flex',gap:8}}>{Q_TYPES.map(qt=><button key={qt.id} onClick={()=>setForm(f=>({...f,type:qt.id}))} style={{flex:1,padding:'10px 8px',borderRadius:12,border:`2px solid ${form.type===qt.id?'#8B3A2A':'#E5E0D8'}`,background:form.type===qt.id?'#FBF0E8':'#FAF6F0',cursor:'pointer',textAlign:'center'}}><div style={{fontSize:16,marginBottom:4,color:form.type===qt.id?'#8B3A2A':'#9B8878'}}>{qt.icon}</div><div style={{fontSize:11,fontWeight:600,color:form.type===qt.id?'#8B3A2A':'#9B8878'}}>{qt.label}</div></button>)}</div></Field>
       <Field label="Question Text"><textarea value={form.text} onChange={e=>setForm(f=>({...f,text:e.target.value}))} rows={3} placeholder="Enter question…" style={{...inp,lineHeight:1.6,resize:'none'}}/></Field>
-      {form.type==='scale'&&<div style={{background:'#FAFAF8',borderRadius:14,padding:16,border:'1px solid #E5E0D8',marginBottom:18}}><Lbl>Scale Range</Lbl><div style={{display:'flex',gap:12,marginBottom:12,flexDirection:isMobile?'column':'row'}}>{[['Min','scaleMin'],['Max','scaleMax']].map(([l,k])=><div key={k} style={{flex:1}}><div style={{fontSize:11,color:'#9B98B8',marginBottom:4}}>{l}</div><input type="number" value={form[k]} onChange={e=>setForm(f=>({...f,[k]:e.target.value}))} style={{...inp,padding:'8px 10px',borderRadius:8}}/></div>)}</div><div style={{display:'flex',gap:12,flexDirection:isMobile?'column':'row'}}>{[['Min Label','scaleMinLabel','e.g. Not at all'],['Max Label','scaleMaxLabel','e.g. Extremely']].map(([l,k,p])=><div key={k} style={{flex:1}}><div style={{fontSize:11,color:'#9B98B8',marginBottom:4}}>{l}</div><input value={form[k]} onChange={e=>setForm(f=>({...f,[k]:e.target.value}))} placeholder={p} style={{...inp,padding:'8px 10px',borderRadius:8,fontSize:13}}/></div>)}</div></div>}
+      {form.type==='scale'&&<div style={{background:'#FAF6F0',borderRadius:14,padding:16,border:'1px solid #E5E0D8',marginBottom:18}}><Lbl>Scale Range</Lbl><div style={{display:'flex',gap:12,marginBottom:12,flexDirection:isMobile?'column':'row'}}>{[['Min','scaleMin'],['Max','scaleMax']].map(([l,k])=><div key={k} style={{flex:1}}><div style={{fontSize:11,color:'#9B8878',marginBottom:4}}>{l}</div><input type="number" value={form[k]} onChange={e=>setForm(f=>({...f,[k]:e.target.value}))} style={{...inp,padding:'8px 10px',borderRadius:8}}/></div>)}</div><div style={{display:'flex',gap:12,flexDirection:isMobile?'column':'row'}}>{[['Min Label','scaleMinLabel','e.g. Not at all'],['Max Label','scaleMaxLabel','e.g. Extremely']].map(([l,k,p])=><div key={k} style={{flex:1}}><div style={{fontSize:11,color:'#9B8878',marginBottom:4}}>{l}</div><input value={form[k]} onChange={e=>setForm(f=>({...f,[k]:e.target.value}))} placeholder={p} style={{...inp,padding:'8px 10px',borderRadius:8,fontSize:13}}/></div>)}</div></div>}
       {form.type==='choice'&&<Field label="Options (one per line)"><textarea value={form.options} onChange={e=>setForm(f=>({...f,options:e.target.value}))} rows={5} placeholder={'Very well\nWell\nOkay\nPoorly\nTerribly'} style={{...inp,lineHeight:1.8,resize:'none'}}/></Field>}
       <Field label="Folder"><input value={form.folder||''} onChange={e=>setForm(f=>({...f,folder:e.target.value}))} placeholder="e.g. Book EMA" style={inp}/></Field>
       <Field label="Category"><input value={form.category} onChange={e=>setForm(f=>({...f,category:e.target.value}))} placeholder="e.g. Cognitive Mechanisms" style={inp}/></Field>
       <Field label="Mechanism (optional)"><input value={form.mechanism} onChange={e=>setForm(f=>({...f,mechanism:e.target.value}))} placeholder="e.g. Body dissatisfaction" style={inp}/></Field>
       <div style={{display:'flex',gap:10}}>
-        <button onClick={()=>setShowForm(false)} style={{flex:1,padding:11,borderRadius:12,border:'1.5px solid #E5E0D8',background:'#fff',color:'#9B98B8',fontSize:14,fontWeight:600,cursor:'pointer'}}>Cancel</button>
-        <button onClick={save} disabled={!form.text.trim()||saving} style={{flex:2,padding:11,borderRadius:12,border:'none',background:form.text.trim()?'#1A1A2E':'#E5E0D8',color:form.text.trim()?'#E8E4FF':'#9B98B8',fontSize:14,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>{saving?<Spin/>:(editing?'Save Changes':'Create Question')}</button>
+        <button onClick={()=>setShowForm(false)} style={{flex:1,padding:11,borderRadius:12,border:'1.5px solid #E5E0D8',background:'#fff',color:'#9B8878',fontSize:14,fontWeight:600,cursor:'pointer'}}>Cancel</button>
+        <button onClick={save} disabled={!form.text.trim()||saving} style={{flex:2,padding:11,borderRadius:12,border:'none',background:form.text.trim()?'#1A0F0A':'#E5E0D8',color:form.text.trim()?'#F5EFE8':'#9B8878',fontSize:14,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>{saving?<Spin/>:(editing?'Save Changes':'Create Question')}</button>
       </div>
     </div>
   )
@@ -620,13 +633,13 @@ function QuestionsView() {
   // ── Assign Modal (shared by both views) ──────────────────────────────────────
   const AssignModal = assignTarget && (
     <div style={{position:'fixed',inset:0,background:'rgba(10,10,20,.7)',backdropFilter:'blur(6px)',zIndex:200,display:'flex',alignItems:'center',justifyContent:'center',padding:20}}>
-      <div style={{background:'#F4F1EC',borderRadius:24,width:'100%',maxWidth:480,boxShadow:'0 32px 80px rgba(0,0,0,.2)',animation:'pop .25s ease',maxHeight:'80vh',display:'flex',flexDirection:'column'}}>
-        <div style={{background:'#1A1A2E',borderRadius:'24px 24px 0 0',padding:'24px 28px',display:'flex',alignItems:'center',justifyContent:'space-between',flexShrink:0}}>
+      <div style={{background:'#F5EFE8',borderRadius:24,width:'100%',maxWidth:480,boxShadow:'0 32px 80px rgba(0,0,0,.2)',animation:'pop .25s ease',maxHeight:'80vh',display:'flex',flexDirection:'column'}}>
+        <div style={{background:'#1A0F0A',borderRadius:'24px 24px 0 0',padding:'24px 28px',display:'flex',alignItems:'center',justifyContent:'space-between',flexShrink:0}}>
           <div>
-            <div style={{fontWeight:700,fontSize:18,color:'#E8E4FF'}}>Assign to Patient</div>
-            <div style={{fontSize:12,color:'#6B6888',marginTop:3}}>"{assignTarget}" · 5 sessions/day · 15 days</div>
+            <div style={{fontWeight:700,fontSize:18,color:'#F5EFE8'}}>Assign to Patient</div>
+            <div style={{fontSize:12,color:'#7A6355',marginTop:3}}>"{assignTarget}" · 5 sessions/day · 15 days</div>
           </div>
-          <button onClick={()=>{setAssignTarget(null);setAssignSuccess(null);setAssignSearch('')}} style={{background:'#FFFFFF1A',border:'none',color:'#E8E4FF',borderRadius:10,padding:'8px 14px',fontSize:13,cursor:'pointer'}}>Close</button>
+          <button onClick={()=>{setAssignTarget(null);setAssignSuccess(null);setAssignSearch('')}} style={{background:'#FFFFFF1A',border:'none',color:'#F5EFE8',borderRadius:10,padding:'8px 14px',fontSize:13,cursor:'pointer'}}>Close</button>
         </div>
         <div style={{padding:'16px 24px',borderBottom:'1px solid #E8E3DA',flexShrink:0}}>
           <input value={assignSearch} onChange={e=>setAssignSearch(e.target.value)} placeholder="Search by name or email…" style={{...inp,margin:0}}/>
@@ -636,12 +649,12 @@ function QuestionsView() {
           <div style={{display:'flex',flexDirection:'column',gap:10}}>
             {users.filter(u=>!assignSearch||u.name?.toLowerCase().includes(assignSearch.toLowerCase())||u.email?.toLowerCase().includes(assignSearch.toLowerCase())).map(u=>(
               <div key={u.id} style={{background:'#fff',borderRadius:16,padding:'14px 18px',border:`1.5px solid ${assignSuccess===u.id?'#6ECB8A':'#E8E3DA'}`,display:'flex',alignItems:'center',gap:12,transition:'border-color .2s'}}>
-                <div style={{width:40,height:40,borderRadius:12,background:'#F0EEFF',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:700,fontSize:15,color:'#6C63FF',flexShrink:0}}>{u.name?.split(' ').map(n=>n[0]).join('')||'?'}</div>
+                <div style={{width:40,height:40,borderRadius:12,background:'#FBF0E8',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:700,fontSize:15,color:'#8B3A2A',flexShrink:0}}>{u.name?.split(' ').map(n=>n[0]).join('')||'?'}</div>
                 <div style={{flex:1}}>
-                  <div style={{fontWeight:600,fontSize:14,color:'#1A1A2E'}}>{u.name}</div>
-                  <div style={{fontSize:12,color:'#9B98B8'}}>{u.email}</div>
+                  <div style={{fontWeight:600,fontSize:14,color:'#1A0F0A'}}>{u.name}</div>
+                  <div style={{fontSize:12,color:'#9B8878'}}>{u.email}</div>
                 </div>
-                <button onClick={()=>assignFolderToUser(u)} disabled={!!assigning} style={{padding:'8px 16px',borderRadius:10,border:'none',background:assignSuccess===u.id?'#1A6644':'#6C63FF',color:'#fff',fontSize:12,fontWeight:700,cursor:assigning?'default':'pointer',display:'flex',alignItems:'center',gap:6,flexShrink:0}}>
+                <button onClick={()=>assignFolderToUser(u)} disabled={!!assigning} style={{padding:'8px 16px',borderRadius:10,border:'none',background:assignSuccess===u.id?'#1A6644':'#8B3A2A',color:'#fff',fontSize:12,fontWeight:700,cursor:assigning?'default':'pointer',display:'flex',alignItems:'center',gap:6,flexShrink:0}}>
                   {assigning===u.id?<Spin/>:assignSuccess===u.id?'✓ Assigned':'Assign'}
                 </button>
               </div>
@@ -659,10 +672,10 @@ function QuestionsView() {
         {AssignModal}
         <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:24}}>
           <div>
-            <h2 style={{fontFamily:"'Inter',sans-serif",fontWeight:800,fontSize:24,color:'#1A1A2E'}}>Question Bank</h2>
-            <p style={{fontSize:13,color:'#9B98B8',marginTop:4}}>{questions.length} questions · {folderNames.length} folder{folderNames.length!==1?'s':''}</p>
+            <h2 style={{fontFamily:"'Playfair Display',serif",fontWeight:800,fontSize:24,color:'#1A0F0A'}}>Question Bank</h2>
+            <p style={{fontSize:13,color:'#9B8878',marginTop:4}}>{questions.length} questions · {folderNames.length} folder{folderNames.length!==1?'s':''}</p>
           </div>
-          <button onClick={openNew} style={{background:'#1A1A2E',color:'#E8E4FF',border:'none',borderRadius:14,padding:'11px 20px',fontSize:14,fontWeight:700,cursor:'pointer'}}>+ New Question</button>
+          <button onClick={openNew} style={{background:'#1A0F0A',color:'#F5EFE8',border:'none',borderRadius:14,padding:'11px 20px',fontSize:14,fontWeight:700,cursor:'pointer'}}>+ New Question</button>
         </div>
         {showForm&&FormPanel}
         {loading&&<div style={{display:'flex',justifyContent:'center',padding:40}}><Spin/></div>}
@@ -675,17 +688,17 @@ function QuestionsView() {
               <div key={f} onClick={()=>{setSelectedFolder(f);setCatFilter('All');setSearch('');setShowForm(false)}}
                 style={{background:'#fff',borderRadius:20,padding:24,border:'1.5px solid #E8E3DA',cursor:'pointer',display:'flex',flexDirection:'column'}}>
                 <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',marginBottom:14}}>
-                  <div style={{width:44,height:44,borderRadius:12,background:'#F0EEFF',display:'flex',alignItems:'center',justifyContent:'center',fontSize:22}}>📁</div>
+                  <div style={{width:44,height:44,borderRadius:12,background:'#FBF0E8',display:'flex',alignItems:'center',justifyContent:'center',fontSize:22}}>📁</div>
                   <span style={{color:'#C8C0B0',fontSize:18}}>→</span>
                 </div>
-                <div style={{fontWeight:700,fontSize:17,color:'#1A1A2E',marginBottom:4}}>{f}</div>
-                <div style={{fontSize:13,color:'#9B98B8',marginBottom:12}}>{qs.length} question{qs.length!==1?'s':''}</div>
+                <div style={{fontWeight:700,fontSize:17,color:'#1A0F0A',marginBottom:4}}>{f}</div>
+                <div style={{fontSize:13,color:'#9B8878',marginBottom:12}}>{qs.length} question{qs.length!==1?'s':''}</div>
                 {topCats.length>0&&<div style={{display:'flex',gap:6,flexWrap:'wrap',marginBottom:14}}>
-                  {topCats.map(([c,n])=><span key={c} style={{fontSize:10,fontWeight:600,color:'#6D28D9',background:'#EDE9FE',borderRadius:20,padding:'2px 8px'}}>{c} · {n}</span>)}
+                  {topCats.map(([c,n])=><span key={c} style={{fontSize:10,fontWeight:600,color:'#8B3A2A',background:'#FBF0E8',borderRadius:20,padding:'2px 8px'}}>{c} · {n}</span>)}
                   {Object.keys(catCounts).length>2&&<span style={{fontSize:10,color:'#C8C0B0',alignSelf:'center'}}>+{Object.keys(catCounts).length-2} more</span>}
                 </div>}
                 <button onClick={e=>{e.stopPropagation();setAssignTarget(f);setAssignSuccess(null);setAssignSearch('')}}
-                  style={{marginTop:'auto',padding:'8px 0',borderRadius:10,border:'1.5px solid #6C63FF',background:'#F0EEFF',color:'#6C63FF',fontSize:12,fontWeight:700,cursor:'pointer',width:'100%'}}>
+                  style={{marginTop:'auto',padding:'8px 0',borderRadius:10,border:'1.5px solid #8B3A2A',background:'#FBF0E8',color:'#8B3A2A',fontSize:12,fontWeight:700,cursor:'pointer',width:'100%'}}>
                   Assign to Patient
                 </button>
               </div>
@@ -711,18 +724,18 @@ function QuestionsView() {
       {AssignModal}
 
       <div style={{display:'flex',alignItems:'center',gap:14,marginBottom:24,flexWrap:'wrap'}}>
-        <button onClick={()=>{setSelectedFolder(null);setShowForm(false)}} style={{background:'none',border:'1.5px solid #E5E0D8',borderRadius:10,padding:'8px 14px',fontSize:13,color:'#6B6888',cursor:'pointer',fontWeight:600,flexShrink:0}}>← Folders</button>
+        <button onClick={()=>{setSelectedFolder(null);setShowForm(false)}} style={{background:'none',border:'1.5px solid #E5E0D8',borderRadius:10,padding:'8px 14px',fontSize:13,color:'#7A6355',cursor:'pointer',fontWeight:600,flexShrink:0}}>← Folders</button>
         <div style={{flex:1,minWidth:0}}>
-          <h2 style={{fontFamily:"'Inter',sans-serif",fontWeight:800,fontSize:22,color:'#1A1A2E',margin:0}}>{selectedFolder}</h2>
-          <p style={{fontSize:13,color:'#9B98B8',margin:'2px 0 0'}}>{filtered.length} of {folderQs.length} questions</p>
+          <h2 style={{fontFamily:"'Playfair Display',serif",fontWeight:800,fontSize:22,color:'#1A0F0A',margin:0}}>{selectedFolder}</h2>
+          <p style={{fontSize:13,color:'#9B8878',margin:'2px 0 0'}}>{filtered.length} of {folderQs.length} questions</p>
         </div>
-        <button onClick={()=>{setAssignTarget(selectedFolder);setAssignSuccess(null);setAssignSearch('')}} style={{background:'#6C63FF',color:'#fff',border:'none',borderRadius:14,padding:'11px 20px',fontSize:14,fontWeight:700,cursor:'pointer',flexShrink:0}}>Assign to Patient</button>
-        <button onClick={openNew} style={{background:'#1A1A2E',color:'#E8E4FF',border:'none',borderRadius:14,padding:'11px 20px',fontSize:14,fontWeight:700,cursor:'pointer',flexShrink:0}}>+ New Question</button>
+        <button onClick={()=>{setAssignTarget(selectedFolder);setAssignSuccess(null);setAssignSearch('')}} style={{background:'#8B3A2A',color:'#fff',border:'none',borderRadius:14,padding:'11px 20px',fontSize:14,fontWeight:700,cursor:'pointer',flexShrink:0}}>Assign to Patient</button>
+        <button onClick={openNew} style={{background:'#1A0F0A',color:'#F5EFE8',border:'none',borderRadius:14,padding:'11px 20px',fontSize:14,fontWeight:700,cursor:'pointer',flexShrink:0}}>+ New Question</button>
       </div>
 
       <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search questions or mechanisms…" style={{...inp,marginBottom:14}}/>
       <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:20}}>
-        {cats.map(c=><button key={c} onClick={()=>setCatFilter(c)} style={{padding:'6px 14px',borderRadius:20,border:`1.5px solid ${catFilter===c?'#1A1A2E':'#E5E0D8'}`,background:catFilter===c?'#1A1A2E':'#fff',color:catFilter===c?'#E8E4FF':'#9B98B8',fontSize:12,fontWeight:600,cursor:'pointer',whiteSpace:'nowrap'}}>{c}</button>)}
+        {cats.map(c=><button key={c} onClick={()=>setCatFilter(c)} style={{padding:'6px 14px',borderRadius:20,border:`1.5px solid ${catFilter===c?'#1A0F0A':'#E5E0D8'}`,background:catFilter===c?'#1A0F0A':'#fff',color:catFilter===c?'#F5EFE8':'#9B8878',fontSize:12,fontWeight:600,cursor:'pointer',whiteSpace:'nowrap'}}>{c}</button>)}
       </div>
 
       {showForm&&FormPanel}
@@ -731,13 +744,13 @@ function QuestionsView() {
           <div key={q.id} style={{background:'#fff',borderRadius:18,padding:'20px 22px',border:'1.5px solid #E8E3DA'}}>
             <div style={{display:'flex',alignItems:'flex-start',gap:14}}>
               <div style={{flex:1}}>
-                <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:8,flexWrap:'wrap'}}><TBadge type={q.type}/>{q.category&&q.category!=='General'&&<span style={{fontSize:11,color:'#6D28D9',background:'#EDE9FE',borderRadius:20,padding:'3px 10px',fontWeight:600}}>{q.category}</span>}{q.mechanism&&<span style={{fontSize:11,color:'#9B98B8'}}>{q.mechanism}</span>}</div>
-                <p style={{fontSize:15,color:'#1A1A2E',lineHeight:1.5,fontWeight:500,margin:0}}>{q.text}</p>
-                {q.type==='scale'&&<div style={{display:'flex',alignItems:'center',gap:8,marginTop:10}}><span style={{fontSize:11,color:'#9B98B8'}}>{q.scaleMinLabel||q.scaleMin}</span><div style={{width:80,height:3,background:'linear-gradient(90deg,#6C63FF,#A89FFF)',borderRadius:4}}/><span style={{fontSize:11,color:'#9B98B8'}}>{q.scaleMaxLabel||q.scaleMax}</span></div>}
-                {q.type==='choice'&&q.options?.length>0&&<div style={{display:'flex',gap:6,marginTop:10,flexWrap:'wrap'}}>{q.options.map(o=><span key={o} style={{fontSize:11,color:'#6B6888',background:'#F4F1EC',borderRadius:20,padding:'3px 10px'}}>{o}</span>)}</div>}
+                <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:8,flexWrap:'wrap'}}><TBadge type={q.type}/>{q.category&&q.category!=='General'&&<span style={{fontSize:11,color:'#8B3A2A',background:'#FBF0E8',borderRadius:20,padding:'3px 10px',fontWeight:600}}>{q.category}</span>}{q.mechanism&&<span style={{fontSize:11,color:'#9B8878'}}>{q.mechanism}</span>}</div>
+                <p style={{fontSize:15,color:'#1A0F0A',lineHeight:1.5,fontWeight:500,margin:0}}>{q.text}</p>
+                {q.type==='scale'&&<div style={{display:'flex',alignItems:'center',gap:8,marginTop:10}}><span style={{fontSize:11,color:'#9B8878'}}>{q.scaleMinLabel||q.scaleMin}</span><div style={{width:80,height:3,background:'linear-gradient(90deg,#8B3A2A,#D4956A)',borderRadius:4}}/><span style={{fontSize:11,color:'#9B8878'}}>{q.scaleMaxLabel||q.scaleMax}</span></div>}
+                {q.type==='choice'&&q.options?.length>0&&<div style={{display:'flex',gap:6,marginTop:10,flexWrap:'wrap'}}>{q.options.map(o=><span key={o} style={{fontSize:11,color:'#7A6355',background:'#F5EFE8',borderRadius:20,padding:'3px 10px'}}>{o}</span>)}</div>}
               </div>
               <div style={{display:'flex',gap:6,flexShrink:0}}>
-                <button onClick={()=>openEdit(q)} style={{padding:'7px 14px',borderRadius:10,border:'1.5px solid #E5E0D8',background:'#fff',color:'#6B6888',fontSize:12,fontWeight:600,cursor:'pointer'}}>Edit</button>
+                <button onClick={()=>openEdit(q)} style={{padding:'7px 14px',borderRadius:10,border:'1.5px solid #E5E0D8',background:'#fff',color:'#7A6355',fontSize:12,fontWeight:600,cursor:'pointer'}}>Edit</button>
                 <button onClick={()=>del(q.id)} style={{padding:'7px 12px',borderRadius:10,border:'1.5px solid #FEE2E2',background:'#fff',color:'#EF4444',fontSize:12,fontWeight:600,cursor:'pointer'}}>✕</button>
               </div>
             </div>
@@ -782,11 +795,11 @@ function ScheduleView() {
       <div style={{display:'flex',alignItems:'flex-start',gap:12}}>
         <div style={{flex:1}}>
           <div style={{display:'flex',gap:6,alignItems:'center',marginBottom:6,flexWrap:'wrap'}}><TBadge type={qType(s.questionId)}/><span style={{fontSize:11,color:isActive?'#1A6644':'#92400E',background:isActive?'#D1FAE5':'#FEF3C7',borderRadius:20,padding:'2px 8px',fontWeight:600}}>{isActive?'Active':'Paused'}</span></div>
-          <p style={{fontSize:14,color:'#1A1A2E',fontWeight:500,marginBottom:8,lineHeight:1.4}}>{qText(s.questionId).slice(0,80)}{qText(s.questionId).length>80?'…':''}</p>
-          <div style={{display:'flex',gap:12,flexWrap:'wrap'}}>{[{i:'◷',v:rLabel(s)},{i:'◎',v:uLabel(s.userId)},{i:'▷',v:`From ${s.startDate}`}].map(({i,v})=><span key={v} style={{fontSize:11,color:'#9B98B8',display:'flex',alignItems:'center',gap:4}}><span style={{color:'#C8C0B0'}}>{i}</span>{v}</span>)}</div>
+          <p style={{fontSize:14,color:'#1A0F0A',fontWeight:500,marginBottom:8,lineHeight:1.4}}>{qText(s.questionId).slice(0,80)}{qText(s.questionId).length>80?'…':''}</p>
+          <div style={{display:'flex',gap:12,flexWrap:'wrap'}}>{[{i:'◷',v:rLabel(s)},{i:'◎',v:uLabel(s.userId)},{i:'▷',v:`From ${s.startDate}`}].map(({i,v})=><span key={v} style={{fontSize:11,color:'#9B8878',display:'flex',alignItems:'center',gap:4}}><span style={{color:'#C8C0B0'}}>{i}</span>{v}</span>)}</div>
         </div>
         <div style={{display:'flex',gap:6,flexShrink:0}}>
-          <button onClick={()=>toggle(s.id,s.active)} style={{padding:'6px 12px',borderRadius:8,border:'1.5px solid #E5E0D8',background:'#fff',color:'#6B6888',fontSize:11,fontWeight:600,cursor:'pointer'}}>{isActive?'Pause':'Resume'}</button>
+          <button onClick={()=>toggle(s.id,s.active)} style={{padding:'6px 12px',borderRadius:8,border:'1.5px solid #E5E0D8',background:'#fff',color:'#7A6355',fontSize:11,fontWeight:600,cursor:'pointer'}}>{isActive?'Pause':'Resume'}</button>
           <button onClick={()=>del(s.id)} style={{padding:'6px 10px',borderRadius:8,border:'1.5px solid #FEE2E2',background:'#fff',color:'#EF4444',fontSize:11,cursor:'pointer'}}>✕</button>
         </div>
       </div>
@@ -796,12 +809,12 @@ function ScheduleView() {
   return (
     <div>
       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:28}}>
-        <div><h2 style={{fontFamily:"'Inter',sans-serif",fontWeight:800,fontSize:24,color:'#1A1A2E'}}>Schedule</h2><p style={{fontSize:13,color:'#9B98B8',marginTop:4}}>{active.length} active · {paused.length} paused</p></div>
-        <button onClick={()=>setShowForm(true)} disabled={!questions.length} style={{background:questions.length?'#1A1A2E':'#E5E0D8',color:questions.length?'#E8E4FF':'#9B98B8',border:'none',borderRadius:14,padding:'11px 20px',fontSize:14,fontWeight:700,cursor:questions.length?'pointer':'default'}}>+ Add Schedule</button>
+        <div><h2 style={{fontFamily:"'Playfair Display',serif",fontWeight:800,fontSize:24,color:'#1A0F0A'}}>Schedule</h2><p style={{fontSize:13,color:'#9B8878',marginTop:4}}>{active.length} active · {paused.length} paused</p></div>
+        <button onClick={()=>setShowForm(true)} disabled={!questions.length} style={{background:questions.length?'#1A0F0A':'#E5E0D8',color:questions.length?'#F5EFE8':'#9B8878',border:'none',borderRadius:14,padding:'11px 20px',fontSize:14,fontWeight:700,cursor:questions.length?'pointer':'default'}}>+ Add Schedule</button>
       </div>
       {showForm&&(
         <div style={{background:'#fff',borderRadius:20,padding:24,border:'1.5px solid #E8E3DA',marginBottom:20,animation:'fadeUp .3s ease'}}>
-          <h3 style={{fontWeight:700,fontSize:16,color:'#1A1A2E',marginBottom:16}}>New Schedule</h3>
+          <h3 style={{fontWeight:700,fontSize:16,color:'#1A0F0A',marginBottom:16}}>New Schedule</h3>
           <Field label="Question"><select value={form.questionId} onChange={e=>setForm(f=>({...f,questionId:e.target.value}))} style={inp}>{questions.map(q=><option key={q.id} value={q.id}>{q.text?.length>60?q.text.slice(0,60)+'…':q.text}</option>)}</select></Field>
           <Field label="Send To"><select value={form.userId} onChange={e=>setForm(f=>({...f,userId:e.target.value}))} style={inp}><option value="all">All Active Users</option>{users.filter(u=>u.status==='active').map(u=><option key={u.id} value={u.id}>{u.name}</option>)}</select></Field>
           <Field label="Start Date"><input type="date" value={form.startDate} onChange={e=>setForm(f=>({...f,startDate:e.target.value}))} style={inp}/></Field>
@@ -809,15 +822,15 @@ function ScheduleView() {
             <ScheduleEntryEditor entry={form} onChange={e=>setForm(f=>({...f,...e}))}/>
           </Field>
           <div style={{display:'flex',gap:10,marginTop:8}}>
-            <button onClick={()=>setShowForm(false)} style={{flex:1,padding:11,borderRadius:12,border:'1.5px solid #E5E0D8',background:'#fff',color:'#9B98B8',fontSize:14,fontWeight:600,cursor:'pointer'}}>Cancel</button>
-            <button onClick={addSched} disabled={saving} style={{flex:2,padding:11,borderRadius:12,border:'none',background:'#1A1A2E',color:'#E8E4FF',fontSize:14,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>{saving?<Spin/>:'Add to Schedule'}</button>
+            <button onClick={()=>setShowForm(false)} style={{flex:1,padding:11,borderRadius:12,border:'1.5px solid #E5E0D8',background:'#fff',color:'#9B8878',fontSize:14,fontWeight:600,cursor:'pointer'}}>Cancel</button>
+            <button onClick={addSched} disabled={saving} style={{flex:2,padding:11,borderRadius:12,border:'none',background:'#1A0F0A',color:'#F5EFE8',fontSize:14,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>{saving?<Spin/>:'Add to Schedule'}</button>
           </div>
         </div>
       )}
       {loading&&<div style={{display:'flex',justifyContent:'center',padding:40}}><Spin/></div>}
       {!loading&&schedules.length===0&&<div style={{textAlign:'center',padding:'60px 20px',color:'#C8C0B0'}}><div style={{fontSize:40,marginBottom:12}}>◷</div><p style={{fontSize:15,fontWeight:500}}>No schedules yet</p></div>}
-      {active.length>0&&<><div style={{fontSize:11,fontWeight:700,color:'#9B98B8',letterSpacing:1.5,textTransform:'uppercase',marginBottom:12}}>Active</div>{active.map(s=><SCard key={s.id} s={s} isActive={true}/>)}</>}
-      {paused.length>0&&<div style={{marginTop:active.length?20:0}}><div style={{fontSize:11,fontWeight:700,color:'#9B98B8',letterSpacing:1.5,textTransform:'uppercase',marginBottom:12}}>Paused</div>{paused.map(s=><SCard key={s.id} s={s} isActive={false}/>)}</div>}
+      {active.length>0&&<><div style={{fontSize:11,fontWeight:700,color:'#9B8878',letterSpacing:1.5,textTransform:'uppercase',marginBottom:12}}>Active</div>{active.map(s=><SCard key={s.id} s={s} isActive={true}/>)}</>}
+      {paused.length>0&&<div style={{marginTop:active.length?20:0}}><div style={{fontSize:11,fontWeight:700,color:'#9B8878',letterSpacing:1.5,textTransform:'uppercase',marginBottom:12}}>Paused</div>{paused.map(s=><SCard key={s.id} s={s} isActive={false}/>)}</div>}
     </div>
   )
 }
@@ -859,7 +872,7 @@ function ResponsesView({questions}) {
   }
 
   // Simple SVG line chart
-  function MiniChart({data, color='#6C63FF', q}) {
+  function MiniChart({data, color='#8B3A2A', q}) {
     if(data.length < 2) return <div style={{fontSize:12,color:'#C8C0B0',padding:'8px 0'}}>Not enough data points yet.</div>
     const W=420, H=80, PX=8, PY=10
     const vals = data.map(d=>d.value)
@@ -927,15 +940,15 @@ function ResponsesView({questions}) {
     byQuestion[r.questionId].push(r)
   })
 
-  const scaleColors = ['#6C63FF','#6ECB8A','#F6C549','#F2857A','#7BB8F5','#B48FE8']
+  const scaleColors = ['#8B3A2A','#6ECB8A','#F6C549','#F2857A','#7BB8F5','#B48FE8']
 
   return (
     <div>
       {/* Header */}
       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:28}}>
         <div>
-          <h2 style={{fontFamily:"'Inter',sans-serif",fontWeight:800,fontSize:24,color:'#1A1A2E'}}>Responses</h2>
-          <p style={{fontSize:13,color:'#9B98B8',marginTop:4}}>Click a patient to view their response history</p>
+          <h2 style={{fontFamily:"'Playfair Display',serif",fontWeight:800,fontSize:24,color:'#1A0F0A'}}>Responses</h2>
+          <p style={{fontSize:13,color:'#9B8878',marginTop:4}}>Click a patient to view their response history</p>
         </div>
         {selectedUser&&userResponses.length>0&&(
           <button onClick={exportCSV} style={{background:'#1A6644',color:'#fff',border:'none',borderRadius:14,padding:'11px 20px',fontSize:14,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',gap:8}}>
@@ -954,10 +967,10 @@ function ResponsesView({questions}) {
             const last=responses.filter(r=>r.userId===u.id).sort((a,b)=>a.ts>b.ts?-1:1)[0]
             return(
               <div key={u.id} onClick={()=>setSelectedUser(u)} style={{background:'#fff',borderRadius:18,padding:'18px 22px',border:'1.5px solid #E8E3DA',display:'flex',alignItems:'center',gap:16,cursor:'pointer'}}>
-                <div style={{width:42,height:42,borderRadius:14,background:'#F0EEFF',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:800,fontSize:16,color:'#6C63FF',flexShrink:0}}>{u.name?.split(' ').map(n=>n[0]).join('')||'?'}</div>
+                <div style={{width:42,height:42,borderRadius:14,background:'#FBF0E8',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:800,fontSize:16,color:'#8B3A2A',flexShrink:0}}>{u.name?.split(' ').map(n=>n[0]).join('')||'?'}</div>
                 <div style={{flex:1}}>
-                  <div style={{fontWeight:600,fontSize:15,color:'#1A1A2E'}}>{u.name}</div>
-                  <div style={{fontSize:12,color:'#9B98B8',marginTop:2}}>{count} response{count!==1?'s':''}{last?` · Last: ${last.date}`:' · No responses yet'}</div>
+                  <div style={{fontWeight:600,fontSize:15,color:'#1A0F0A'}}>{u.name}</div>
+                  <div style={{fontSize:12,color:'#9B8878',marginTop:2}}>{count} response{count!==1?'s':''}{last?` · Last: ${last.date}`:' · No responses yet'}</div>
                 </div>
                 <span style={{color:'#C8C0B0',fontSize:20}}>›</span>
               </div>
@@ -970,16 +983,16 @@ function ResponsesView({questions}) {
       {selectedUser&&<>
         {/* Back + filters */}
         <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:20,flexWrap:'wrap'}}>
-          <button onClick={()=>{setSelectedUser(null);setDateFrom('');setDateTo('')}} style={{background:'none',border:'1.5px solid #E5E0D8',borderRadius:10,padding:'8px 14px',fontSize:13,color:'#6B6888',cursor:'pointer',fontWeight:600}}>← All Users</button>
+          <button onClick={()=>{setSelectedUser(null);setDateFrom('');setDateTo('')}} style={{background:'none',border:'1.5px solid #E5E0D8',borderRadius:10,padding:'8px 14px',fontSize:13,color:'#7A6355',cursor:'pointer',fontWeight:600}}>← All Users</button>
           <div style={{display:'flex',alignItems:'center',gap:8,background:'#fff',borderRadius:12,padding:'8px 14px',border:'1.5px solid #E5E0D8'}}>
-            <div style={{width:36,height:36,borderRadius:10,background:'#F0EEFF',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:800,fontSize:14,color:'#6C63FF'}}>{selectedUser.name?.split(' ').map(n=>n[0]).join('')||'?'}</div>
-            <div><div style={{fontWeight:600,fontSize:14,color:'#1A1A2E'}}>{selectedUser.name}</div><div style={{fontSize:11,color:'#9B98B8'}}>{userResponses.length} response{userResponses.length!==1?'s':''}</div></div>
+            <div style={{width:36,height:36,borderRadius:10,background:'#FBF0E8',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:800,fontSize:14,color:'#8B3A2A'}}>{selectedUser.name?.split(' ').map(n=>n[0]).join('')||'?'}</div>
+            <div><div style={{fontWeight:600,fontSize:14,color:'#1A0F0A'}}>{selectedUser.name}</div><div style={{fontSize:11,color:'#9B8878'}}>{userResponses.length} response{userResponses.length!==1?'s':''}</div></div>
           </div>
           <div style={{display:'flex',alignItems:'center',gap:8,marginLeft:'auto'}}>
-            <div style={{fontSize:12,color:'#9B98B8'}}>From</div>
-            <input type="date" value={dateFrom} onChange={e=>setDateFrom(e.target.value)} style={{border:'1.5px solid #E5E0D8',borderRadius:8,padding:'6px 10px',fontSize:12,color:'#1A1A2E',background:'#fff'}}/>
-            <div style={{fontSize:12,color:'#9B98B8'}}>To</div>
-            <input type="date" value={dateTo} onChange={e=>setDateTo(e.target.value)} style={{border:'1.5px solid #E5E0D8',borderRadius:8,padding:'6px 10px',fontSize:12,color:'#1A1A2E',background:'#fff'}}/>
+            <div style={{fontSize:12,color:'#9B8878'}}>From</div>
+            <input type="date" value={dateFrom} onChange={e=>setDateFrom(e.target.value)} style={{border:'1.5px solid #E5E0D8',borderRadius:8,padding:'6px 10px',fontSize:12,color:'#1A0F0A',background:'#fff'}}/>
+            <div style={{fontSize:12,color:'#9B8878'}}>To</div>
+            <input type="date" value={dateTo} onChange={e=>setDateTo(e.target.value)} style={{border:'1.5px solid #E5E0D8',borderRadius:8,padding:'6px 10px',fontSize:12,color:'#1A0F0A',background:'#fff'}}/>
           </div>
         </div>
 
@@ -991,7 +1004,7 @@ function ResponsesView({questions}) {
             const q=qInfo(qId); return q?.type==='scale' && byQuestion[qId].length>=2
           }).length>0&&(
             <div style={{background:'#fff',borderRadius:20,padding:24,border:'1.5px solid #E8E3DA',marginBottom:20}}>
-              <div style={{fontSize:11,fontWeight:700,color:'#9B98B8',letterSpacing:1.5,textTransform:'uppercase',marginBottom:16}}>Scale Trends</div>
+              <div style={{fontSize:11,fontWeight:700,color:'#9B8878',letterSpacing:1.5,textTransform:'uppercase',marginBottom:16}}>Scale Trends</div>
               {Object.keys(byQuestion).filter(qId=>qInfo(qId)?.type==='scale').map((qId,idx)=>{
                 const q=qInfo(qId)
                 const data=getChartData(qId)
@@ -1000,12 +1013,12 @@ function ResponsesView({questions}) {
                 const latest=data[data.length-1]?.value
                 const avg=(data.reduce((s,d)=>s+d.value,0)/data.length).toFixed(1)
                 return(
-                  <div key={qId} style={{marginBottom:24,paddingBottom:24,borderBottom:'1px solid #F4F1EC'}}>
+                  <div key={qId} style={{marginBottom:24,paddingBottom:24,borderBottom:'1px solid #F5EFE8'}}>
                     <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10}}>
-                      <p style={{fontSize:13,color:'#1A1A2E',fontWeight:600,margin:0,flex:1,lineHeight:1.4}}>{q?.text?.length>80?q.text.slice(0,80)+'…':q?.text}</p>
+                      <p style={{fontSize:13,color:'#1A0F0A',fontWeight:600,margin:0,flex:1,lineHeight:1.4}}>{q?.text?.length>80?q.text.slice(0,80)+'…':q?.text}</p>
                       <div style={{display:'flex',gap:16,flexShrink:0,marginLeft:12}}>
-                        <div style={{textAlign:'center'}}><div style={{fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:20,color}}>{latest}</div><div style={{fontSize:10,color:'#C8C0B0'}}>Latest</div></div>
-                        <div style={{textAlign:'center'}}><div style={{fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:20,color:'#9B98B8'}}>{avg}</div><div style={{fontSize:10,color:'#C8C0B0'}}>Avg</div></div>
+                        <div style={{textAlign:'center'}}><div style={{fontFamily:"'Playfair Display',serif",fontWeight:700,fontSize:20,color}}>{latest}</div><div style={{fontSize:10,color:'#C8C0B0'}}>Latest</div></div>
+                        <div style={{textAlign:'center'}}><div style={{fontFamily:"'Playfair Display',serif",fontWeight:700,fontSize:20,color:'#9B8878'}}>{avg}</div><div style={{fontSize:10,color:'#C8C0B0'}}>Avg</div></div>
                       </div>
                     </div>
                     <MiniChart data={data} color={color} q={q} qId={qId}/>
@@ -1017,13 +1030,13 @@ function ResponsesView({questions}) {
 
           {/* Full response table */}
           <div style={{background:'#fff',borderRadius:20,padding:24,border:'1.5px solid #E8E3DA'}}>
-            <div style={{fontSize:11,fontWeight:700,color:'#9B98B8',letterSpacing:1.5,textTransform:'uppercase',marginBottom:16}}>All Responses ({userResponses.length})</div>
+            <div style={{fontSize:11,fontWeight:700,color:'#9B8878',letterSpacing:1.5,textTransform:'uppercase',marginBottom:16}}>All Responses ({userResponses.length})</div>
             <div style={{overflowX:'auto'}}>
               <table style={{width:'100%',borderCollapse:'collapse',fontSize:13}}>
                 <thead>
-                  <tr style={{borderBottom:'2px solid #F4F1EC'}}>
+                  <tr style={{borderBottom:'2px solid #F5EFE8'}}>
                     {['Date','Time','Question','Category','Answer'].map(h=>(
-                      <th key={h} style={{textAlign:'left',padding:'8px 12px',fontSize:11,fontWeight:700,color:'#9B98B8',letterSpacing:.5,whiteSpace:'nowrap'}}>{h}</th>
+                      <th key={h} style={{textAlign:'left',padding:'8px 12px',fontSize:11,fontWeight:700,color:'#9B8878',letterSpacing:.5,whiteSpace:'nowrap'}}>{h}</th>
                     ))}
                   </tr>
                 </thead>
@@ -1031,12 +1044,12 @@ function ResponsesView({questions}) {
                   {userResponses.map((r,i)=>{
                     const q=qInfo(r.questionId)
                     return(
-                      <tr key={r.id} style={{borderBottom:'1px solid #F4F1EC',background:i%2===0?'#FAFAF8':'#fff'}}>
-                        <td style={{padding:'10px 12px',color:'#6B6888',whiteSpace:'nowrap'}}>{r.date}</td>
-                        <td style={{padding:'10px 12px',color:'#9B98B8',whiteSpace:'nowrap'}}>{r.ts?new Date(r.ts).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):'-'}</td>
-                        <td style={{padding:'10px 12px',color:'#1A1A2E',maxWidth:280}}><div style={{lineHeight:1.4}}>{q?.text||r.questionId}</div></td>
-                        <td style={{padding:'10px 12px',whiteSpace:'nowrap'}}>{q?.category?<span style={{fontSize:11,color:'#6D28D9',background:'#EDE9FE',borderRadius:20,padding:'2px 8px',fontWeight:600}}>{q.category}</span>:'-'}</td>
-                        <td style={{padding:'10px 12px',fontWeight:600,color:'#1A1A2E',whiteSpace:'nowrap'}}>{r.answer}</td>
+                      <tr key={r.id} style={{borderBottom:'1px solid #F5EFE8',background:i%2===0?'#FAF6F0':'#fff'}}>
+                        <td style={{padding:'10px 12px',color:'#7A6355',whiteSpace:'nowrap'}}>{r.date}</td>
+                        <td style={{padding:'10px 12px',color:'#9B8878',whiteSpace:'nowrap'}}>{r.ts?new Date(r.ts).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):'-'}</td>
+                        <td style={{padding:'10px 12px',color:'#1A0F0A',maxWidth:280}}><div style={{lineHeight:1.4}}>{q?.text||r.questionId}</div></td>
+                        <td style={{padding:'10px 12px',whiteSpace:'nowrap'}}>{q?.category?<span style={{fontSize:11,color:'#8B3A2A',background:'#FBF0E8',borderRadius:20,padding:'2px 8px',fontWeight:600}}>{q.category}</span>:'-'}</td>
+                        <td style={{padding:'10px 12px',fontWeight:600,color:'#1A0F0A',whiteSpace:'nowrap'}}>{r.answer}</td>
                       </tr>
                     )
                   })}
@@ -1069,18 +1082,18 @@ export default function AdminApp() {
     return unsub
   },[authed])
 
-  if(authed===null)return<div style={{minHeight:'100vh',background:'#1A1A2E',display:'flex',alignItems:'center',justifyContent:'center'}}><style>{G}</style><Spin/></div>
+  if(authed===null)return<div style={{minHeight:'100vh',background:'#1A0F0A',display:'flex',alignItems:'center',justifyContent:'center'}}><style>{G}</style><Spin/></div>
   if(!authed)return<AdminLogin onLogin={()=>setAuthed(true)}/>
 
   return(
-    <div style={{display:'flex',minHeight:'100vh',background:'#F4F1EC'}}>
+    <div style={{display:'flex',minHeight:'100vh',background:'#F5EFE8'}}>
       <style>{G}</style>
       <Sidebar active={view} setActive={setView} onLogout={()=>signOut(auth)} open={sidebarOpen} onClose={()=>setSidebarOpen(false)}/>
       <div style={{flex:1,overflowY:'auto',minWidth:0,padding:isMobile?0:'40px 44px'}}>
         {isMobile&&(
           <div style={{display:'flex',alignItems:'center',gap:12,padding:'14px 16px',background:'#fff',borderBottom:'1px solid #E8E3DA',position:'sticky',top:0,zIndex:50}}>
-            <button onClick={()=>setSidebarOpen(true)} style={{background:'none',border:'1.5px solid #E5E0D8',borderRadius:10,padding:0,width:44,height:44,cursor:'pointer',fontSize:20,color:'#1A1A2E',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>☰</button>
-            <div style={{fontFamily:"'Inter',sans-serif",fontWeight:800,fontSize:18,color:'#1A1A2E'}}>Sylvia Admin</div>
+            <button onClick={()=>setSidebarOpen(true)} style={{background:'none',border:'1.5px solid #E5E0D8',borderRadius:10,padding:0,width:44,height:44,cursor:'pointer',fontSize:20,color:'#1A0F0A',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>☰</button>
+            <div style={{fontFamily:"'Playfair Display',serif",fontWeight:800,fontSize:18,color:'#1A0F0A'}}>Sylvia Admin</div>
           </div>
         )}
         <div style={{padding:isMobile?'16px':'0'}}>
