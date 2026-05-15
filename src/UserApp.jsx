@@ -350,10 +350,12 @@ function MainApp({user, onLogout}) {
     return()=>{ unsub(); stopSched() }
   },[])
 
-  const mySchedules      = schedules.filter(s=>{ if(!s.active)return false; if(s.userId!=='all'&&s.userId!==user.id)return false; if(s.endDate&&today()>s.endDate)return false; return true })
-  const hasAllSchedule   = mySchedules.some(s=>s.questionId==='__ALL__'||s.isDefaultSession)
-  const myQIds           = [...new Set(mySchedules.filter(s=>s.questionId!=='__ALL__').map(s=>s.questionId))]
-  const sessionQuestions = hasAllSchedule ? questions : myQIds.length>0 ? questions.filter(q=>myQIds.includes(q.id)) : questions
+  const mySchedules       = schedules.filter(s=>{ if(!s.active)return false; if(s.userId!=='all'&&s.userId!==user.id)return false; if(s.endDate&&today()>s.endDate)return false; return true })
+  const hasAllSchedule    = mySchedules.some(s=>s.questionId==='__ALL__'||s.isDefaultSession)
+  const hasFolderSchedule = mySchedules.some(s=>s.isFolderSession)
+  const folderSessionName = mySchedules.find(s=>s.isFolderSession)?.folder
+  const myQIds            = [...new Set(mySchedules.filter(s=>s.questionId!=='__ALL__'&&!s.isFolderSession).map(s=>s.questionId))]
+  const sessionQuestions  = hasAllSchedule ? questions : hasFolderSchedule ? questions.filter(q=>q.folder===folderSessionName) : myQIds.length>0 ? questions.filter(q=>myQIds.includes(q.id)) : questions
   const defaultSchedule  = mySchedules.find(s=>s.isDefaultSession)
   const daysRemaining    = defaultSchedule?.endDate ? Math.max(0,Math.ceil((new Date(defaultSchedule.endDate)-new Date(today()))/86400000)+1) : null
   const scheduleExpired  = defaultSchedule?.endDate && today()>defaultSchedule.endDate

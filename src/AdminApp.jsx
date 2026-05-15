@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { db, auth } from './firebase.js'
 import {
-  collection, doc, getDoc, setDoc, addDoc, updateDoc, deleteDoc,
+  collection, doc, getDoc, getDocs, setDoc, addDoc, updateDoc, deleteDoc,
   onSnapshot, query, where
 } from 'firebase/firestore'
 import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth'
@@ -522,17 +522,33 @@ function InvitesView() {
 
 // ── Questions View ────────────────────────────────────────────────────────────
 function QuestionsView() {
-  const [questions,setQuestions]=useState([]); const [loading,setLoading]=useState(true)
+  const [questions,setQuestions]=useState([]); const [users,setUsers]=useState([]); const [loading,setLoading]=useState(true)
+  const [selectedFolder,setSelectedFolder]=useState(null)
   const [editing,setEditing]=useState(null); const [showForm,setShowForm]=useState(false)
-  const [folderFilter,setFolderFilter]=useState('All'); const [catFilter,setCatFilter]=useState('All'); const [search,setSearch]=useState('')
-  const [form,setForm]=useState({type:'scale',text:'',scaleMin:0,scaleMax:100,scaleMinLabel:'Not at all',scaleMaxLabel:'More than I ever have',options:'',category:'General',mechanism:'',folder:'Book EMA'}); const [saving,setSaving]=useState(false)
+  const [catFilter,setCatFilter]=useState('All'); const [search,setSearch]=useState('')
+  const [form,setForm]=useState({type:'scale',text:'',scaleMin:0,scaleMax:100,scaleMinLabel:'Not at all',scaleMaxLabel:'More than I ever have',options:'',category:'General',mechanism:'',folder:'Book EMA'})
+  const [saving,setSaving]=useState(false)
+  const [showAssign,setShowAssign]=useState(false); const [assigning,setAssigning]=useState(null); const [assignSuccess,setAssignSuccess]=useState(null)
 
-  useEffect(()=>{ const unsub=onSnapshot(collection(db,'questions'),snap=>{setQuestions(snap.docs.map(d=>({id:d.id,...d.data()}))); setLoading(false)}); return unsub },[])
+  useEffect(()=>{
+    const u1=onSnapshot(collection(db,'questions'),snap=>{setQuestions(snap.docs.map(d=>({id:d.id,...d.data()}))); setLoading(false)})
+    const u2=onSnapshot(collection(db,'users'),snap=>{setUsers(snap.docs.map(d=>({id:d.id,...d.data()})))})
+    return()=>{u1();u2()}
+  },[])
 
-  function openNew(){setEditing(null);setForm({type:'scale',text:'',scaleMin:0,scaleMax:100,scaleMinLabel:'Not at all',scaleMaxLabel:'More than I ever have',options:'',category:'General',mechanism:'',folder:'Book EMA'});setShowForm(true)}
+  // Build folder map
+  const folderMap={}
+  questions.forEach(q=>{const f=q.folder||'Uncategorized'; if(!folderMap[f])folderMap[f]=[]; folderMap[f].push(q)})
+  const folderNames=Object.keys(folderMap).sort()
+
+  function openNew(){
+    setEditing(null)
+    setForm({type:'scale',text:'',scaleMin:0,scaleMax:100,scaleMinLabel:'Not at all',scaleMaxLabel:'More than I ever have',options:'',category:'General',mechanism:'',folder:selectedFolder||'Book EMA'})
+    setShowForm(true)
+  }
   function openEdit(q){setEditing(q);setForm({...q,options:q.options?.join('\n')||''});setShowForm(true)}
 
-  async function save() {
+  async function save(){
     if(!form.text.trim())return; setSaving(true)
     const data={...form,scaleMin:+form.scaleMin,scaleMax:+form.scaleMax,options:form.type==='choice'?form.options.split('\n').map(s=>s.trim()).filter(Boolean):[],scheduled:editing?.scheduled||[]}
     if(editing){await setDoc(doc(db,'questions',editing.id),data,{merge:true})}
@@ -541,53 +557,151 @@ function QuestionsView() {
   }
 
   async function del(id){await deleteDoc(doc(db,'questions',id))}
-  const folders=['All',...Array.from(new Set(questions.map(q=>q.folder||'Uncategorized'))).sort()]
-  const cats=['All',...Array.from(new Set(questions.filter(q=>folderFilter==='All'||(q.folder||'Uncategorized')===folderFilter).map(q=>q.category||'General')))]
-  const filtered=questions.filter(q=>{
-    const mf=folderFilter==='All'||(q.folder||'Uncategorized')===folderFilter
+
+  async function assignFolderToUser(user){
+    setAssigning(user.id)
+    try{
+      const existingSnap=await getDocs(query(collection(db,'schedules'),where('userId','==',user.id)))
+      for(const d of existingSnap.docs) await deleteDoc(doc(db,'schedules',d.id))
+      const DEFAULT_TIMES=['09:00','12:00','15:00','18:00','21:00']
+      const startDate=today()
+      const end=new Date(); end.setDate(end.getDate()+14)
+      const endDate=end.toISOString().split('T')[0]
+      for(const time of DEFAULT_TIMES){
+        const ref=await addDoc(collection(db,'schedules'),{
+          questionId:'__FOLDER__',folder:selectedFolder,userId:user.id,
+          time,repeat:'Daily',interval:null,mode:'time',
+          startDate,endDate,durationDays:15,active:true,isFolderSession:true
+        })
+        await updateDoc(doc(db,'schedules',ref.id),{id:ref.id})
+      }
+      setAssignSuccess(user.id); setTimeout(()=>setAssignSuccess(null),3000)
+    }catch(e){alert('Error: '+e.message)}
+    setAssigning(null)
+  }
+
+  // Shared form panel
+  const FormPanel=(
+    <div style={{background:'#fff',borderRadius:20,padding:24,border:'1.5px solid #E8E3DA',marginBottom:20,animation:'fadeUp .3s ease'}}>
+      <h3 style={{fontWeight:700,fontSize:16,color:'#1A1A2E',marginBottom:16}}>{editing?'Edit Question':'New Question'}</h3>
+      <Field label="Type"><div style={{display:'flex',gap:8}}>{Q_TYPES.map(qt=><button key={qt.id} onClick={()=>setForm(f=>({...f,type:qt.id}))} style={{flex:1,padding:'10px 8px',borderRadius:12,border:`2px solid ${form.type===qt.id?'#6C63FF':'#E5E0D8'}`,background:form.type===qt.id?'#F0EEFF':'#FAFAF8',cursor:'pointer',textAlign:'center'}}><div style={{fontSize:16,marginBottom:4,color:form.type===qt.id?'#6C63FF':'#9B98B8'}}>{qt.icon}</div><div style={{fontSize:11,fontWeight:600,color:form.type===qt.id?'#6C63FF':'#9B98B8'}}>{qt.label}</div></button>)}</div></Field>
+      <Field label="Question Text"><textarea value={form.text} onChange={e=>setForm(f=>({...f,text:e.target.value}))} rows={3} placeholder="Enter question…" style={{...inp,lineHeight:1.6,resize:'none'}}/></Field>
+      {form.type==='scale'&&<div style={{background:'#FAFAF8',borderRadius:14,padding:16,border:'1px solid #E5E0D8',marginBottom:18}}><Lbl>Scale Range</Lbl><div style={{display:'flex',gap:12,marginBottom:12}}>{[['Min','scaleMin'],['Max','scaleMax']].map(([l,k])=><div key={k} style={{flex:1}}><div style={{fontSize:11,color:'#9B98B8',marginBottom:4}}>{l}</div><input type="number" value={form[k]} onChange={e=>setForm(f=>({...f,[k]:e.target.value}))} style={{...inp,padding:'8px 10px',borderRadius:8}}/></div>)}</div><div style={{display:'flex',gap:12}}>{[['Min Label','scaleMinLabel','e.g. Not at all'],['Max Label','scaleMaxLabel','e.g. Extremely']].map(([l,k,p])=><div key={k} style={{flex:1}}><div style={{fontSize:11,color:'#9B98B8',marginBottom:4}}>{l}</div><input value={form[k]} onChange={e=>setForm(f=>({...f,[k]:e.target.value}))} placeholder={p} style={{...inp,padding:'8px 10px',borderRadius:8,fontSize:13}}/></div>)}</div></div>}
+      {form.type==='choice'&&<Field label="Options (one per line)"><textarea value={form.options} onChange={e=>setForm(f=>({...f,options:e.target.value}))} rows={5} placeholder={'Very well\nWell\nOkay\nPoorly\nTerribly'} style={{...inp,lineHeight:1.8,resize:'none'}}/></Field>}
+      <Field label="Folder"><input value={form.folder||''} onChange={e=>setForm(f=>({...f,folder:e.target.value}))} placeholder="e.g. Book EMA" style={inp}/></Field>
+      <Field label="Category"><input value={form.category} onChange={e=>setForm(f=>({...f,category:e.target.value}))} placeholder="e.g. Cognitive Mechanisms" style={inp}/></Field>
+      <Field label="Mechanism (optional)"><input value={form.mechanism} onChange={e=>setForm(f=>({...f,mechanism:e.target.value}))} placeholder="e.g. Body dissatisfaction" style={inp}/></Field>
+      <div style={{display:'flex',gap:10}}>
+        <button onClick={()=>setShowForm(false)} style={{flex:1,padding:11,borderRadius:12,border:'1.5px solid #E5E0D8',background:'#fff',color:'#9B98B8',fontSize:14,fontWeight:600,cursor:'pointer'}}>Cancel</button>
+        <button onClick={save} disabled={!form.text.trim()||saving} style={{flex:2,padding:11,borderRadius:12,border:'none',background:form.text.trim()?'#1A1A2E':'#E5E0D8',color:form.text.trim()?'#E8E4FF':'#9B98B8',fontSize:14,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>{saving?<Spin/>:(editing?'Save Changes':'Create Question')}</button>
+      </div>
+    </div>
+  )
+
+  // ── Folder List View ──────────────────────────────────────────────────────────
+  if(!selectedFolder){
+    return(
+      <div>
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:24}}>
+          <div>
+            <h2 style={{fontFamily:"'Inter',sans-serif",fontWeight:800,fontSize:24,color:'#1A1A2E'}}>Question Bank</h2>
+            <p style={{fontSize:13,color:'#9B98B8',marginTop:4}}>{questions.length} questions · {folderNames.length} folder{folderNames.length!==1?'s':''}</p>
+          </div>
+          <button onClick={openNew} style={{background:'#1A1A2E',color:'#E8E4FF',border:'none',borderRadius:14,padding:'11px 20px',fontSize:14,fontWeight:700,cursor:'pointer'}}>+ New Question</button>
+        </div>
+        {showForm&&FormPanel}
+        {loading&&<div style={{display:'flex',justifyContent:'center',padding:40}}><Spin/></div>}
+        <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(240px,1fr))',gap:16}}>
+          {folderNames.map(f=>{
+            const qs=folderMap[f]||[]
+            const catCounts={}; qs.forEach(q=>{const c=q.category||'General'; catCounts[c]=(catCounts[c]||0)+1})
+            const topCats=Object.entries(catCounts).sort((a,b)=>b[1]-a[1]).slice(0,2)
+            return(
+              <div key={f} onClick={()=>{setSelectedFolder(f);setCatFilter('All');setSearch('');setShowForm(false)}}
+                style={{background:'#fff',borderRadius:20,padding:24,border:'1.5px solid #E8E3DA',cursor:'pointer',display:'flex',flexDirection:'column'}}>
+                <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',marginBottom:14}}>
+                  <div style={{width:44,height:44,borderRadius:12,background:'#F0EEFF',display:'flex',alignItems:'center',justifyContent:'center',fontSize:22}}>📁</div>
+                  <span style={{color:'#C8C0B0',fontSize:18}}>→</span>
+                </div>
+                <div style={{fontWeight:700,fontSize:17,color:'#1A1A2E',marginBottom:4}}>{f}</div>
+                <div style={{fontSize:13,color:'#9B98B8',marginBottom:topCats.length?12:0}}>{qs.length} question{qs.length!==1?'s':''}</div>
+                {topCats.length>0&&<div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+                  {topCats.map(([c,n])=><span key={c} style={{fontSize:10,fontWeight:600,color:'#6D28D9',background:'#EDE9FE',borderRadius:20,padding:'2px 8px'}}>{c} · {n}</span>)}
+                  {Object.keys(catCounts).length>2&&<span style={{fontSize:10,color:'#C8C0B0',alignSelf:'center'}}>+{Object.keys(catCounts).length-2} more</span>}
+                </div>}
+              </div>
+            )
+          })}
+        </div>
+        {!loading&&folderNames.length===0&&<div style={{textAlign:'center',padding:'60px 20px',color:'#C8C0B0'}}><div style={{fontSize:40,marginBottom:12}}>📁</div><p style={{fontSize:15,fontWeight:500}}>No questions yet</p></div>}
+      </div>
+    )
+  }
+
+  // ── Folder Detail View ────────────────────────────────────────────────────────
+  const folderQs=folderMap[selectedFolder]||[]
+  const cats=['All',...Array.from(new Set(folderQs.map(q=>q.category||'General')))]
+  const filtered=folderQs.filter(q=>{
     const mc=catFilter==='All'||(q.category||'General')===catFilter
     const ms=!search||q.text?.toLowerCase().includes(search.toLowerCase())||(q.mechanism||'').toLowerCase().includes(search.toLowerCase())
-    return mf&&mc&&ms
+    return mc&&ms
   })
 
-  return (
+  return(
     <div>
-      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:20}}>
-        <div><h2 style={{fontFamily:"'Inter',sans-serif",fontWeight:800,fontSize:24,color:'#1A1A2E'}}>Question Bank</h2><p style={{fontSize:13,color:'#9B98B8',marginTop:4}}>{filtered.length} of {questions.length} questions</p></div>
-        <button onClick={openNew} style={{background:'#1A1A2E',color:'#E8E4FF',border:'none',borderRadius:14,padding:'11px 20px',fontSize:14,fontWeight:700,cursor:'pointer'}}>+ New Question</button>
-      </div>
-      <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search questions or mechanisms…" style={{...inp,marginBottom:14}}/>
-      <div style={{marginBottom:10}}>
-        <div style={{fontSize:10,fontWeight:700,color:'#C8C0B0',letterSpacing:1.5,textTransform:'uppercase',marginBottom:6}}>Folder</div>
-        <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>{folders.map(f=><button key={f} onClick={()=>{setFolderFilter(f);setCatFilter('All')}} style={{padding:'6px 14px',borderRadius:20,border:`1.5px solid ${folderFilter===f?'#6C63FF':'#E5E0D8'}`,background:folderFilter===f?'#6C63FF':'#fff',color:folderFilter===f?'#fff':'#9B98B8',fontSize:12,fontWeight:600,cursor:'pointer',whiteSpace:'nowrap'}}>{f}</button>)}</div>
-      </div>
-      <div style={{marginBottom:20}}>
-        <div style={{fontSize:10,fontWeight:700,color:'#C8C0B0',letterSpacing:1.5,textTransform:'uppercase',marginBottom:6}}>Category</div>
-        <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>{cats.map(c=><button key={c} onClick={()=>setCatFilter(c)} style={{padding:'6px 14px',borderRadius:20,border:`1.5px solid ${catFilter===c?'#1A1A2E':'#E5E0D8'}`,background:catFilter===c?'#1A1A2E':'#fff',color:catFilter===c?'#E8E4FF':'#9B98B8',fontSize:12,fontWeight:600,cursor:'pointer',whiteSpace:'nowrap'}}>{c}</button>)}</div>
-      </div>
-      {showForm&&(
-        <div style={{background:'#fff',borderRadius:20,padding:24,border:'1.5px solid #E8E3DA',marginBottom:20,animation:'fadeUp .3s ease'}}>
-          <h3 style={{fontWeight:700,fontSize:16,color:'#1A1A2E',marginBottom:16}}>{editing?'Edit Question':'New Question'}</h3>
-          <Field label="Type"><div style={{display:'flex',gap:8}}>{Q_TYPES.map(qt=><button key={qt.id} onClick={()=>setForm(f=>({...f,type:qt.id}))} style={{flex:1,padding:'10px 8px',borderRadius:12,border:`2px solid ${form.type===qt.id?'#6C63FF':'#E5E0D8'}`,background:form.type===qt.id?'#F0EEFF':'#FAFAF8',cursor:'pointer',textAlign:'center'}}><div style={{fontSize:16,marginBottom:4,color:form.type===qt.id?'#6C63FF':'#9B98B8'}}>{qt.icon}</div><div style={{fontSize:11,fontWeight:600,color:form.type===qt.id?'#6C63FF':'#9B98B8'}}>{qt.label}</div></button>)}</div></Field>
-          <Field label="Question Text"><textarea value={form.text} onChange={e=>setForm(f=>({...f,text:e.target.value}))} rows={3} placeholder="Enter question…" style={{...inp,lineHeight:1.6,resize:'none'}}/></Field>
-          {form.type==='scale'&&<div style={{background:'#FAFAF8',borderRadius:14,padding:16,border:'1px solid #E5E0D8',marginBottom:18}}><Lbl>Scale Range</Lbl><div style={{display:'flex',gap:12,marginBottom:12}}>{[['Min','scaleMin'],['Max','scaleMax']].map(([l,k])=><div key={k} style={{flex:1}}><div style={{fontSize:11,color:'#9B98B8',marginBottom:4}}>{l}</div><input type="number" value={form[k]} onChange={e=>setForm(f=>({...f,[k]:e.target.value}))} style={{...inp,padding:'8px 10px',borderRadius:8}}/></div>)}</div><div style={{display:'flex',gap:12}}>{[['Min Label','scaleMinLabel','e.g. Not at all'],['Max Label','scaleMaxLabel','e.g. Extremely']].map(([l,k,p])=><div key={k} style={{flex:1}}><div style={{fontSize:11,color:'#9B98B8',marginBottom:4}}>{l}</div><input value={form[k]} onChange={e=>setForm(f=>({...f,[k]:e.target.value}))} placeholder={p} style={{...inp,padding:'8px 10px',borderRadius:8,fontSize:13}}/></div>)}</div></div>}
-          {form.type==='choice'&&<Field label="Options (one per line)"><textarea value={form.options} onChange={e=>setForm(f=>({...f,options:e.target.value}))} rows={5} placeholder={'Very well\nWell\nOkay\nPoorly\nTerribly'} style={{...inp,lineHeight:1.8,resize:'none'}}/></Field>}
-          <Field label="Folder"><input value={form.folder||''} onChange={e=>setForm(f=>({...f,folder:e.target.value}))} placeholder="e.g. Book EMA" style={inp}/></Field>
-          <Field label="Category"><input value={form.category} onChange={e=>setForm(f=>({...f,category:e.target.value}))} placeholder="e.g. Cognitive Mechanisms" style={inp}/></Field>
-          <Field label="Mechanism (optional)"><input value={form.mechanism} onChange={e=>setForm(f=>({...f,mechanism:e.target.value}))} placeholder="e.g. Body dissatisfaction" style={inp}/></Field>
-          <div style={{display:'flex',gap:10}}>
-            <button onClick={()=>setShowForm(false)} style={{flex:1,padding:11,borderRadius:12,border:'1.5px solid #E5E0D8',background:'#fff',color:'#9B98B8',fontSize:14,fontWeight:600,cursor:'pointer'}}>Cancel</button>
-            <button onClick={save} disabled={!form.text.trim()||saving} style={{flex:2,padding:11,borderRadius:12,border:'none',background:form.text.trim()?'#1A1A2E':'#E5E0D8',color:form.text.trim()?'#E8E4FF':'#9B98B8',fontSize:14,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>{saving?<Spin/>:(editing?'Save Changes':'Create Question')}</button>
+      {showAssign&&(
+        <div style={{position:'fixed',inset:0,background:'rgba(10,10,20,.7)',backdropFilter:'blur(6px)',zIndex:200,display:'flex',alignItems:'center',justifyContent:'center',padding:20}}>
+          <div style={{background:'#F4F1EC',borderRadius:24,width:'100%',maxWidth:480,boxShadow:'0 32px 80px rgba(0,0,0,.2)',animation:'pop .25s ease',maxHeight:'80vh',display:'flex',flexDirection:'column'}}>
+            <div style={{background:'#1A1A2E',borderRadius:'24px 24px 0 0',padding:'24px 28px',display:'flex',alignItems:'center',justifyContent:'space-between',flexShrink:0}}>
+              <div>
+                <div style={{fontWeight:700,fontSize:18,color:'#E8E4FF'}}>Assign to Patient</div>
+                <div style={{fontSize:12,color:'#6B6888',marginTop:3}}>"{selectedFolder}" · 5 sessions/day · 15 days</div>
+              </div>
+              <button onClick={()=>setShowAssign(false)} style={{background:'#FFFFFF1A',border:'none',color:'#E8E4FF',borderRadius:10,padding:'8px 14px',fontSize:13,cursor:'pointer'}}>Close</button>
+            </div>
+            <div style={{padding:'20px 24px',overflowY:'auto'}}>
+              {users.length===0&&<div style={{textAlign:'center',padding:30,color:'#C8C0B0'}}>No patients found.</div>}
+              <div style={{display:'flex',flexDirection:'column',gap:10}}>
+                {users.map(u=>(
+                  <div key={u.id} style={{background:'#fff',borderRadius:16,padding:'14px 18px',border:`1.5px solid ${assignSuccess===u.id?'#6ECB8A':'#E8E3DA'}`,display:'flex',alignItems:'center',gap:12,transition:'border-color .2s'}}>
+                    <div style={{width:40,height:40,borderRadius:12,background:'#F0EEFF',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:700,fontSize:15,color:'#6C63FF',flexShrink:0}}>{u.name?.split(' ').map(n=>n[0]).join('')||'?'}</div>
+                    <div style={{flex:1}}>
+                      <div style={{fontWeight:600,fontSize:14,color:'#1A1A2E'}}>{u.name}</div>
+                      <div style={{fontSize:12,color:'#9B98B8'}}>{u.email}</div>
+                    </div>
+                    <button onClick={()=>assignFolderToUser(u)} disabled={!!assigning} style={{padding:'8px 16px',borderRadius:10,border:'none',background:assignSuccess===u.id?'#1A6644':'#6C63FF',color:'#fff',fontSize:12,fontWeight:700,cursor:assigning?'default':'pointer',display:'flex',alignItems:'center',gap:6,flexShrink:0}}>
+                      {assigning===u.id?<Spin/>:assignSuccess===u.id?'✓ Assigned':'Assign'}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       )}
-      {loading&&<div style={{display:'flex',justifyContent:'center',padding:40}}><Spin/></div>}
+
+      <div style={{display:'flex',alignItems:'center',gap:14,marginBottom:24,flexWrap:'wrap'}}>
+        <button onClick={()=>{setSelectedFolder(null);setShowForm(false)}} style={{background:'none',border:'1.5px solid #E5E0D8',borderRadius:10,padding:'8px 14px',fontSize:13,color:'#6B6888',cursor:'pointer',fontWeight:600,flexShrink:0}}>← Folders</button>
+        <div style={{flex:1,minWidth:0}}>
+          <h2 style={{fontFamily:"'Inter',sans-serif",fontWeight:800,fontSize:22,color:'#1A1A2E',margin:0}}>{selectedFolder}</h2>
+          <p style={{fontSize:13,color:'#9B98B8',margin:'2px 0 0'}}>{filtered.length} of {folderQs.length} questions</p>
+        </div>
+        <button onClick={()=>setShowAssign(true)} style={{background:'#6C63FF',color:'#fff',border:'none',borderRadius:14,padding:'11px 20px',fontSize:14,fontWeight:700,cursor:'pointer',flexShrink:0}}>Assign to Patient</button>
+        <button onClick={openNew} style={{background:'#1A1A2E',color:'#E8E4FF',border:'none',borderRadius:14,padding:'11px 20px',fontSize:14,fontWeight:700,cursor:'pointer',flexShrink:0}}>+ New Question</button>
+      </div>
+
+      <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search questions or mechanisms…" style={{...inp,marginBottom:14}}/>
+      <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:20}}>
+        {cats.map(c=><button key={c} onClick={()=>setCatFilter(c)} style={{padding:'6px 14px',borderRadius:20,border:`1.5px solid ${catFilter===c?'#1A1A2E':'#E5E0D8'}`,background:catFilter===c?'#1A1A2E':'#fff',color:catFilter===c?'#E8E4FF':'#9B98B8',fontSize:12,fontWeight:600,cursor:'pointer',whiteSpace:'nowrap'}}>{c}</button>)}
+      </div>
+
+      {showForm&&FormPanel}
       <div style={{display:'flex',flexDirection:'column',gap:12}}>
         {filtered.map(q=>(
           <div key={q.id} style={{background:'#fff',borderRadius:18,padding:'20px 22px',border:'1.5px solid #E8E3DA'}}>
             <div style={{display:'flex',alignItems:'flex-start',gap:14}}>
               <div style={{flex:1}}>
-                <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:8,flexWrap:'wrap'}}><TBadge type={q.type}/>{q.folder&&<span style={{fontSize:11,color:'#0369A1',background:'#E0F2FE',borderRadius:20,padding:'3px 10px',fontWeight:600}}>⬡ {q.folder}</span>}{q.category&&q.category!=='General'&&<span style={{fontSize:11,color:'#6D28D9',background:'#EDE9FE',borderRadius:20,padding:'3px 10px',fontWeight:600}}>{q.category}</span>}{q.mechanism&&<span style={{fontSize:11,color:'#9B98B8'}}>{q.mechanism}</span>}</div>
+                <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:8,flexWrap:'wrap'}}><TBadge type={q.type}/>{q.category&&q.category!=='General'&&<span style={{fontSize:11,color:'#6D28D9',background:'#EDE9FE',borderRadius:20,padding:'3px 10px',fontWeight:600}}>{q.category}</span>}{q.mechanism&&<span style={{fontSize:11,color:'#9B98B8'}}>{q.mechanism}</span>}</div>
                 <p style={{fontSize:15,color:'#1A1A2E',lineHeight:1.5,fontWeight:500,margin:0}}>{q.text}</p>
                 {q.type==='scale'&&<div style={{display:'flex',alignItems:'center',gap:8,marginTop:10}}><span style={{fontSize:11,color:'#9B98B8'}}>{q.scaleMinLabel||q.scaleMin}</span><div style={{width:80,height:3,background:'linear-gradient(90deg,#6C63FF,#A89FFF)',borderRadius:4}}/><span style={{fontSize:11,color:'#9B98B8'}}>{q.scaleMaxLabel||q.scaleMax}</span></div>}
                 {q.type==='choice'&&q.options?.length>0&&<div style={{display:'flex',gap:6,marginTop:10,flexWrap:'wrap'}}>{q.options.map(o=><span key={o} style={{fontSize:11,color:'#6B6888',background:'#F4F1EC',borderRadius:20,padding:'3px 10px'}}>{o}</span>)}</div>}
@@ -599,7 +713,7 @@ function QuestionsView() {
             </div>
           </div>
         ))}
-        {!loading&&filtered.length===0&&<div style={{textAlign:'center',padding:'60px 20px',color:'#C8C0B0'}}><div style={{fontSize:40,marginBottom:12}}>◈</div><p style={{fontSize:15,fontWeight:500}}>{questions.length===0?'No questions yet':'No questions match your filter'}</p></div>}
+        {filtered.length===0&&<div style={{textAlign:'center',padding:'60px 20px',color:'#C8C0B0'}}><div style={{fontSize:40,marginBottom:12}}>◈</div><p style={{fontSize:15,fontWeight:500}}>{folderQs.length===0?'No questions in this folder yet':'No questions match your search'}</p></div>}
       </div>
     </div>
   )
