@@ -524,12 +524,12 @@ function InvitesView() {
 function QuestionsView() {
   const [questions,setQuestions]=useState([]); const [loading,setLoading]=useState(true)
   const [editing,setEditing]=useState(null); const [showForm,setShowForm]=useState(false)
-  const [catFilter,setCatFilter]=useState('All'); const [search,setSearch]=useState('')
-  const [form,setForm]=useState({type:'scale',text:'',scaleMin:0,scaleMax:100,scaleMinLabel:'Not at all',scaleMaxLabel:'More than I ever have',options:'',category:'General',mechanism:''}); const [saving,setSaving]=useState(false)
+  const [folderFilter,setFolderFilter]=useState('All'); const [catFilter,setCatFilter]=useState('All'); const [search,setSearch]=useState('')
+  const [form,setForm]=useState({type:'scale',text:'',scaleMin:0,scaleMax:100,scaleMinLabel:'Not at all',scaleMaxLabel:'More than I ever have',options:'',category:'General',mechanism:'',folder:'Book EMA'}); const [saving,setSaving]=useState(false)
 
   useEffect(()=>{ const unsub=onSnapshot(collection(db,'questions'),snap=>{setQuestions(snap.docs.map(d=>({id:d.id,...d.data()}))); setLoading(false)}); return unsub },[])
 
-  function openNew(){setEditing(null);setForm({type:'scale',text:'',scaleMin:0,scaleMax:100,scaleMinLabel:'Not at all',scaleMaxLabel:'More than I ever have',options:'',category:'General',mechanism:''});setShowForm(true)}
+  function openNew(){setEditing(null);setForm({type:'scale',text:'',scaleMin:0,scaleMax:100,scaleMinLabel:'Not at all',scaleMaxLabel:'More than I ever have',options:'',category:'General',mechanism:'',folder:'Book EMA'});setShowForm(true)}
   function openEdit(q){setEditing(q);setForm({...q,options:q.options?.join('\n')||''});setShowForm(true)}
 
   async function save() {
@@ -541,8 +541,14 @@ function QuestionsView() {
   }
 
   async function del(id){await deleteDoc(doc(db,'questions',id))}
-  const cats=['All',...Array.from(new Set(questions.map(q=>q.category||'General')))]
-  const filtered=questions.filter(q=>{const mc=catFilter==='All'||(q.category||'General')===catFilter;const ms=!search||q.text?.toLowerCase().includes(search.toLowerCase())||(q.mechanism||'').toLowerCase().includes(search.toLowerCase());return mc&&ms})
+  const folders=['All',...Array.from(new Set(questions.map(q=>q.folder||'Uncategorized'))).sort()]
+  const cats=['All',...Array.from(new Set(questions.filter(q=>folderFilter==='All'||(q.folder||'Uncategorized')===folderFilter).map(q=>q.category||'General')))]
+  const filtered=questions.filter(q=>{
+    const mf=folderFilter==='All'||(q.folder||'Uncategorized')===folderFilter
+    const mc=catFilter==='All'||(q.category||'General')===catFilter
+    const ms=!search||q.text?.toLowerCase().includes(search.toLowerCase())||(q.mechanism||'').toLowerCase().includes(search.toLowerCase())
+    return mf&&mc&&ms
+  })
 
   return (
     <div>
@@ -551,7 +557,14 @@ function QuestionsView() {
         <button onClick={openNew} style={{background:'#1A1A2E',color:'#E8E4FF',border:'none',borderRadius:14,padding:'11px 20px',fontSize:14,fontWeight:700,cursor:'pointer'}}>+ New Question</button>
       </div>
       <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search questions or mechanisms…" style={{...inp,marginBottom:14}}/>
-      <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:20}}>{cats.map(c=><button key={c} onClick={()=>setCatFilter(c)} style={{padding:'6px 14px',borderRadius:20,border:`1.5px solid ${catFilter===c?'#1A1A2E':'#E5E0D8'}`,background:catFilter===c?'#1A1A2E':'#fff',color:catFilter===c?'#E8E4FF':'#9B98B8',fontSize:12,fontWeight:600,cursor:'pointer',whiteSpace:'nowrap'}}>{c}</button>)}</div>
+      <div style={{marginBottom:10}}>
+        <div style={{fontSize:10,fontWeight:700,color:'#C8C0B0',letterSpacing:1.5,textTransform:'uppercase',marginBottom:6}}>Folder</div>
+        <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>{folders.map(f=><button key={f} onClick={()=>{setFolderFilter(f);setCatFilter('All')}} style={{padding:'6px 14px',borderRadius:20,border:`1.5px solid ${folderFilter===f?'#6C63FF':'#E5E0D8'}`,background:folderFilter===f?'#6C63FF':'#fff',color:folderFilter===f?'#fff':'#9B98B8',fontSize:12,fontWeight:600,cursor:'pointer',whiteSpace:'nowrap'}}>{f}</button>)}</div>
+      </div>
+      <div style={{marginBottom:20}}>
+        <div style={{fontSize:10,fontWeight:700,color:'#C8C0B0',letterSpacing:1.5,textTransform:'uppercase',marginBottom:6}}>Category</div>
+        <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>{cats.map(c=><button key={c} onClick={()=>setCatFilter(c)} style={{padding:'6px 14px',borderRadius:20,border:`1.5px solid ${catFilter===c?'#1A1A2E':'#E5E0D8'}`,background:catFilter===c?'#1A1A2E':'#fff',color:catFilter===c?'#E8E4FF':'#9B98B8',fontSize:12,fontWeight:600,cursor:'pointer',whiteSpace:'nowrap'}}>{c}</button>)}</div>
+      </div>
       {showForm&&(
         <div style={{background:'#fff',borderRadius:20,padding:24,border:'1.5px solid #E8E3DA',marginBottom:20,animation:'fadeUp .3s ease'}}>
           <h3 style={{fontWeight:700,fontSize:16,color:'#1A1A2E',marginBottom:16}}>{editing?'Edit Question':'New Question'}</h3>
@@ -559,6 +572,7 @@ function QuestionsView() {
           <Field label="Question Text"><textarea value={form.text} onChange={e=>setForm(f=>({...f,text:e.target.value}))} rows={3} placeholder="Enter question…" style={{...inp,lineHeight:1.6,resize:'none'}}/></Field>
           {form.type==='scale'&&<div style={{background:'#FAFAF8',borderRadius:14,padding:16,border:'1px solid #E5E0D8',marginBottom:18}}><Lbl>Scale Range</Lbl><div style={{display:'flex',gap:12,marginBottom:12}}>{[['Min','scaleMin'],['Max','scaleMax']].map(([l,k])=><div key={k} style={{flex:1}}><div style={{fontSize:11,color:'#9B98B8',marginBottom:4}}>{l}</div><input type="number" value={form[k]} onChange={e=>setForm(f=>({...f,[k]:e.target.value}))} style={{...inp,padding:'8px 10px',borderRadius:8}}/></div>)}</div><div style={{display:'flex',gap:12}}>{[['Min Label','scaleMinLabel','e.g. Not at all'],['Max Label','scaleMaxLabel','e.g. Extremely']].map(([l,k,p])=><div key={k} style={{flex:1}}><div style={{fontSize:11,color:'#9B98B8',marginBottom:4}}>{l}</div><input value={form[k]} onChange={e=>setForm(f=>({...f,[k]:e.target.value}))} placeholder={p} style={{...inp,padding:'8px 10px',borderRadius:8,fontSize:13}}/></div>)}</div></div>}
           {form.type==='choice'&&<Field label="Options (one per line)"><textarea value={form.options} onChange={e=>setForm(f=>({...f,options:e.target.value}))} rows={5} placeholder={'Very well\nWell\nOkay\nPoorly\nTerribly'} style={{...inp,lineHeight:1.8,resize:'none'}}/></Field>}
+          <Field label="Folder"><input value={form.folder||''} onChange={e=>setForm(f=>({...f,folder:e.target.value}))} placeholder="e.g. Book EMA" style={inp}/></Field>
           <Field label="Category"><input value={form.category} onChange={e=>setForm(f=>({...f,category:e.target.value}))} placeholder="e.g. Cognitive Mechanisms" style={inp}/></Field>
           <Field label="Mechanism (optional)"><input value={form.mechanism} onChange={e=>setForm(f=>({...f,mechanism:e.target.value}))} placeholder="e.g. Body dissatisfaction" style={inp}/></Field>
           <div style={{display:'flex',gap:10}}>
@@ -573,7 +587,7 @@ function QuestionsView() {
           <div key={q.id} style={{background:'#fff',borderRadius:18,padding:'20px 22px',border:'1.5px solid #E8E3DA'}}>
             <div style={{display:'flex',alignItems:'flex-start',gap:14}}>
               <div style={{flex:1}}>
-                <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:8,flexWrap:'wrap'}}><TBadge type={q.type}/>{q.category&&q.category!=='General'&&<span style={{fontSize:11,color:'#6D28D9',background:'#EDE9FE',borderRadius:20,padding:'3px 10px',fontWeight:600}}>{q.category}</span>}{q.mechanism&&<span style={{fontSize:11,color:'#9B98B8'}}>{q.mechanism}</span>}</div>
+                <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:8,flexWrap:'wrap'}}><TBadge type={q.type}/>{q.folder&&<span style={{fontSize:11,color:'#0369A1',background:'#E0F2FE',borderRadius:20,padding:'3px 10px',fontWeight:600}}>⬡ {q.folder}</span>}{q.category&&q.category!=='General'&&<span style={{fontSize:11,color:'#6D28D9',background:'#EDE9FE',borderRadius:20,padding:'3px 10px',fontWeight:600}}>{q.category}</span>}{q.mechanism&&<span style={{fontSize:11,color:'#9B98B8'}}>{q.mechanism}</span>}</div>
                 <p style={{fontSize:15,color:'#1A1A2E',lineHeight:1.5,fontWeight:500,margin:0}}>{q.text}</p>
                 {q.type==='scale'&&<div style={{display:'flex',alignItems:'center',gap:8,marginTop:10}}><span style={{fontSize:11,color:'#9B98B8'}}>{q.scaleMinLabel||q.scaleMin}</span><div style={{width:80,height:3,background:'linear-gradient(90deg,#6C63FF,#A89FFF)',borderRadius:4}}/><span style={{fontSize:11,color:'#9B98B8'}}>{q.scaleMaxLabel||q.scaleMax}</span></div>}
                 {q.type==='choice'&&q.options?.length>0&&<div style={{display:'flex',gap:6,marginTop:10,flexWrap:'wrap'}}>{q.options.map(o=><span key={o} style={{fontSize:11,color:'#6B6888',background:'#F4F1EC',borderRadius:20,padding:'3px 10px'}}>{o}</span>)}</div>}
