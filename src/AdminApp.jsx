@@ -546,7 +546,7 @@ function QuestionsView() {
   const [catFilter,setCatFilter]=useState('All'); const [search,setSearch]=useState('')
   const [form,setForm]=useState({type:'scale',text:'',scaleMin:0,scaleMax:100,scaleMinLabel:'Not at all',scaleMaxLabel:'More than I ever have',options:'',category:'General',mechanism:'',folder:'Book EMA'})
   const [saving,setSaving]=useState(false)
-  const [assignTarget,setAssignTarget]=useState(null); const [assigning,setAssigning]=useState(null); const [assignSuccess,setAssignSuccess]=useState(null)
+  const [assignTarget,setAssignTarget]=useState(null); const [assigning,setAssigning]=useState(null); const [assignSuccess,setAssignSuccess]=useState(null); const [assignSearch,setAssignSearch]=useState('')
   const isMobile=useMobile()
 
   useEffect(()=>{
@@ -626,12 +626,15 @@ function QuestionsView() {
             <div style={{fontWeight:700,fontSize:18,color:'#E8E4FF'}}>Assign to Patient</div>
             <div style={{fontSize:12,color:'#6B6888',marginTop:3}}>"{assignTarget}" · 5 sessions/day · 15 days</div>
           </div>
-          <button onClick={()=>{setAssignTarget(null);setAssignSuccess(null)}} style={{background:'#FFFFFF1A',border:'none',color:'#E8E4FF',borderRadius:10,padding:'8px 14px',fontSize:13,cursor:'pointer'}}>Close</button>
+          <button onClick={()=>{setAssignTarget(null);setAssignSuccess(null);setAssignSearch('')}} style={{background:'#FFFFFF1A',border:'none',color:'#E8E4FF',borderRadius:10,padding:'8px 14px',fontSize:13,cursor:'pointer'}}>Close</button>
         </div>
-        <div style={{padding:'20px 24px',overflowY:'auto'}}>
+        <div style={{padding:'16px 24px',borderBottom:'1px solid #E8E3DA',flexShrink:0}}>
+          <input value={assignSearch} onChange={e=>setAssignSearch(e.target.value)} placeholder="Search by name or email…" style={{...inp,margin:0}}/>
+        </div>
+        <div style={{padding:'16px 24px',overflowY:'auto'}}>
           {users.length===0&&<div style={{textAlign:'center',padding:30,color:'#C8C0B0'}}>No patients found.</div>}
           <div style={{display:'flex',flexDirection:'column',gap:10}}>
-            {users.map(u=>(
+            {users.filter(u=>!assignSearch||u.name?.toLowerCase().includes(assignSearch.toLowerCase())||u.email?.toLowerCase().includes(assignSearch.toLowerCase())).map(u=>(
               <div key={u.id} style={{background:'#fff',borderRadius:16,padding:'14px 18px',border:`1.5px solid ${assignSuccess===u.id?'#6ECB8A':'#E8E3DA'}`,display:'flex',alignItems:'center',gap:12,transition:'border-color .2s'}}>
                 <div style={{width:40,height:40,borderRadius:12,background:'#F0EEFF',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:700,fontSize:15,color:'#6C63FF',flexShrink:0}}>{u.name?.split(' ').map(n=>n[0]).join('')||'?'}</div>
                 <div style={{flex:1}}>
@@ -681,7 +684,7 @@ function QuestionsView() {
                   {topCats.map(([c,n])=><span key={c} style={{fontSize:10,fontWeight:600,color:'#6D28D9',background:'#EDE9FE',borderRadius:20,padding:'2px 8px'}}>{c} · {n}</span>)}
                   {Object.keys(catCounts).length>2&&<span style={{fontSize:10,color:'#C8C0B0',alignSelf:'center'}}>+{Object.keys(catCounts).length-2} more</span>}
                 </div>}
-                <button onClick={e=>{e.stopPropagation();setAssignTarget(f);setAssignSuccess(null)}}
+                <button onClick={e=>{e.stopPropagation();setAssignTarget(f);setAssignSuccess(null);setAssignSearch('')}}
                   style={{marginTop:'auto',padding:'8px 0',borderRadius:10,border:'1.5px solid #6C63FF',background:'#F0EEFF',color:'#6C63FF',fontSize:12,fontWeight:700,cursor:'pointer',width:'100%'}}>
                   Assign to Patient
                 </button>
@@ -713,7 +716,7 @@ function QuestionsView() {
           <h2 style={{fontFamily:"'Inter',sans-serif",fontWeight:800,fontSize:22,color:'#1A1A2E',margin:0}}>{selectedFolder}</h2>
           <p style={{fontSize:13,color:'#9B98B8',margin:'2px 0 0'}}>{filtered.length} of {folderQs.length} questions</p>
         </div>
-        <button onClick={()=>{setAssignTarget(selectedFolder);setAssignSuccess(null)}} style={{background:'#6C63FF',color:'#fff',border:'none',borderRadius:14,padding:'11px 20px',fontSize:14,fontWeight:700,cursor:'pointer',flexShrink:0}}>Assign to Patient</button>
+        <button onClick={()=>{setAssignTarget(selectedFolder);setAssignSuccess(null);setAssignSearch('')}} style={{background:'#6C63FF',color:'#fff',border:'none',borderRadius:14,padding:'11px 20px',fontSize:14,fontWeight:700,cursor:'pointer',flexShrink:0}}>Assign to Patient</button>
         <button onClick={openNew} style={{background:'#1A1A2E',color:'#E8E4FF',border:'none',borderRadius:14,padding:'11px 20px',fontSize:14,fontWeight:700,cursor:'pointer',flexShrink:0}}>+ New Question</button>
       </div>
 
