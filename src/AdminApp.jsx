@@ -493,48 +493,22 @@ function InvitesView() {
 
   async function sendWelcomeEmail(recipientName, recipientEmail, code) {
     try {
-      const res = await fetch('https://api.resend.com/emails', {
+      const res = await fetch('/api/send-invite', {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${import.meta.env.VITE_RESEND_API_KEY}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          from: 'onboarding@resend.dev',
-          to: recipientEmail,
-          subject: `Welcome to Sylvia, ${recipientName} — Your Invitation Code`,
-          html: `
-            <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px 24px;background:#ffffff;">
-              <h2 style="font-size:22px;color:#1A1A2E;margin:0 0 8px;">Welcome to Sylvia, ${recipientName}</h2>
-              <p style="font-size:15px;color:#6B6888;line-height:1.6;margin:0 0 24px;">
-                Sylvia is a daily wellness check-in app that helps you track how you're feeling over time. Your care team will use your responses to better support you.
-              </p>
-              <p style="font-size:14px;color:#1A1A2E;margin:0 0 8px;font-weight:600;">Your invite code:</p>
-              <div style="background:#1A1A2E;border-radius:12px;padding:16px 24px;display:inline-block;margin-bottom:24px;">
-                <span style="font-size:24px;font-weight:800;color:#A89FFF;letter-spacing:4px;">${code}</span>
-              </div>
-              <p style="font-size:14px;color:#6B6888;line-height:1.6;margin:0 0 24px;">
-                Enter this code when you open the app to create your account. Get started at the link below.
-              </p>
-              <a href="https://sylvia-health.vercel.app" style="display:inline-block;background:#6C63FF;color:#ffffff;text-decoration:none;font-size:15px;font-weight:700;padding:13px 28px;border-radius:12px;">
-                Get Started →
-              </a>
-              <p style="font-size:12px;color:#C8C0B0;margin-top:32px;">Sylvia Precision Health</p>
-            </div>
-          `
-        })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: recipientName, email: recipientEmail, code })
       })
       const data = await res.json()
       if(!res.ok) {
-        const msg = data?.message || data?.name || JSON.stringify(data)
-        console.error('Resend API error:', res.status, data)
+        const msg = data?.error || JSON.stringify(data)
+        console.error('send-invite error:', res.status, data)
         setEmailSent(`HTTP ${res.status}: ${msg}`)
       } else {
-        console.log('Resend email sent:', data)
+        console.log('Email sent:', data)
         setEmailSent('sent')
       }
     } catch(e) {
-      console.error('Resend fetch error:', e)
+      console.error('send-invite fetch error:', e)
       setEmailSent(e.message || String(e))
     }
   }
