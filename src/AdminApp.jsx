@@ -195,12 +195,15 @@ function ClientProfileView({client, questions, onBack}) {
   const [templates,setTemplates]=useState([])
   const [loading,setLoading]=useState(true)
   const [activeTab,setActiveTab]=useState('info')
-  const [saving,setSaving]=useState(null)
-  const [showAssign,setShowAssign]=useState(false)
-  const [selectedTemplate,setSelectedTemplate]=useState(null)
-  const [durDays,setDurDays]=useState(15)
-  const [assigning,setAssigning]=useState(false)
-  const [assignSuccess,setAssignSuccess]=useState(false)
+  const [showAddQ,setShowAddQ]=useState(false)
+  const [addStep,setAddStep]=useState(1)
+  const [addFolder,setAddFolder]=useState(null)
+  const [addTemplate,setAddTemplate]=useState(null)
+  const [addDurDays,setAddDurDays]=useState(15)
+  const [adding,setAdding]=useState(false)
+  const [addSuccess,setAddSuccess]=useState(false)
+  const [toggling,setToggling]=useState(null)
+  const [removing,setRemoving]=useState(null)
   const [dateFrom,setDateFrom]=useState('')
   const [dateTo,setDateTo]=useState('')
 
@@ -216,11 +219,6 @@ function ClientProfileView({client, questions, onBack}) {
 
   function qInfo(id){return questions.find(q=>q.id===id)}
 
-  const defaultSched=schedules.find(s=>s.isDefaultSession)
-  const daysLeft=defaultSched?.endDate
-    ?Math.max(0,Math.ceil((new Date(defaultSched.endDate)-new Date(today()))/86400000)+1)
-    :null
-
   function tSummary(t){
     if(!t)return''
     if(t.type==='custom_interval')return`Every ${t.intervalHours}h from ${(t.times||['08:00'])[0]}`
@@ -228,45 +226,82 @@ function ClientProfileView({client, questions, onBack}) {
     return(t.times||[]).join(' · ')
   }
 
-  function openAssign(){
-    const def=templates.find(t=>t.isDefault)||templates[0]||null
-    setSelectedTemplate(def)
-    setDurDays(def?.defaultDuration||15)
-    setAssignSuccess(false)
-    setShowAssign(true)
+  const folderMap={}
+  questions.forEach(q=>{const f=q.folder||'Uncategorized';if(!folderMap[f])folderMap[f]=[];folderMap[f].push(q)})
+  const folderNames=Object.keys(folderMap).sort()
+
+  function groupAssignments(scheds){
+    const groups={}
+    scheds.forEach(s=>{const key=s.assignmentId||s.id;if(!groups[key])groups[key]=[];groups[key].push(s)})
+    return Object.values(groups)
   }
 
-  async function confirmAssign(){
-    if(!selectedTemplate)return
-    setAssigning(true)
+  function groupMeta(group){
+    const first=group[0]
+    const endDate=first.endDate||''
+    const isExpired=endDate&&endDate<today()
+    const isRemoved=group.every(s=>s.removed)
+    const dl=endDate?Math.max(0,Math.ceil((new Date(endDate)-new Date(today()))/86400000)+1):null
+    return{
+      folder:first.folder||'All Questions',
+      templateName:first.templateName||'Custom',
+      startDate:first.startDate||'',
+      endDate,times:group.map(s=>s.time).filter(Boolean),
+      active:group.some(s=>s.active),
+      removed:isRemoved,expired:isExpired&&!isRemoved,
+      daysLeft:dl,assignmentId:first.assignmentId||first.id,ids:group.map(s=>s.id)
+    }
+  }
+
+  const allGroups=groupAssignments(schedules)
+  const activeGroups=allGroups.filter(g=>{const m=groupMeta(g);return!m.removed&&(m.endDate?m.endDate>=today():true)})
+  const pastGroups=allGroups.filter(g=>{const m=groupMeta(g);return m.removed||(m.endDate&&m.endDate<today())})
+
+  async function toggleAssignment(group){
+    const meta=groupMeta(group);setToggling(meta.assignmentId)
+    const newActive=!meta.active
+    for(const s of group)await updateDoc(doc(db,'schedules',s.id),{active:newActive})
+    setToggling(null)
+  }
+
+  async function removeAssignment(group){
+    const meta=groupMeta(group)
+    if(!window.confirm('Remove this assignment?'))return
+    setRemoving(meta.assignmentId)
+    for(const s of group)await updateDoc(doc(db,'schedules',s.id),{removed:true,active:false})
+    setRemoving(null)
+  }
+
+  async function confirmAdd(){
+    if(!addTemplate||!addFolder)return
+    setAdding(true)
     try{
-      for(const s of schedules)await deleteDoc(doc(db,'schedules',s.id))
       const startDate=today()
-      const end=new Date();end.setDate(end.getDate()+durDays-1)
+      const end=new Date();end.setDate(end.getDate()+addDurDays-1)
       const endDate=end.toISOString().split('T')[0]
-      let timesToCreate=[...(selectedTemplate.times||['09:00'])],extraFields={}
-      if(selectedTemplate.type==='weekly'){extraFields={repeat:'Weekly',days:selectedTemplate.days||[]}}
-      else if(selectedTemplate.type==='custom_interval'){
-        timesToCreate=[(selectedTemplate.times||['08:00'])[0]]
-        extraFields={mode:'interval',interval:selectedTemplate.intervalHours||4,repeat:'Custom interval'}
+      const assignmentId=Date.now().toString(36)+Math.random().toString(36).slice(2,6)
+      let timesToCreate=[...(addTemplate.times||['09:00'])],extraFields={}
+      if(addTemplate.type==='weekly'){extraFields={repeat:'Weekly',days:addTemplate.days||[]}}
+      else if(addTemplate.type==='custom_interval'){
+        timesToCreate=[(addTemplate.times||['08:00'])[0]]
+        extraFields={mode:'interval',interval:addTemplate.intervalHours||4,repeat:'Custom interval'}
       }
       for(const time of timesToCreate){
         const ref=await addDoc(collection(db,'schedules'),{
           questionId:'__ALL__',userId:client.id,time,
           repeat:'Daily',interval:null,mode:'time',
-          startDate,endDate,durationDays:durDays,
-          active:true,isDefaultSession:true,
-          templateId:selectedTemplate.id,templateName:selectedTemplate.name,
-          ...extraFields
+          startDate,endDate,durationDays:addDurDays,
+          active:true,removed:false,folder:addFolder,assignmentId,
+          templateId:addTemplate.id,templateName:addTemplate.name,...extraFields
         })
         await updateDoc(doc(db,'schedules',ref.id),{id:ref.id})
       }
-      setAssignSuccess(true)
+      setAddSuccess(true)
     }catch(e){alert('Error: '+e.message)}
-    setAssigning(false)
+    setAdding(false)
   }
 
-  async function removeSchedule(s){await deleteDoc(doc(db,'schedules',s.id))}
+  function closeAdd(){setShowAddQ(false);setAddStep(1);setAddFolder(null);setAddTemplate(null);setAddDurDays(15);setAddSuccess(false)}
 
   const clientResponses=responses.filter(r=>{
     if(r.answer==='__skipped__')return false
@@ -338,7 +373,7 @@ function ClientProfileView({client, questions, onBack}) {
   const byQuestion={}
   clientResponses.forEach(r=>{if(!byQuestion[r.questionId])byQuestion[r.questionId]=[];byQuestion[r.questionId].push(r)})
   const scaleColors=['#6C63FF','#6ECB8A','#F6C549','#F2857A','#7BB8F5','#B48FE8']
-  const tabs=[{id:'info',label:'Info'},{id:'schedule',label:'Schedule'},{id:'responses',label:'Responses'}]
+  const tabs=[{id:'info',label:'Info'},{id:'questions',label:'Questions'},{id:'responses',label:'Responses'}]
 
   return(
     <div style={{animation:'fadeUp .25s ease'}}>
@@ -382,97 +417,169 @@ function ClientProfileView({client, questions, onBack}) {
         </div>
       )}
 
-      {activeTab==='schedule'&&(
+      {activeTab==='questions'&&(
         <div>
-          {!showAssign&&(
-            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:16}}>
-              <div style={{fontSize:11,fontWeight:700,color:'#9B98B8',letterSpacing:1.5,textTransform:'uppercase'}}>Active Schedule ({schedules.length})</div>
-              <button onClick={openAssign} style={{background:'#6C63FF',color:'#fff',border:'none',borderRadius:12,padding:'9px 18px',fontSize:13,fontWeight:700,cursor:'pointer'}}>⚡ Assign Schedule</button>
-            </div>
-          )}
-          {showAssign&&(assignSuccess?(
-            <div style={{background:'#fff',borderRadius:20,padding:32,border:'1.5px solid #E8E3DA',textAlign:'center',marginBottom:16}}>
-              <div style={{fontSize:36,marginBottom:10}}>✓</div>
-              <div style={{fontWeight:700,fontSize:17,color:'#1A6644',marginBottom:6}}>Schedule Assigned</div>
-              <div style={{fontSize:13,color:'#6B6888',marginBottom:20,lineHeight:1.6}}>{selectedTemplate?.name} · {durDays} days</div>
-              <button onClick={()=>{setShowAssign(false);setAssignSuccess(false)}} style={{padding:'10px 28px',borderRadius:12,border:'none',background:'#1A1A2E',color:'#E8E4FF',fontSize:14,fontWeight:700,cursor:'pointer'}}>Done</button>
-            </div>
-          ):(
-            <div style={{background:'#fff',borderRadius:20,padding:24,border:'1.5px solid #E8E3DA',marginBottom:16,animation:'fadeUp .2s ease'}}>
-              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:16}}>
-                <div style={{fontSize:14,fontWeight:700,color:'#1A1A2E'}}>Assign Schedule</div>
-                <button onClick={()=>setShowAssign(false)} style={{background:'none',border:'1.5px solid #E5E0D8',borderRadius:8,padding:'5px 12px',fontSize:12,color:'#6B6888',cursor:'pointer'}}>Cancel</button>
+          {showAddQ?(
+            addSuccess?(
+              <div style={{background:'#fff',borderRadius:20,padding:32,border:'1.5px solid #E8E3DA',textAlign:'center',marginBottom:20}}>
+                <div style={{fontSize:36,marginBottom:10}}>✓</div>
+                <div style={{fontWeight:700,fontSize:17,color:'#1A6644',marginBottom:6}}>Assignment Added</div>
+                <div style={{fontSize:13,color:'#6B6888',marginBottom:20,lineHeight:1.6}}>{addFolder} · {addTemplate?.name} · {addDurDays} days</div>
+                <button onClick={closeAdd} style={{padding:'10px 28px',borderRadius:12,border:'none',background:'#1A1A2E',color:'#E8E4FF',fontSize:14,fontWeight:700,cursor:'pointer'}}>Done</button>
               </div>
-              <div style={{fontSize:10,fontWeight:700,color:'#6B6888',letterSpacing:1,textTransform:'uppercase',marginBottom:10}}>Template</div>
-              {templates.length===0&&<div style={{textAlign:'center',padding:'20px',color:'#C8C0B0',fontSize:13,marginBottom:16}}>No templates yet — create one in the Schedule tab.</div>}
-              <div style={{display:'flex',flexDirection:'column',gap:8,marginBottom:18}}>
-                {templates.map(t=>(
-                  <div key={t.id} onClick={()=>{setSelectedTemplate(t);setDurDays(t.defaultDuration)}} style={{background:'#FAFAF8',borderRadius:14,padding:'14px 16px',border:`1.5px solid ${selectedTemplate?.id===t.id?'#6C63FF':'#E8E3DA'}`,cursor:'pointer',transition:'border-color .15s'}}>
-                    <div style={{display:'flex',alignItems:'center',gap:12}}>
-                      <div style={{flex:1}}>
-                        <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:3}}>
-                          <span style={{fontWeight:600,fontSize:14,color:'#1A1A2E'}}>{t.name}</span>
-                          {t.isDefault&&<span style={{fontSize:10,fontWeight:700,color:'#6C63FF',background:'#EDE9FE',borderRadius:20,padding:'1px 7px'}}>DEFAULT</span>}
-                        </div>
-                        <div style={{fontSize:12,color:'#6B6888'}}>{tSummary(t)}</div>
-                        <div style={{fontSize:11,color:'#9B98B8',marginTop:2}}>{t.defaultDuration} days</div>
-                      </div>
-                      <div style={{width:20,height:20,borderRadius:'50%',border:`2px solid ${selectedTemplate?.id===t.id?'#6C63FF':'#D1D5DB'}`,background:selectedTemplate?.id===t.id?'#6C63FF':'transparent',flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center'}}>
-                        {selectedTemplate?.id===t.id&&<div style={{width:8,height:8,borderRadius:'50%',background:'#fff'}}/>}
-                      </div>
-                    </div>
+            ):(
+              <div style={{background:'#fff',borderRadius:20,padding:24,border:'1.5px solid #E8E3DA',marginBottom:20,animation:'fadeUp .2s ease'}}>
+                <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:16}}>
+                  <div>
+                    <div style={{fontSize:14,fontWeight:700,color:'#1A1A2E'}}>Add Questions</div>
+                    {addStep===2&&addFolder&&<div style={{fontSize:12,color:'#6B6888',marginTop:2}}>📁 {addFolder} · {(folderMap[addFolder]||[]).length} questions</div>}
                   </div>
-                ))}
-              </div>
-              <div style={{marginBottom:20}}>
-                <div style={{fontSize:10,fontWeight:700,color:'#6B6888',letterSpacing:1,textTransform:'uppercase',marginBottom:10}}>Duration</div>
-                <div style={{display:'flex',gap:6,flexWrap:'wrap',alignItems:'center'}}>
-                  {[15,30,60].map(d=>(
-                    <button key={d} onClick={()=>setDurDays(d)} style={{padding:'7px 12px',borderRadius:10,border:`1.5px solid ${durDays===d?'#1A1A2E':'#E5E0D8'}`,background:durDays===d?'#1A1A2E':'#fff',color:durDays===d?'#E8E4FF':'#9B98B8',fontSize:12,fontWeight:600,cursor:'pointer'}}>
-                      {d} days
-                    </button>
-                  ))}
-                  <div style={{display:'flex',alignItems:'center',gap:6}}>
-                    <input type="number" min={1} max={365} value={durDays} onChange={e=>setDurDays(Math.max(1,+e.target.value))} style={{...inp,padding:'7px 10px',borderRadius:8,width:72}}/>
-                    <span style={{fontSize:12,color:'#9B98B8'}}>days</span>
+                  <div style={{display:'flex',gap:8}}>
+                    {addStep===2&&<button onClick={()=>{setAddStep(1);setAddFolder(null)}} style={{background:'none',border:'1.5px solid #E5E0D8',borderRadius:8,padding:'5px 10px',fontSize:12,color:'#6B6888',cursor:'pointer'}}>← Back</button>}
+                    <button onClick={closeAdd} style={{background:'none',border:'1.5px solid #E5E0D8',borderRadius:8,padding:'5px 12px',fontSize:12,color:'#6B6888',cursor:'pointer'}}>Cancel</button>
                   </div>
                 </div>
-              </div>
-              <button onClick={confirmAssign} disabled={assigning||!selectedTemplate} style={{width:'100%',padding:12,borderRadius:12,border:'none',background:selectedTemplate&&!assigning?'#6C63FF':'#E5E0D8',color:selectedTemplate&&!assigning?'#fff':'#9B98B8',fontSize:14,fontWeight:700,cursor:selectedTemplate&&!assigning?'pointer':'default',display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>
-                {assigning?<><Spin/> Assigning…</>:'Confirm & Assign'}
-              </button>
-            </div>
-          ))}
-          {!showAssign&&schedules.length===0&&(
-            <div style={{textAlign:'center',padding:'60px 20px',color:'#C8C0B0',background:'#fff',borderRadius:20,border:'1.5px solid #E8E3DA'}}>
-              <div style={{fontSize:36,marginBottom:12}}>◷</div>
-              <p style={{fontSize:15,fontWeight:500}}>No schedule assigned yet</p>
-              <p style={{fontSize:13,marginTop:6}}>Click "Assign Schedule" above to get started.</p>
-            </div>
-          )}
-          {!showAssign&&schedules.length>0&&(
-            <div>
-              {schedules.filter(s=>s.isDefaultSession).length>0&&(
-                <div style={{background:'#fff',borderRadius:16,padding:'18px 20px',border:'1.5px solid #E8E3DA',marginBottom:10}}>
-                  <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:12}}>
-                    <div style={{flex:1,minWidth:0}}>
-                      <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:6,flexWrap:'wrap'}}>
-                        <span style={{fontWeight:700,fontSize:15,color:'#1A1A2E'}}>{schedules.find(s=>s.templateName)?.templateName||'All Questions'}</span>
-                        <span style={{fontSize:11,color:'#1A6644',background:'#D1FAE5',borderRadius:20,padding:'2px 8px',fontWeight:600}}>Active</span>
-                      </div>
-                      <div style={{fontSize:13,color:'#6B6888',marginBottom:4}}>{schedules.filter(s=>s.isDefaultSession).map(s=>s.time).join(' · ')}</div>
-                      {defaultSched&&<div style={{fontSize:12,color:'#9B98B8'}}>{defaultSched.startDate} → {defaultSched.endDate} · {daysLeft!=null&&daysLeft>0?`${daysLeft} day${daysLeft!==1?'s':''} left`:'ended'}</div>}
+
+                {addStep===1&&(
+                  <>
+                    <div style={{fontSize:10,fontWeight:700,color:'#6B6888',letterSpacing:1,textTransform:'uppercase',marginBottom:10}}>Select Folder</div>
+                    {folderNames.length===0&&<div style={{textAlign:'center',padding:'30px',color:'#C8C0B0',fontSize:13}}>No question folders found.</div>}
+                    <div style={{display:'flex',flexDirection:'column',gap:8}}>
+                      {folderNames.map(f=>(
+                        <div key={f} onClick={()=>{setAddFolder(f);const def=templates.find(t=>t.isDefault)||templates[0]||null;setAddTemplate(def);setAddDurDays(def?.defaultDuration||15);setAddStep(2)}}
+                          style={{background:'#FAFAF8',borderRadius:14,padding:'14px 16px',border:'1.5px solid #E8E3DA',cursor:'pointer',display:'flex',alignItems:'center',gap:12}}>
+                          <div style={{width:38,height:38,borderRadius:10,background:'#EDE9FE',display:'flex',alignItems:'center',justifyContent:'center',fontSize:18,flexShrink:0}}>📁</div>
+                          <div style={{flex:1}}>
+                            <div style={{fontWeight:600,fontSize:14,color:'#1A1A2E'}}>{f}</div>
+                            <div style={{fontSize:12,color:'#9B98B8',marginTop:2}}>{(folderMap[f]||[]).length} question{(folderMap[f]||[]).length!==1?'s':''}</div>
+                          </div>
+                          <span style={{color:'#C8C0B0',fontSize:18}}>›</span>
+                        </div>
+                      ))}
                     </div>
-                    <button onClick={()=>{if(window.confirm('Remove this schedule?'))schedules.forEach(s=>removeSchedule(s))}} style={{padding:'7px 14px',borderRadius:10,border:'1.5px solid #FEE2E2',background:'#fff',color:'#EF4444',fontSize:12,fontWeight:600,cursor:'pointer',flexShrink:0,whiteSpace:'nowrap'}}>Remove</button>
-                  </div>
+                  </>
+                )}
+
+                {addStep===2&&(
+                  <>
+                    <div style={{fontSize:10,fontWeight:700,color:'#6B6888',letterSpacing:1,textTransform:'uppercase',marginBottom:10}}>Schedule Template</div>
+                    {templates.length===0&&<div style={{textAlign:'center',padding:'20px',color:'#C8C0B0',fontSize:13,marginBottom:16}}>No templates yet — create one in the Schedule tab.</div>}
+                    <div style={{display:'flex',flexDirection:'column',gap:8,marginBottom:18}}>
+                      {templates.map(t=>(
+                        <div key={t.id} onClick={()=>{setAddTemplate(t);setAddDurDays(t.defaultDuration)}}
+                          style={{background:'#FAFAF8',borderRadius:14,padding:'14px 16px',border:`1.5px solid ${addTemplate?.id===t.id?'#6C63FF':'#E8E3DA'}`,cursor:'pointer',transition:'border-color .15s'}}>
+                          <div style={{display:'flex',alignItems:'center',gap:12}}>
+                            <div style={{flex:1}}>
+                              <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:3}}>
+                                <span style={{fontWeight:600,fontSize:14,color:'#1A1A2E'}}>{t.name}</span>
+                                {t.isDefault&&<span style={{fontSize:10,fontWeight:700,color:'#6C63FF',background:'#EDE9FE',borderRadius:20,padding:'1px 7px'}}>DEFAULT</span>}
+                              </div>
+                              <div style={{fontSize:12,color:'#6B6888'}}>{tSummary(t)}</div>
+                              <div style={{fontSize:11,color:'#9B98B8',marginTop:2}}>{t.defaultDuration} days</div>
+                            </div>
+                            <div style={{width:20,height:20,borderRadius:'50%',border:`2px solid ${addTemplate?.id===t.id?'#6C63FF':'#D1D5DB'}`,background:addTemplate?.id===t.id?'#6C63FF':'transparent',flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center'}}>
+                              {addTemplate?.id===t.id&&<div style={{width:8,height:8,borderRadius:'50%',background:'#fff'}}/>}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{marginBottom:20}}>
+                      <div style={{fontSize:10,fontWeight:700,color:'#6B6888',letterSpacing:1,textTransform:'uppercase',marginBottom:10}}>Duration</div>
+                      <div style={{display:'flex',gap:6,flexWrap:'wrap',alignItems:'center'}}>
+                        {[15,30,60].map(d=>(
+                          <button key={d} onClick={()=>setAddDurDays(d)} style={{padding:'7px 12px',borderRadius:10,border:`1.5px solid ${addDurDays===d?'#1A1A2E':'#E5E0D8'}`,background:addDurDays===d?'#1A1A2E':'#fff',color:addDurDays===d?'#E8E4FF':'#9B98B8',fontSize:12,fontWeight:600,cursor:'pointer'}}>
+                            {d} days
+                          </button>
+                        ))}
+                        <div style={{display:'flex',alignItems:'center',gap:6}}>
+                          <input type="number" min={1} max={365} value={addDurDays} onChange={e=>setAddDurDays(Math.max(1,+e.target.value))} style={{...inp,padding:'7px 10px',borderRadius:8,width:72}}/>
+                          <span style={{fontSize:12,color:'#9B98B8'}}>days</span>
+                        </div>
+                      </div>
+                    </div>
+                    <button onClick={confirmAdd} disabled={adding||!addTemplate} style={{width:'100%',padding:12,borderRadius:12,border:'none',background:addTemplate&&!adding?'#6C63FF':'#E5E0D8',color:addTemplate&&!adding?'#fff':'#9B98B8',fontSize:14,fontWeight:700,cursor:addTemplate&&!adding?'pointer':'default',display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>
+                      {adding?<><Spin/> Adding…</>:'Confirm & Add'}
+                    </button>
+                  </>
+                )}
+              </div>
+            )
+          ):(
+            <>
+              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:16}}>
+                <div style={{fontSize:11,fontWeight:700,color:'#9B98B8',letterSpacing:1.5,textTransform:'uppercase'}}>Active Assignments ({activeGroups.length})</div>
+                <button onClick={()=>{setShowAddQ(true);setAddStep(1);setAddFolder(null);setAddSuccess(false)}} style={{background:'#6C63FF',color:'#fff',border:'none',borderRadius:12,padding:'9px 18px',fontSize:13,fontWeight:700,cursor:'pointer'}}>+ Add Questions</button>
+              </div>
+
+              {activeGroups.length===0&&(
+                <div style={{textAlign:'center',padding:'48px 20px',color:'#C8C0B0',background:'#fff',borderRadius:20,border:'1.5px solid #E8E3DA',marginBottom:20}}>
+                  <div style={{fontSize:36,marginBottom:12}}>📁</div>
+                  <p style={{fontSize:15,fontWeight:500}}>No questions assigned yet</p>
+                  <p style={{fontSize:13,marginTop:6}}>Click "+ Add Questions" to assign a folder with a schedule.</p>
                 </div>
               )}
-              {schedules.filter(s=>!s.isDefaultSession).map(s=>{
-                const q=qInfo(s.questionId)
-                if(!q)return null
-                return<ScheduleRow key={s.id} s={s} q={q} saving={saving} onSave={async(sId,edits)=>{setSaving(sId);await updateDoc(doc(db,'schedules',sId),edits);setSaving(null)}} onToggle={s=>updateDoc(doc(db,'schedules',s.id),{active:!s.active})} onRemove={removeSchedule}/>
+
+              {activeGroups.map(group=>{
+                const meta=groupMeta(group)
+                const qCount=(folderMap[meta.folder]||[]).length
+                const isToggling=toggling===meta.assignmentId
+                const isRemoving=removing===meta.assignmentId
+                return(
+                  <div key={meta.assignmentId} style={{background:'#fff',borderRadius:16,padding:'18px 20px',border:`1.5px solid ${meta.active?'#E8E3DA':'#F0EDE8'}`,marginBottom:10,opacity:meta.active?1:.7}}>
+                    <div style={{display:'flex',alignItems:'flex-start',gap:12}}>
+                      <div style={{width:42,height:42,borderRadius:12,background:'#EDE9FE',display:'flex',alignItems:'center',justifyContent:'center',fontSize:20,flexShrink:0}}>📁</div>
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:5,flexWrap:'wrap'}}>
+                          <span style={{fontWeight:700,fontSize:15,color:'#1A1A2E'}}>{meta.folder}</span>
+                          {qCount>0&&<span style={{fontSize:11,color:'#6C63FF',background:'#EDE9FE',borderRadius:20,padding:'2px 8px',fontWeight:600}}>{qCount} question{qCount!==1?'s':''}</span>}
+                          {meta.active
+                            ?<span style={{fontSize:11,color:'#1A6644',background:'#D1FAE5',borderRadius:20,padding:'2px 8px',fontWeight:600}}>Active</span>
+                            :<span style={{fontSize:11,color:'#92400E',background:'#FEF3C7',borderRadius:20,padding:'2px 8px',fontWeight:600}}>Paused</span>}
+                          {meta.daysLeft!==null&&meta.daysLeft>0
+                            ?<span style={{fontSize:11,color:'#6B6888',background:'#F4F1EC',borderRadius:20,padding:'2px 8px'}}>{meta.daysLeft} day{meta.daysLeft!==1?'s':''} left</span>
+                            :meta.endDate&&<span style={{fontSize:11,color:'#EF4444',background:'#FEE2E2',borderRadius:20,padding:'2px 8px',fontWeight:600}}>Expired</span>}
+                        </div>
+                        <div style={{fontSize:12,color:'#6B6888',marginBottom:3}}>{meta.templateName} · {meta.times.join(' · ')}</div>
+                        <div style={{fontSize:11,color:'#9B98B8'}}>{meta.startDate} → {meta.endDate}</div>
+                      </div>
+                      <div style={{display:'flex',gap:6,flexShrink:0}}>
+                        <button onClick={()=>toggleAssignment(group)} disabled={!!toggling||!!removing} style={{padding:'6px 12px',borderRadius:8,border:'1.5px solid #E5E0D8',background:'#fff',color:'#6B6888',fontSize:11,fontWeight:600,cursor:'pointer',display:'flex',alignItems:'center',gap:4}}>
+                          {isToggling?<Spin/>:(meta.active?'Pause':'Resume')}
+                        </button>
+                        <button onClick={()=>removeAssignment(group)} disabled={!!toggling||!!removing} style={{padding:'6px 10px',borderRadius:8,border:'1.5px solid #FEE2E2',background:'#fff',color:'#EF4444',fontSize:11,cursor:'pointer',display:'flex',alignItems:'center',gap:4}}>
+                          {isRemoving?<Spin/>:'✕'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )
               })}
-            </div>
+
+              {pastGroups.length>0&&(
+                <div style={{marginTop:28}}>
+                  <div style={{fontSize:11,fontWeight:700,color:'#9B98B8',letterSpacing:1.5,textTransform:'uppercase',marginBottom:12}}>Past Assignments ({pastGroups.length})</div>
+                  {pastGroups.map(group=>{
+                    const meta=groupMeta(group)
+                    const [sc,sbg]=meta.removed?['#92400E','#FEF3C7']:['#374151','#F3F4F6']
+                    return(
+                      <div key={meta.assignmentId} style={{background:'#FAFAF8',borderRadius:14,padding:'14px 18px',border:'1.5px solid #F0EDE8',marginBottom:8,opacity:.65}}>
+                        <div style={{display:'flex',alignItems:'center',gap:10}}>
+                          <div style={{width:34,height:34,borderRadius:10,background:'#F0EDE8',display:'flex',alignItems:'center',justifyContent:'center',fontSize:16,flexShrink:0}}>📁</div>
+                          <div style={{flex:1,minWidth:0}}>
+                            <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:3,flexWrap:'wrap'}}>
+                              <span style={{fontWeight:600,fontSize:13,color:'#1A1A2E'}}>{meta.folder}</span>
+                              <span style={{fontSize:10,fontWeight:700,color:sc,background:sbg,borderRadius:20,padding:'1px 7px'}}>{meta.removed?'Removed':'Expired'}</span>
+                            </div>
+                            <div style={{fontSize:11,color:'#9B98B8'}}>{meta.templateName} · {meta.startDate} → {meta.endDate}</div>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </>
           )}
         </div>
       )}
