@@ -405,10 +405,9 @@ function MainApp({user, onLogout}) {
           <div>
             <div style={{fontSize:11,color:'#4a4a6a',letterSpacing:2,textTransform:'uppercase',marginBottom:4}}>Sylvia Precision Health</div>
             <h1 style={{fontFamily:"-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif",color:'#E8E4FF',fontSize:26,margin:0,fontWeight:700}}>
-              {tab==='home'?`Hello, ${firstName}`:'Session History'}
+              {tab==='home'?`Hello, ${firstName}`:tab==='log'?'Session History':'Settings'}
             </h1>
           </div>
-          {tab==='log'&&<button onClick={onLogout} style={{background:'none',border:'1px solid #1e2640',color:'#6B6888',borderRadius:10,padding:'8px 14px',fontSize:12,cursor:'pointer'}}>Sign out</button>}
         </div>
       </div>
 
@@ -461,6 +460,23 @@ function MainApp({user, onLogout}) {
           )}
         </>}
 
+        {tab==='settings'&&(
+          <div style={{animation:'fadeUp .4s ease',paddingTop:8}}>
+            <div style={{background:'#0d1120',border:'1px solid #1e2640',borderRadius:20,padding:'24px 20px',marginBottom:16,display:'flex',alignItems:'center',gap:16}}>
+              <div style={{width:52,height:52,borderRadius:16,background:'linear-gradient(135deg,#6C63FF,#4A42CC)',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:800,fontSize:20,color:'#fff',flexShrink:0}}>
+                {user.name?.split(' ').map(n=>n[0]).join('').slice(0,2)||'?'}
+              </div>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontWeight:700,fontSize:16,color:'#E8E4FF',marginBottom:3}}>{user.name}</div>
+                <div style={{fontSize:13,color:'#6B6888',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{user.email}</div>
+              </div>
+            </div>
+            <button onClick={onLogout} style={{width:'100%',background:'#0d1120',border:'1.5px solid #2a1e2e',borderRadius:16,padding:'15px',color:'#F2857A',fontSize:15,fontWeight:600,cursor:'pointer',textAlign:'left',paddingLeft:20}}>
+              Sign Out
+            </button>
+          </div>
+        )}
+
         {tab==='log'&&<>
           {sessions.length===0&&(
             <div style={{textAlign:'center',padding:'60px 20px',color:'#4a4a6a'}}>
@@ -488,8 +504,8 @@ function MainApp({user, onLogout}) {
 
       {/* Bottom Nav */}
       <div style={{position:'fixed',bottom:0,left:0,right:0,background:'rgba(8,10,22,.95)',backdropFilter:'blur(16px)',borderTop:'1px solid #1e2640',display:'flex',justifyContent:'space-around',padding:'10px 0 24px',zIndex:50}}>
-        {[{id:'home',emoji:'◎',label:'Home'},{id:'log',emoji:'◷',label:'History'}].map(t=>(
-          <button key={t.id} onClick={()=>setTab(t.id)} style={{background:'none',border:'none',cursor:'pointer',display:'flex',flexDirection:'column',alignItems:'center',gap:4,padding:'4px 40px'}}>
+        {[{id:'home',emoji:'◎',label:'Home'},{id:'log',emoji:'◷',label:'History'},{id:'settings',emoji:'⚙',label:'Settings'}].map(t=>(
+          <button key={t.id} onClick={()=>setTab(t.id)} style={{background:'none',border:'none',cursor:'pointer',display:'flex',flexDirection:'column',alignItems:'center',gap:4,padding:'4px 24px'}}>
             <span style={{fontSize:22,color:tab===t.id?'#6C63FF':'#3a3a5c'}}>{t.emoji}</span>
             <span style={{fontSize:11,color:tab===t.id?'#A89FFF':'#3a3a5c',letterSpacing:.5}}>{t.label}</span>
           </button>
