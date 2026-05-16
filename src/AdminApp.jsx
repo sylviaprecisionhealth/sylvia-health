@@ -673,6 +673,7 @@ function ClientProfileView({client, questions, onBack}) {
 function ClientsView({questions}) {
   const [users,setUsers]=useState([]);const [schedules,setSchedules]=useState([]);const [loading,setLoading]=useState(true)
   const [selectedClient,setSelectedClient]=useState(null)
+  const [search,setSearch]=useState('')
   useEffect(()=>{
     const u1=onSnapshot(collection(db,'users'),s=>{setUsers(s.docs.map(d=>({id:d.id,...d.data()})));setLoading(false)})
     const u2=onSnapshot(collection(db,'schedules'),s=>{setSchedules(s.docs.map(d=>({id:d.id,...d.data()})))})
@@ -692,10 +693,11 @@ function ClientsView({questions}) {
         <h2 style={{fontFamily:"'Inter',sans-serif",fontWeight:800,fontSize:24,color:'#1A1A2E'}}>Clients</h2>
         <p style={{fontSize:13,color:'#9B98B8',marginTop:4}}>{users.length} enrolled client{users.length!==1?'s':''} · Click a client to view their profile</p>
       </div>
+      {!loading&&users.length>0&&<input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search by name or email…" style={{...inp,marginBottom:16}}/>}
       {loading&&<div style={{display:'flex',justifyContent:'center',padding:40}}><Spin/></div>}
       {!loading&&users.length===0&&<div style={{textAlign:'center',padding:'60px 20px',color:'#C8C0B0'}}><div style={{fontSize:40,marginBottom:12}}>◎</div><p style={{fontSize:15,fontWeight:500}}>No clients yet — send an invite to get started</p></div>}
       <div style={{display:'flex',flexDirection:'column',gap:10}}>
-        {users.map(u=>{
+        {(()=>{const filtered=users.filter(u=>!search||u.name?.toLowerCase().includes(search.toLowerCase())||u.email?.toLowerCase().includes(search.toLowerCase()));return filtered.length===0&&search?<div style={{textAlign:'center',padding:'40px 20px',color:'#C8C0B0'}}><p style={{fontSize:14,fontWeight:500}}>No clients found</p></div>:filtered.map(u=>{
           const userScheds=schedules.filter(s=>s.userId===u.id||s.userId==='all')
           const activeCount=userScheds.filter(s=>s.active).length
           return(
@@ -715,7 +717,7 @@ function ClientsView({questions}) {
               <button onClick={e=>{e.stopPropagation();deleteUser(u)}} style={{padding:'6px 10px',borderRadius:8,border:'1.5px solid #FEE2E2',background:'#fff',color:'#EF4444',fontSize:12,cursor:'pointer',flexShrink:0}}>✕</button>
             </div>
           )
-        })}
+        })})()}
       </div>
     </div>
   )
@@ -725,6 +727,7 @@ function ClientsView({questions}) {
 function InvitesView() {
   const [invites,setInvites]=useState([]); const [loading,setLoading]=useState(true); const [copied,setCopied]=useState(null)
   const [name,setName]=useState(''); const [email,setEmail]=useState(''); const [creating,setCreating]=useState(false); const [done,setDone]=useState(null); const [showForm,setShowForm]=useState(false); const [emailSent,setEmailSent]=useState(null)
+  const [search,setSearch]=useState('')
 
   useEffect(()=>{ const unsub=onSnapshot(collection(db,'invites'),snap=>{setInvites(snap.docs.map(d=>({id:d.id,...d.data()}))); setLoading(false)}); return unsub },[])
 
@@ -770,7 +773,8 @@ function InvitesView() {
 
   function copy(code){navigator.clipboard?.writeText(code); setCopied(code); setTimeout(()=>setCopied(null),2000)}
   const valid=name.trim().length>1&&email.includes('@')
-  const pending=invites.filter(i=>!i.used), used=invites.filter(i=>i.used)
+  const matchesSearch=i=>!search||i.name?.toLowerCase().includes(search.toLowerCase())||i.email?.toLowerCase().includes(search.toLowerCase())
+  const pending=invites.filter(i=>!i.used&&matchesSearch(i)), used=invites.filter(i=>i.used&&matchesSearch(i))
 
   return (
     <div>
@@ -809,6 +813,7 @@ function InvitesView() {
           </div>
         </div>
       )}
+      {!loading&&invites.length>0&&<input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search by name or email…" style={{...inp,marginBottom:16}}/>}
       {loading&&<div style={{display:'flex',justifyContent:'center',padding:40}}><Spin/></div>}
       {!loading&&pending.length>0&&<><div style={{fontSize:11,fontWeight:700,color:'#9B98B8',letterSpacing:1.5,textTransform:'uppercase',marginBottom:12}}>Pending</div>
         {pending.map(inv=>(
