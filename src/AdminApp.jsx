@@ -485,7 +485,7 @@ function InvitesView() {
 
   async function sendWelcomeEmail(recipientName, recipientEmail, code) {
     try {
-      await fetch('https://api.resend.com/emails', {
+      const res = await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${import.meta.env.VITE_RESEND_API_KEY}`,
@@ -516,9 +516,18 @@ function InvitesView() {
           `
         })
       })
-      setEmailSent('sent')
+      const data = await res.json()
+      if(!res.ok) {
+        const msg = data?.message || data?.name || JSON.stringify(data)
+        console.error('Resend API error:', res.status, data)
+        setEmailSent(`HTTP ${res.status}: ${msg}`)
+      } else {
+        console.log('Resend email sent:', data)
+        setEmailSent('sent')
+      }
     } catch(e) {
-      setEmailSent('failed')
+      console.error('Resend fetch error:', e)
+      setEmailSent(e.message || String(e))
     }
   }
 
@@ -565,7 +574,7 @@ function InvitesView() {
           <div style={{fontSize:12,marginBottom:16,minHeight:20}}>
             {emailSent===null&&<span style={{color:'#9B98B8'}}>Sending welcome email…</span>}
             {emailSent==='sent'&&<span style={{color:'#1A6644'}}>✓ Welcome email sent to {done.email}</span>}
-            {emailSent==='failed'&&<span style={{color:'#EF4444'}}>Email failed to send — share the code manually</span>}
+            {emailSent&&emailSent!=='sent'&&<span style={{color:'#EF4444'}}>Email error: {emailSent}</span>}
           </div>
           <div style={{display:'flex',gap:10,justifyContent:'center'}}>
             <button onClick={()=>copy(done.code)} style={{padding:'8px 20px',borderRadius:10,border:'1.5px solid #E5E0D8',background:copied===done.code?'#D1FAE5':'#fff',color:copied===done.code?'#1A6644':'#6B6888',fontSize:13,fontWeight:600,cursor:'pointer'}}>{copied===done.code?'Copied!':'Copy Code'}</button>
