@@ -609,19 +609,15 @@ function QuestionsView() {
   const [form,setForm]=useState({type:'scale',text:'',scaleMin:0,scaleMax:100,scaleMinLabel:'Not at all',scaleMaxLabel:'More than I ever have',options:'',category:'General',mechanism:'',folder:'Book EMA'})
   const [saving,setSaving]=useState(false)
   const [assignTarget,setAssignTarget]=useState(null); const [assigning,setAssigning]=useState(null); const [assignSuccess,setAssignSuccess]=useState(null); const [assignSearch,setAssignSearch]=useState('')
-  const [assignStep,setAssignStep]=useState(1); const [assignUser,setAssignUser]=useState(null)
-  const [schedType,setSchedType]=useState('5x')
-  const [times3,setTimes3]=useState(['09:00','12:00','15:00'])
-  const [time1,setTime1]=useState('09:00')
-  const [wDays,setWDays]=useState([1,3,5]); const [wTime,setWTime]=useState('09:00')
-  const [intN,setIntN]=useState(4); const [intStart,setIntStart]=useState('08:00')
-  const [durType,setDurType]=useState('15'); const [durCustom,setDurCustom]=useState(30)
+  const [assignStep,setAssignStep]=useState(1); const [assignUser,setAssignUser]=useState(null); const [selectedTemplate,setSelectedTemplate]=useState(null)
+  const [templates,setTemplates]=useState([])
   const isMobile=useMobile()
 
   useEffect(()=>{
     const u1=onSnapshot(collection(db,'questions'),snap=>{setQuestions(snap.docs.map(d=>({id:d.id,...d.data()}))); setLoading(false)})
     const u2=onSnapshot(collection(db,'users'),snap=>{setUsers(snap.docs.map(d=>({id:d.id,...d.data()})))})
-    return()=>{u1();u2()}
+    const u3=onSnapshot(collection(db,'scheduleTemplates'),snap=>{setTemplates(snap.docs.map(d=>({id:d.id,...d.data()})))})
+    return()=>{u1();u2();u3()}
   },[])
 
   // Build folder map
@@ -648,30 +644,34 @@ function QuestionsView() {
 
   function closeAssignModal(){
     setAssignTarget(null); setAssignSuccess(null); setAssignSearch('')
-    setAssignStep(1); setAssignUser(null)
+    setAssignStep(1); setAssignUser(null); setSelectedTemplate(null)
   }
 
   async function confirmAssign(){
+    if(!selectedTemplate) return
     setAssigning(assignUser.id)
     try{
       const existingSnap=await getDocs(query(collection(db,'schedules'),where('userId','==',assignUser.id)))
       for(const d of existingSnap.docs) await deleteDoc(doc(db,'schedules',d.id))
       const startDate=today()
-      const durDays=durType==='15'?15:durType==='30'?30:durType==='60'?60:+durCustom
+      const durDays=selectedTemplate.defaultDuration||15
       const end=new Date(); end.setDate(end.getDate()+durDays-1)
       const endDate=end.toISOString().split('T')[0]
-      let timesToCreate=[],extraFields={}
-      if(schedType==='5x') timesToCreate=['09:00','12:00','15:00','18:00','21:00']
-      else if(schedType==='3x') timesToCreate=[...times3]
-      else if(schedType==='1x') timesToCreate=[time1]
-      else if(schedType==='weekly'){timesToCreate=[wTime];extraFields={repeat:'Weekly',days:wDays}}
-      else if(schedType==='interval'){timesToCreate=[intStart];extraFields={mode:'interval',interval:+intN,repeat:'Custom interval'}}
+      let timesToCreate=[...(selectedTemplate.times||['09:00'])],extraFields={}
+      if(selectedTemplate.type==='weekly'){
+        extraFields={repeat:'Weekly',days:selectedTemplate.days||[]}
+      } else if(selectedTemplate.type==='custom_interval'){
+        timesToCreate=[(selectedTemplate.times||['08:00'])[0]]
+        extraFields={mode:'interval',interval:selectedTemplate.intervalHours||4,repeat:'Custom interval'}
+      }
       for(const time of timesToCreate){
         const ref=await addDoc(collection(db,'schedules'),{
           questionId:'__ALL__',userId:assignUser.id,time,
           repeat:'Daily',interval:null,mode:'time',
           startDate,endDate,durationDays:durDays,
-          active:true,isDefaultSession:true,...extraFields
+          active:true,isDefaultSession:true,
+          templateId:selectedTemplate.id,templateName:selectedTemplate.name,
+          ...extraFields
         })
         await updateDoc(doc(db,'schedules',ref.id),{id:ref.id})
       }
@@ -725,7 +725,7 @@ function QuestionsView() {
                     <div style={{fontWeight:600,fontSize:14,color:'#1A1A2E'}}>{u.name}</div>
                     <div style={{fontSize:12,color:'#9B98B8',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{u.email}</div>
                   </div>
-                  <button onClick={()=>{setAssignUser(u);setAssignStep(2);setSchedType('5x');setDurType('15')}} style={{padding:'7px 14px',borderRadius:10,border:'none',background:'#6C63FF',color:'#fff',fontSize:12,fontWeight:700,cursor:'pointer',flexShrink:0}}>
+                  <button onClick={()=>{setAssignUser(u);setAssignStep(2);setSelectedTemplate(templates.find(t=>t.isDefault)||templates[0]||null)}} style={{padding:'7px 14px',borderRadius:10,border:'none',background:'#6C63FF',color:'#fff',fontSize:12,fontWeight:700,cursor:'pointer',flexShrink:0}}>
                     Assign →
                   </button>
                 </div>
@@ -739,100 +739,42 @@ function QuestionsView() {
             <div style={{textAlign:'center',padding:'32px 20px'}}>
               <div style={{fontSize:36,marginBottom:10}}>✓</div>
               <div style={{fontWeight:700,fontSize:17,color:'#1A6644',marginBottom:6}}>Schedule Assigned</div>
-              <div style={{fontSize:13,color:'#6B6888',marginBottom:20,lineHeight:1.5}}>{assignUser.name}<br/>{durType==='custom'?durCustom:durType} days · {schedType==='5x'?'5×/day':schedType==='3x'?'3×/day':schedType==='1x'?'1×/day':schedType==='weekly'?'Weekly':'Custom interval'}</div>
+              <div style={{fontSize:13,color:'#6B6888',marginBottom:20,lineHeight:1.6}}>
+                {assignUser.name}<br/>
+                {selectedTemplate?.name} · {selectedTemplate?.defaultDuration} days
+              </div>
               <button onClick={closeAssignModal} style={{padding:'10px 28px',borderRadius:12,border:'none',background:'#1A1A2E',color:'#E8E4FF',fontSize:14,fontWeight:700,cursor:'pointer'}}>Done</button>
             </div>
           ):(
             <>
-              <div style={{marginBottom:18}}>
-                <div style={{fontSize:10,fontWeight:700,color:'#6B6888',letterSpacing:1,textTransform:'uppercase',marginBottom:8}}>Schedule Type</div>
-                <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
-                  {[['5x','5× Daily'],['3x','3× Daily'],['1x','1× Daily'],['weekly','Weekly'],['interval','Interval']].map(([v,l])=>(
-                    <button key={v} onClick={()=>setSchedType(v)} style={{padding:'7px 11px',borderRadius:10,border:`1.5px solid ${schedType===v?'#6C63FF':'#E5E0D8'}`,background:schedType===v?'#EDE9FE':'#fff',color:schedType===v?'#6C63FF':'#9B98B8',fontSize:12,fontWeight:600,cursor:'pointer'}}>
-                      {l}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {schedType==='5x'&&(
-                <div style={{background:'#F0EEFF',borderRadius:10,padding:'10px 14px',marginBottom:18,fontSize:12,color:'#6B6888',lineHeight:1.6}}>
-                  9:00 AM · 12:00 PM · 3:00 PM · 6:00 PM · 9:00 PM
+              <div style={{fontSize:10,fontWeight:700,color:'#6B6888',letterSpacing:1,textTransform:'uppercase',marginBottom:12}}>Choose Schedule Template</div>
+              {templates.length===0&&(
+                <div style={{textAlign:'center',padding:'30px 20px',color:'#C8C0B0',fontSize:13,lineHeight:1.6}}>
+                  No templates yet.<br/>Create one in the Schedule tab first.
                 </div>
               )}
-
-              {schedType==='3x'&&(
-                <div style={{marginBottom:18}}>
-                  <div style={{fontSize:10,fontWeight:600,color:'#6B6888',marginBottom:8,textTransform:'uppercase',letterSpacing:.5}}>Session Times</div>
-                  <div style={{display:'flex',flexDirection:'column',gap:8}}>
-                    {times3.map((t,i)=>(
-                      <div key={i} style={{display:'flex',alignItems:'center',gap:10}}>
-                        <div style={{fontSize:12,color:'#9B98B8',width:72,flexShrink:0}}>Session {i+1}</div>
-                        <input type="time" value={t} onChange={e=>{const n=[...times3];n[i]=e.target.value;setTimes3(n)}} style={{...inp,padding:'7px 10px',borderRadius:8}}/>
+              <div style={{display:'flex',flexDirection:'column',gap:8,marginBottom:16}}>
+                {templates.map(t=>(
+                  <div key={t.id} onClick={()=>setSelectedTemplate(t)} style={{background:'#fff',borderRadius:14,padding:'14px 16px',border:`1.5px solid ${selectedTemplate?.id===t.id?'#6C63FF':'#E8E3DA'}`,cursor:'pointer',transition:'border-color .15s'}}>
+                    <div style={{display:'flex',alignItems:'center',gap:12}}>
+                      <div style={{flex:1}}>
+                        <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:3}}>
+                          <span style={{fontWeight:600,fontSize:14,color:'#1A1A2E'}}>{t.name}</span>
+                          {t.isDefault&&<span style={{fontSize:10,fontWeight:700,color:'#6C63FF',background:'#EDE9FE',borderRadius:20,padding:'1px 7px'}}>DEFAULT</span>}
+                        </div>
+                        <div style={{fontSize:12,color:'#6B6888',marginBottom:2}}>{t.type==='custom_interval'?`Every ${t.intervalHours}h from ${(t.times||['08:00'])[0]}`:t.type==='weekly'?`${(t.days||[]).join(', ')} at ${(t.times||['09:00'])[0]}`:(t.times||[]).join(' · ')}</div>
+                        <div style={{fontSize:11,color:'#9B98B8'}}>{t.defaultDuration} days</div>
                       </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {schedType==='1x'&&(
-                <div style={{marginBottom:18}}>
-                  <div style={{fontSize:10,fontWeight:600,color:'#6B6888',marginBottom:8,textTransform:'uppercase',letterSpacing:.5}}>Session Time</div>
-                  <input type="time" value={time1} onChange={e=>setTime1(e.target.value)} style={{...inp,padding:'7px 10px',borderRadius:8}}/>
-                </div>
-              )}
-
-              {schedType==='weekly'&&(
-                <div style={{marginBottom:18}}>
-                  <div style={{fontSize:10,fontWeight:600,color:'#6B6888',marginBottom:8,textTransform:'uppercase',letterSpacing:.5}}>Days</div>
-                  <div style={{display:'flex',gap:5,flexWrap:'wrap',marginBottom:12}}>
-                    {DAYS.map((d,i)=>(
-                      <button key={i} onClick={()=>setWDays(p=>p.includes(i)?p.filter(x=>x!==i):[...p,i].sort())} style={{padding:'5px 10px',borderRadius:8,border:`1.5px solid ${wDays.includes(i)?'#6C63FF':'#E5E0D8'}`,background:wDays.includes(i)?'#EDE9FE':'#fff',color:wDays.includes(i)?'#6C63FF':'#9B98B8',fontSize:12,fontWeight:600,cursor:'pointer'}}>
-                        {d}
-                      </button>
-                    ))}
-                  </div>
-                  <div style={{fontSize:10,fontWeight:600,color:'#6B6888',marginBottom:8,textTransform:'uppercase',letterSpacing:.5}}>Time</div>
-                  <input type="time" value={wTime} onChange={e=>setWTime(e.target.value)} style={{...inp,padding:'7px 10px',borderRadius:8}}/>
-                </div>
-              )}
-
-              {schedType==='interval'&&(
-                <div style={{marginBottom:18}}>
-                  <div style={{display:'flex',gap:12,marginBottom:8}}>
-                    <div style={{flex:1}}>
-                      <div style={{fontSize:10,fontWeight:600,color:'#6B6888',marginBottom:6,textTransform:'uppercase',letterSpacing:.5}}>Every N hours</div>
-                      <input type="number" min={1} max={24} value={intN} onChange={e=>setIntN(+e.target.value)} style={{...inp,padding:'7px 10px',borderRadius:8}}/>
-                    </div>
-                    <div style={{flex:1}}>
-                      <div style={{fontSize:10,fontWeight:600,color:'#6B6888',marginBottom:6,textTransform:'uppercase',letterSpacing:.5}}>Start time</div>
-                      <input type="time" value={intStart} onChange={e=>setIntStart(e.target.value)} style={{...inp,padding:'7px 10px',borderRadius:8}}/>
+                      <div style={{width:20,height:20,borderRadius:'50%',border:`2px solid ${selectedTemplate?.id===t.id?'#6C63FF':'#D1D5DB'}`,background:selectedTemplate?.id===t.id?'#6C63FF':'transparent',flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center'}}>
+                        {selectedTemplate?.id===t.id&&<div style={{width:8,height:8,borderRadius:'50%',background:'#fff'}}/>}
+                      </div>
                     </div>
                   </div>
-                  <div style={{fontSize:12,color:'#9B98B8'}}>Sends every {intN} hour{intN!==1?'s':''} starting at {intStart}</div>
-                </div>
-              )}
-
-              <div style={{marginBottom:20}}>
-                <div style={{fontSize:10,fontWeight:700,color:'#6B6888',letterSpacing:1,textTransform:'uppercase',marginBottom:8}}>Duration</div>
-                <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
-                  {[['15','15 days'],['30','30 days'],['60','60 days'],['custom','Custom']].map(([v,l])=>(
-                    <button key={v} onClick={()=>setDurType(v)} style={{padding:'7px 12px',borderRadius:10,border:`1.5px solid ${durType===v?'#1A1A2E':'#E5E0D8'}`,background:durType===v?'#1A1A2E':'#fff',color:durType===v?'#E8E4FF':'#9B98B8',fontSize:12,fontWeight:600,cursor:'pointer'}}>
-                      {l}
-                    </button>
-                  ))}
-                </div>
-                {durType==='custom'&&(
-                  <div style={{display:'flex',alignItems:'center',gap:10,marginTop:10}}>
-                    <input type="number" min={1} max={365} value={durCustom} onChange={e=>setDurCustom(+e.target.value)} style={{...inp,padding:'7px 10px',borderRadius:8,width:90}}/>
-                    <span style={{fontSize:13,color:'#6B6888'}}>days</span>
-                  </div>
-                )}
+                ))}
               </div>
-
               <div style={{display:'flex',gap:10}}>
                 <button onClick={()=>{setAssignStep(1);setAssignUser(null)}} style={{flex:1,padding:11,borderRadius:12,border:'1.5px solid #E5E0D8',background:'#fff',color:'#6B6888',fontSize:14,fontWeight:600,cursor:'pointer'}}>← Back</button>
-                <button onClick={confirmAssign} disabled={!!assigning} style={{flex:2,padding:11,borderRadius:12,border:'none',background:'#6C63FF',color:'#fff',fontSize:14,fontWeight:700,cursor:assigning?'default':'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>
+                <button onClick={confirmAssign} disabled={!!assigning||!selectedTemplate} style={{flex:2,padding:11,borderRadius:12,border:'none',background:selectedTemplate&&!assigning?'#6C63FF':'#E5E0D8',color:selectedTemplate&&!assigning?'#fff':'#9B98B8',fontSize:14,fontWeight:700,cursor:selectedTemplate&&!assigning?'pointer':'default',display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>
                   {assigning===assignUser?.id?<Spin/>:'Confirm & Assign'}
                 </button>
               </div>
@@ -940,75 +882,211 @@ function QuestionsView() {
   )
 }
 
-// ── Schedule View ─────────────────────────────────────────────────────────────
+// ── Schedule View (Template Library) ──────────────────────────────────────────
 function ScheduleView() {
-  const [questions,setQuestions]=useState([]); const [users,setUsers]=useState([]); const [schedules,setSchedules]=useState([]); const [loading,setLoading]=useState(true); const [showForm,setShowForm]=useState(false); const [saving,setSaving]=useState(false)
-  const [form,setForm]=useState({questionId:'',userId:'all',time:'08:00',repeat:'Daily',days:[],interval:4,startDate:today(),mode:'time'})
+  const [templates,setTemplates]=useState([])
+  const [loading,setLoading]=useState(true)
+  const [showForm,setShowForm]=useState(false)
+  const [editing,setEditing]=useState(null)
+  const [saving,setSaving]=useState(false)
+  const [seeded,setSeeded]=useState(false)
+  const [form,setForm]=useState({name:'',type:'5x_daily',times:['09:00','12:00','15:00','18:00','21:00'],days:['Mon','Wed','Fri'],intervalHours:4,defaultDuration:15,isDefault:false})
+  const isMobile=useMobile()
 
   useEffect(()=>{
-    const u1=onSnapshot(collection(db,'questions'),s=>{setQuestions(s.docs.map(d=>({id:d.id,...d.data()})))})
-    const u2=onSnapshot(collection(db,'users'),s=>{setUsers(s.docs.map(d=>({id:d.id,...d.data()})))})
-    const u3=onSnapshot(collection(db,'schedules'),s=>{setSchedules(s.docs.map(d=>({id:d.id,...d.data()})));setLoading(false)})
-    return()=>{u1();u2();u3()}
+    const unsub=onSnapshot(collection(db,'scheduleTemplates'),snap=>{
+      setTemplates(snap.docs.map(d=>({id:d.id,...d.data()})))
+      setLoading(false)
+    })
+    return unsub
   },[])
 
-  useEffect(()=>{if(questions.length&&!form.questionId)setForm(f=>({...f,questionId:questions[0]?.id||''}))},[questions])
+  useEffect(()=>{
+    if(!loading&&templates.length===0&&!seeded){
+      setSeeded(true)
+      addDoc(collection(db,'scheduleTemplates'),{
+        name:'Standard 5× Daily',type:'5x_daily',
+        times:['09:00','12:00','15:00','18:00','21:00'],
+        days:[],intervalHours:4,defaultDuration:15,isDefault:true
+      }).then(ref=>updateDoc(doc(db,'scheduleTemplates',ref.id),{id:ref.id}))
+    }
+  },[loading,templates.length])
 
-  async function addSched(){
-    setSaving(true)
-    const ref=await addDoc(collection(db,'schedules'),{...form,interval:form.mode==='interval'?+form.interval:null,active:true})
-    await updateDoc(doc(db,'schedules',ref.id),{id:ref.id})
-    setShowForm(false); setSaving(false)
+  function changeType(t){
+    const defaults={'5x_daily':['09:00','12:00','15:00','18:00','21:00'],'3x_daily':['09:00','13:00','18:00'],'1x_daily':['09:00'],'weekly':['09:00'],'custom_interval':['08:00']}
+    setForm(f=>({...f,type:t,times:defaults[t]}))
   }
-  async function toggle(id,active){await updateDoc(doc(db,'schedules',id),{active:!active})}
-  async function del(id){await deleteDoc(doc(db,'schedules',id))}
-  function qText(id){return questions.find(q=>q.id===id)?.text||'Unknown question'}
-  function qType(id){return questions.find(q=>q.id===id)?.type||'scale'}
-  function uLabel(id){return id==='all'?'All users':users.find(u=>u.id===id)?.name||id}
-  function rLabel(s){if(s.mode==='interval')return`Every ${s.interval}h from ${s.time}`;if(s.repeat==='Weekly'&&s.days?.length)return`Weekly · ${s.days.join(', ')}`;return`${s.repeat} at ${s.time}`}
-  const active=schedules.filter(s=>s.active),paused=schedules.filter(s=>!s.active)
 
-  const SCard=({s,isActive})=>(
-    <div style={{background:'#fff',borderRadius:16,padding:'16px 18px',border:`1.5px solid ${isActive?'#E8E3DA':'#F0EDE8'}`,opacity:isActive?1:.6,marginBottom:10}}>
-      <div style={{display:'flex',alignItems:'flex-start',gap:12}}>
-        <div style={{flex:1}}>
-          <div style={{display:'flex',gap:6,alignItems:'center',marginBottom:6,flexWrap:'wrap'}}><TBadge type={qType(s.questionId)}/><span style={{fontSize:11,color:isActive?'#1A6644':'#92400E',background:isActive?'#D1FAE5':'#FEF3C7',borderRadius:20,padding:'2px 8px',fontWeight:600}}>{isActive?'Active':'Paused'}</span></div>
-          <p style={{fontSize:14,color:'#1A1A2E',fontWeight:500,marginBottom:8,lineHeight:1.4}}>{qText(s.questionId).slice(0,80)}{qText(s.questionId).length>80?'…':''}</p>
-          <div style={{display:'flex',gap:12,flexWrap:'wrap'}}>{[{i:'◷',v:rLabel(s)},{i:'◎',v:uLabel(s.userId)},{i:'▷',v:`From ${s.startDate}`}].map(({i,v})=><span key={v} style={{fontSize:11,color:'#9B98B8',display:'flex',alignItems:'center',gap:4}}><span style={{color:'#C8C0B0'}}>{i}</span>{v}</span>)}</div>
+  async function save(){
+    if(!form.name.trim()) return
+    setSaving(true)
+    const data={name:form.name.trim(),type:form.type,times:form.times,days:form.days,intervalHours:+form.intervalHours,defaultDuration:+form.defaultDuration,isDefault:form.isDefault}
+    if(data.isDefault){
+      for(const t of templates){
+        if(t.id!==editing?.id&&t.isDefault) await updateDoc(doc(db,'scheduleTemplates',t.id),{isDefault:false})
+      }
+    }
+    if(editing){
+      await updateDoc(doc(db,'scheduleTemplates',editing.id),data)
+    } else {
+      const ref=await addDoc(collection(db,'scheduleTemplates'),data)
+      await updateDoc(doc(db,'scheduleTemplates',ref.id),{id:ref.id})
+    }
+    setShowForm(false); setEditing(null); setSaving(false)
+  }
+
+  async function del(t){
+    if(!window.confirm(`Delete "${t.name}"? This cannot be undone.`)) return
+    await deleteDoc(doc(db,'scheduleTemplates',t.id))
+  }
+
+  async function setDefault(t){
+    for(const tmpl of templates) await updateDoc(doc(db,'scheduleTemplates',tmpl.id),{isDefault:tmpl.id===t.id})
+  }
+
+  function openNew(){
+    setEditing(null)
+    setForm({name:'',type:'5x_daily',times:['09:00','12:00','15:00','18:00','21:00'],days:['Mon','Wed','Fri'],intervalHours:4,defaultDuration:15,isDefault:false})
+    setShowForm(true)
+  }
+
+  function openEdit(t){
+    setEditing(t)
+    setForm({name:t.name,type:t.type,times:[...(t.times||[])],days:[...(t.days||[])],intervalHours:t.intervalHours||4,defaultDuration:t.defaultDuration||15,isDefault:t.isDefault||false})
+    setShowForm(true)
+  }
+
+  function tLabel(type){return{'5x_daily':'5× Daily','3x_daily':'3× Daily','1x_daily':'1× Daily','weekly':'Weekly','custom_interval':'Custom Interval'}[type]||type}
+
+  function tSummary(t){
+    if(t.type==='custom_interval') return`Every ${t.intervalHours}h from ${(t.times||['08:00'])[0]}`
+    if(t.type==='weekly') return`${(t.days||[]).join(', ')} at ${(t.times||['09:00'])[0]}`
+    return(t.times||[]).join(' · ')
+  }
+
+  const WDAYS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun']
+  const TIME_COUNT={'5x_daily':5,'3x_daily':3,'1x_daily':1,'weekly':1,'custom_interval':1}
+
+  const FormPanel=(
+    <div style={{background:'#fff',borderRadius:20,padding:24,border:'1.5px solid #E8E3DA',marginBottom:20,animation:'fadeUp .3s ease'}}>
+      <h3 style={{fontWeight:700,fontSize:16,color:'#1A1A2E',marginBottom:16}}>{editing?'Edit Template':'New Template'}</h3>
+      <Field label="Template Name">
+        <input value={form.name} onChange={e=>setForm(f=>({...f,name:e.target.value}))} placeholder="e.g. Standard 5× Daily" style={inp}/>
+      </Field>
+      <Field label="Schedule Type">
+        <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+          {[['5x_daily','5× Daily'],['3x_daily','3× Daily'],['1x_daily','1× Daily'],['weekly','Weekly'],['custom_interval','Interval']].map(([v,l])=>(
+            <button key={v} onClick={()=>changeType(v)} style={{padding:'8px 12px',borderRadius:10,border:`1.5px solid ${form.type===v?'#6C63FF':'#E5E0D8'}`,background:form.type===v?'#EDE9FE':'#FAFAF8',color:form.type===v?'#6C63FF':'#9B98B8',fontSize:12,fontWeight:600,cursor:'pointer'}}>
+              {l}
+            </button>
+          ))}
         </div>
-        <div style={{display:'flex',gap:6,flexShrink:0}}>
-          <button onClick={()=>toggle(s.id,s.active)} style={{padding:'6px 12px',borderRadius:8,border:'1.5px solid #E5E0D8',background:'#fff',color:'#6B6888',fontSize:11,fontWeight:600,cursor:'pointer'}}>{isActive?'Pause':'Resume'}</button>
-          <button onClick={()=>del(s.id)} style={{padding:'6px 10px',borderRadius:8,border:'1.5px solid #FEE2E2',background:'#fff',color:'#EF4444',fontSize:11,cursor:'pointer'}}>✕</button>
+      </Field>
+
+      {(form.type==='5x_daily'||form.type==='3x_daily'||form.type==='1x_daily')&&(
+        <Field label="Session Times">
+          <div style={{display:'flex',flexDirection:'column',gap:8}}>
+            {(form.times||[]).slice(0,TIME_COUNT[form.type]).map((t,i)=>(
+              <div key={i} style={{display:'flex',alignItems:'center',gap:10}}>
+                <div style={{fontSize:12,color:'#9B98B8',width:76,flexShrink:0}}>Session {i+1}</div>
+                <input type="time" value={t} onChange={e=>{const n=[...form.times];n[i]=e.target.value;setForm(f=>({...f,times:n}))}} style={{...inp,padding:'8px 10px',borderRadius:8}}/>
+              </div>
+            ))}
+          </div>
+        </Field>
+      )}
+
+      {form.type==='weekly'&&(<>
+        <Field label="Days">
+          <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+            {WDAYS.map(d=>(
+              <button key={d} onClick={()=>setForm(f=>({...f,days:f.days.includes(d)?f.days.filter(x=>x!==d):[...f.days,d]}))} style={{padding:'6px 11px',borderRadius:8,border:`1.5px solid ${form.days.includes(d)?'#6C63FF':'#E5E0D8'}`,background:form.days.includes(d)?'#EDE9FE':'#FAFAF8',color:form.days.includes(d)?'#6C63FF':'#9B98B8',fontSize:12,fontWeight:600,cursor:'pointer'}}>
+                {d}
+              </button>
+            ))}
+          </div>
+        </Field>
+        <Field label="Time">
+          <input type="time" value={form.times[0]||'09:00'} onChange={e=>setForm(f=>({...f,times:[e.target.value]}))} style={{...inp,padding:'8px 10px',borderRadius:8}}/>
+        </Field>
+      </>)}
+
+      {form.type==='custom_interval'&&(<>
+        <div style={{display:'flex',gap:12,marginBottom:18,flexDirection:isMobile?'column':'row'}}>
+          <div style={{flex:1}}>
+            <Lbl>Interval (hours)</Lbl>
+            <input type="number" min={1} max={24} value={form.intervalHours} onChange={e=>setForm(f=>({...f,intervalHours:+e.target.value}))} style={{...inp,padding:'8px 10px',borderRadius:8}}/>
+          </div>
+          <div style={{flex:1}}>
+            <Lbl>Start Time</Lbl>
+            <input type="time" value={form.times[0]||'08:00'} onChange={e=>setForm(f=>({...f,times:[e.target.value]}))} style={{...inp,padding:'8px 10px',borderRadius:8}}/>
+          </div>
         </div>
+      </>)}
+
+      <Field label="Default Duration (days)">
+        <input type="number" min={1} max={365} value={form.defaultDuration} onChange={e=>setForm(f=>({...f,defaultDuration:+e.target.value}))} style={{...inp,padding:'8px 10px',borderRadius:8,maxWidth:160}}/>
+      </Field>
+
+      <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:20,cursor:'pointer'}} onClick={()=>setForm(f=>({...f,isDefault:!f.isDefault}))}>
+        <div style={{width:20,height:20,borderRadius:5,border:`2px solid ${form.isDefault?'#6C63FF':'#D1D5DB'}`,background:form.isDefault?'#6C63FF':'#fff',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+          {form.isDefault&&<span style={{color:'#fff',fontSize:12,fontWeight:700}}>✓</span>}
+        </div>
+        <span style={{fontSize:13,color:'#1A1A2E'}}>Set as default template</span>
+      </div>
+
+      <div style={{display:'flex',gap:10}}>
+        <button onClick={()=>{setShowForm(false);setEditing(null)}} style={{flex:1,padding:11,borderRadius:12,border:'1.5px solid #E5E0D8',background:'#fff',color:'#9B98B8',fontSize:14,fontWeight:600,cursor:'pointer'}}>Cancel</button>
+        <button onClick={save} disabled={!form.name.trim()||saving} style={{flex:2,padding:11,borderRadius:12,border:'none',background:form.name.trim()?'#1A1A2E':'#E5E0D8',color:form.name.trim()?'#E8E4FF':'#9B98B8',fontSize:14,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>
+          {saving?<Spin/>:editing?'Save Changes':'Create Template'}
+        </button>
       </div>
     </div>
   )
 
   return (
     <div>
-      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:28}}>
-        <div><h2 style={{fontFamily:"'Inter',sans-serif",fontWeight:800,fontSize:24,color:'#1A1A2E'}}>Schedule</h2><p style={{fontSize:13,color:'#9B98B8',marginTop:4}}>{active.length} active · {paused.length} paused</p></div>
-        <button onClick={()=>setShowForm(true)} disabled={!questions.length} style={{background:questions.length?'#1A1A2E':'#E5E0D8',color:questions.length?'#E8E4FF':'#9B98B8',border:'none',borderRadius:14,padding:'11px 20px',fontSize:14,fontWeight:700,cursor:questions.length?'pointer':'default'}}>+ Add Schedule</button>
+      <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',marginBottom:24}}>
+        <div>
+          <h2 style={{fontFamily:"'Inter',sans-serif",fontWeight:800,fontSize:24,color:'#1A1A2E'}}>Schedule Templates</h2>
+          <p style={{fontSize:13,color:'#9B98B8',marginTop:4}}>{templates.length} template{templates.length!==1?'s':''} · Select a template when assigning schedules to clients</p>
+        </div>
+        <button onClick={openNew} style={{background:'#1A1A2E',color:'#E8E4FF',border:'none',borderRadius:14,padding:'11px 20px',fontSize:14,fontWeight:700,cursor:'pointer',flexShrink:0}}>+ New Template</button>
       </div>
-      {showForm&&(
-        <div style={{background:'#fff',borderRadius:20,padding:24,border:'1.5px solid #E8E3DA',marginBottom:20,animation:'fadeUp .3s ease'}}>
-          <h3 style={{fontWeight:700,fontSize:16,color:'#1A1A2E',marginBottom:16}}>New Schedule</h3>
-          <Field label="Question"><select value={form.questionId} onChange={e=>setForm(f=>({...f,questionId:e.target.value}))} style={inp}>{questions.map(q=><option key={q.id} value={q.id}>{q.text?.length>60?q.text.slice(0,60)+'…':q.text}</option>)}</select></Field>
-          <Field label="Send To"><select value={form.userId} onChange={e=>setForm(f=>({...f,userId:e.target.value}))} style={inp}><option value="all">All Active Users</option>{users.filter(u=>u.status==='active').map(u=><option key={u.id} value={u.id}>{u.name}</option>)}</select></Field>
-          <Field label="Start Date"><input type="date" value={form.startDate} onChange={e=>setForm(f=>({...f,startDate:e.target.value}))} style={inp}/></Field>
-          <Field label="Timing">
-            <ScheduleEntryEditor entry={form} onChange={e=>setForm(f=>({...f,...e}))}/>
-          </Field>
-          <div style={{display:'flex',gap:10,marginTop:8}}>
-            <button onClick={()=>setShowForm(false)} style={{flex:1,padding:11,borderRadius:12,border:'1.5px solid #E5E0D8',background:'#fff',color:'#9B98B8',fontSize:14,fontWeight:600,cursor:'pointer'}}>Cancel</button>
-            <button onClick={addSched} disabled={saving} style={{flex:2,padding:11,borderRadius:12,border:'none',background:'#1A1A2E',color:'#E8E4FF',fontSize:14,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>{saving?<Spin/>:'Add to Schedule'}</button>
-          </div>
+
+      {showForm&&FormPanel}
+
+      {loading&&<div style={{display:'flex',justifyContent:'center',padding:40}}><Spin/></div>}
+      {!loading&&templates.length===0&&!showForm&&(
+        <div style={{textAlign:'center',padding:'60px 20px',color:'#C8C0B0'}}>
+          <div style={{fontSize:40,marginBottom:12}}>◷</div>
+          <p style={{fontSize:15,fontWeight:500}}>No templates yet</p>
+          <p style={{fontSize:13,marginTop:6}}>Create templates to quickly assign schedules to clients</p>
         </div>
       )}
-      {loading&&<div style={{display:'flex',justifyContent:'center',padding:40}}><Spin/></div>}
-      {!loading&&schedules.length===0&&<div style={{textAlign:'center',padding:'60px 20px',color:'#C8C0B0'}}><div style={{fontSize:40,marginBottom:12}}>◷</div><p style={{fontSize:15,fontWeight:500}}>No schedules yet</p></div>}
-      {active.length>0&&<><div style={{fontSize:11,fontWeight:700,color:'#9B98B8',letterSpacing:1.5,textTransform:'uppercase',marginBottom:12}}>Active</div>{active.map(s=><SCard key={s.id} s={s} isActive={true}/>)}</>}
-      {paused.length>0&&<div style={{marginTop:active.length?20:0}}><div style={{fontSize:11,fontWeight:700,color:'#9B98B8',letterSpacing:1.5,textTransform:'uppercase',marginBottom:12}}>Paused</div>{paused.map(s=><SCard key={s.id} s={s} isActive={false}/>)}</div>}
+
+      <div style={{display:'flex',flexDirection:'column',gap:12}}>
+        {templates.map(t=>(
+          <div key={t.id} style={{background:'#fff',borderRadius:18,padding:'20px 22px',border:`1.5px solid ${t.isDefault?'#6C63FF':'#E8E3DA'}`,boxShadow:t.isDefault?'0 0 0 1px rgba(108,99,255,.15)':undefined}}>
+            <div style={{display:'flex',alignItems:'flex-start',gap:14}}>
+              <div style={{flex:1}}>
+                <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:6,flexWrap:'wrap'}}>
+                  <span style={{fontSize:15,fontWeight:700,color:'#1A1A2E'}}>{t.name}</span>
+                  {t.isDefault&&<span style={{fontSize:10,fontWeight:700,color:'#6C63FF',background:'#EDE9FE',borderRadius:20,padding:'2px 9px',letterSpacing:.5,textTransform:'uppercase'}}>Default</span>}
+                  <span style={{fontSize:11,fontWeight:600,color:'#6B6888',background:'#F4F1EC',borderRadius:20,padding:'2px 10px'}}>{tLabel(t.type)}</span>
+                </div>
+                <div style={{fontSize:13,color:'#1A1A2E',fontWeight:500,marginBottom:3}}>{tSummary(t)}</div>
+                <div style={{fontSize:12,color:'#9B98B8'}}>{t.defaultDuration} day{t.defaultDuration!==1?'s':''}</div>
+              </div>
+              <div style={{display:'flex',gap:6,flexShrink:0,flexWrap:'wrap',justifyContent:'flex-end'}}>
+                {!t.isDefault&&<button onClick={()=>setDefault(t)} style={{padding:'6px 12px',borderRadius:8,border:'1.5px solid #E5E0D8',background:'#fff',color:'#6B6888',fontSize:11,fontWeight:600,cursor:'pointer',whiteSpace:'nowrap'}}>Set Default</button>}
+                <button onClick={()=>openEdit(t)} style={{padding:'6px 12px',borderRadius:8,border:'1.5px solid #E5E0D8',background:'#fff',color:'#6B6888',fontSize:11,fontWeight:600,cursor:'pointer'}}>Edit</button>
+                <button onClick={()=>del(t)} style={{padding:'6px 10px',borderRadius:8,border:'1.5px solid #FEE2E2',background:'#fff',color:'#EF4444',fontSize:11,cursor:'pointer'}}>✕</button>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
