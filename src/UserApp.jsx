@@ -6,7 +6,7 @@ import {
 } from 'firebase/firestore'
 import {
   createUserWithEmailAndPassword, signInWithEmailAndPassword,
-  signOut, onAuthStateChanged
+  signOut, onAuthStateChanged, sendPasswordResetEmail
 } from 'firebase/auth'
 import {
   registerServiceWorker, requestNotificationPermission,
@@ -139,6 +139,9 @@ function RegisterScreen({onBack, onSuccess}) {
 // ── Login ─────────────────────────────────────────────────────────────────────
 function LoginScreen({onBack, onSuccess}) {
   const [email,setEmail] = useState(''); const [pw,setPw] = useState(''); const [err,setErr] = useState(''); const [loading,setLoading] = useState(false)
+  const [showReset,setShowReset] = useState(false)
+  const [resetEmail,setResetEmail] = useState(''); const [resetSent,setResetSent] = useState(false); const [resetErr,setResetErr] = useState(''); const [resetLoading,setResetLoading] = useState(false)
+
   async function login() {
     setLoading(true); setErr('')
     try {
@@ -148,6 +151,19 @@ function LoginScreen({onBack, onSuccess}) {
     } catch(e){ setErr('Email or password incorrect.') }
     setLoading(false)
   }
+
+  async function sendReset() {
+    if(!resetEmail.trim()) return
+    setResetLoading(true); setResetErr('')
+    try {
+      await sendPasswordResetEmail(auth, resetEmail.trim())
+      setResetSent(true)
+    } catch(e){
+      setResetErr(e.code==='auth/user-not-found'||e.code==='auth/invalid-email' ? 'No account found with that email.' : 'Something went wrong. Please try again.')
+    }
+    setResetLoading(false)
+  }
+
   return (
     <div style={{minHeight:'100vh',background:'#F5EFE8',display:'flex',justifyContent:'center',fontFamily:"-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif"}}>
       <style>{G}</style>
@@ -164,6 +180,34 @@ function LoginScreen({onBack, onSuccess}) {
         ))}
         {err && <p style={{color:'#EF4444',fontSize:12,marginBottom:12}}>{err}</p>}
         <button onClick={login} disabled={loading} style={{background:'#8B3A2A',color:'#fff',border:'none',borderRadius:14,padding:15,fontSize:15,fontWeight:700,cursor:'pointer',marginTop:8,display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>{loading?<Spin/>:'Sign In →'}</button>
+
+        {!showReset && (
+          <button onClick={()=>{setShowReset(true);setResetEmail(email)}} style={{background:'none',border:'none',color:'#8B7355',fontSize:13,cursor:'pointer',marginTop:20,textDecoration:'underline',textDecorationColor:'#C8C0B0'}}>Forgot Password?</button>
+        )}
+
+        {showReset && (
+          <div style={{marginTop:24,padding:20,background:'#fff',border:'1.5px solid #E5E0D8',borderRadius:16,animation:'fadeUp .3s ease'}}>
+            {resetSent ? (
+              <div style={{textAlign:'center'}}>
+                <div style={{fontSize:28,marginBottom:8}}>✉️</div>
+                <p style={{color:'#1A0F0A',fontWeight:600,fontSize:14,marginBottom:4}}>Check your email for a reset link</p>
+                <p style={{color:'#8B7355',fontSize:12,marginBottom:16}}>Sent to {resetEmail}</p>
+                <button onClick={()=>{setShowReset(false);setResetSent(false);setResetEmail('')}} style={{background:'none',border:'none',color:'#8B7355',fontSize:13,cursor:'pointer',textDecoration:'underline',textDecorationColor:'#C8C0B0'}}>Back to sign in</button>
+              </div>
+            ) : (
+              <>
+                <div style={{fontSize:13,color:'#1A0F0A',fontWeight:600,marginBottom:4}}>Reset your password</div>
+                <p style={{fontSize:12,color:'#8B7355',marginBottom:14,lineHeight:1.5}}>Enter your email and we'll send you a reset link.</p>
+                <input type="email" value={resetEmail} onChange={e=>setResetEmail(e.target.value)} placeholder="your@email.com" onKeyDown={e=>e.key==='Enter'&&sendReset()} style={{width:'100%',background:'#FAFAF8',border:`1.5px solid ${resetErr?'#EF4444':'#E5E0D8'}`,borderRadius:10,padding:'12px 14px',color:'#1A0F0A',fontSize:14,fontFamily:"-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif",marginBottom:resetErr?8:12}}/>
+                {resetErr && <p style={{color:'#EF4444',fontSize:12,marginBottom:10}}>{resetErr}</p>}
+                <div style={{display:'flex',gap:8}}>
+                  <button onClick={()=>{setShowReset(false);setResetErr('');setResetEmail('')}} style={{flex:1,background:'none',border:'1.5px solid #E5E0D8',borderRadius:10,padding:'11px',fontSize:13,color:'#8B7355',cursor:'pointer'}}>Cancel</button>
+                  <button onClick={sendReset} disabled={!resetEmail.trim()||resetLoading} style={{flex:2,background:resetEmail.trim()?'#8B3A2A':'#E5E0D8',color:resetEmail.trim()?'#fff':'#8B7355',border:'none',borderRadius:10,padding:'11px',fontSize:13,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:6}}>{resetLoading?<Spin/>:'Send Reset Link'}</button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
       </div>
       </div>
     </div>
