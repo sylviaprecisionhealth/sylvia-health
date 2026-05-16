@@ -1,13 +1,20 @@
 export default async function handler(req, res) {
+  console.log('[send-invite] method:', req.method)
+
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
-  const { name, email, code } = req.body
+  const { name, email, code } = req.body || {}
+  console.log('[send-invite] payload:', { name, email, code })
 
   if (!name || !email || !code) {
     return res.status(400).json({ error: 'Missing required fields: name, email, code' })
   }
+
+  let resendStatus
+  let resendBody
+  let data
 
   try {
     const response = await fetch('https://api.resend.com/emails', {
@@ -42,16 +49,26 @@ export default async function handler(req, res) {
       })
     })
 
-    const data = await response.json()
+    resendStatus = response.status
+    resendBody = await response.text()
+    console.log('[send-invite] Resend status:', resendStatus)
+    console.log('[send-invite] Resend body:', resendBody)
+
+    try {
+      data = JSON.parse(resendBody)
+    } catch {
+      data = { raw: resendBody }
+    }
 
     if (!response.ok) {
-      console.error('Resend error:', response.status, data)
-      return res.status(response.status).json({ error: data?.message || data?.name || 'Resend API error', details: data })
+      const msg = data?.message || data?.name || resendBody || 'Resend API error'
+      return res.status(resendStatus).json({ error: msg, details: data })
     }
 
     return res.status(200).json({ success: true, id: data.id })
+
   } catch (err) {
-    console.error('send-invite handler error:', err)
+    console.error('[send-invite] exception:', err)
     return res.status(500).json({ error: err.message || 'Internal server error' })
   }
 }
