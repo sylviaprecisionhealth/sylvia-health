@@ -285,74 +285,84 @@ function ScheduleRow({s, q, saving, onSave, onToggle, onRemove}) {
 // ── User Profile Modal ────────────────────────────────────────────────────────
 function UserProfileModal({user, questions, onClose}) {
   const [liveSchedules, setLiveSchedules] = useState([])
-  const [applying, setApplying] = useState(false)
   const [saving, setSaving] = useState(null)
-  const [applySuccess, setApplySuccess] = useState(false)
-  const [tab, setTab] = useState('active')
-  const [addSearch, setAddSearch] = useState('')
+  const [templates, setTemplates] = useState([])
+  const [showAssign, setShowAssign] = useState(false)
+  const [selectedTemplate, setSelectedTemplate] = useState(null)
+  const [durDays, setDurDays] = useState(15)
+  const [assigning, setAssigning] = useState(false)
+  const [assignSuccess, setAssignSuccess] = useState(false)
 
   useEffect(()=>{
-    const unsub = onSnapshot(
+    const u1 = onSnapshot(
       query(collection(db,'schedules'), where('userId','==',user.id)),
       snap => setLiveSchedules(snap.docs.map(d=>({id:d.id,...d.data()})))
     )
-    return unsub
+    const u2 = onSnapshot(collection(db,'scheduleTemplates'),
+      snap => setTemplates(snap.docs.map(d=>({id:d.id,...d.data()})))
+    )
+    return ()=>{u1();u2()}
   },[user.id])
 
-  const userSchedules  = liveSchedules
-  const DEFAULT_TIMES  = ['09:00','12:00','15:00','18:00','21:00']
-  const assignedQIds   = new Set(userSchedules.map(s=>s.questionId))
-  const availableToAdd = questions.filter(q=>
-    !assignedQIds.has(q.id) &&
-    (!addSearch || q.text.toLowerCase().includes(addSearch.toLowerCase()))
-  )
-  const defaultSched = userSchedules.find(s=>s.isDefaultSession)
+  const userSchedules = liveSchedules
+  const defaultSched  = userSchedules.find(s=>s.isDefaultSession)
   const daysLeft = defaultSched?.endDate
     ? Math.max(0, Math.ceil((new Date(defaultSched.endDate)-new Date(today()))/86400000)+1)
     : null
 
-  async function applyDefault() {
-    if(!questions.length){ alert('No questions found in the database.'); return }
-    setApplying(true)
-    try {
-      for(const s of userSchedules) {
-        await deleteDoc(doc(db,'schedules',s.id))
+  function openAssign(){
+    const def = templates.find(t=>t.isDefault)||templates[0]||null
+    setSelectedTemplate(def)
+    setDurDays(def?.defaultDuration||15)
+    setAssignSuccess(false)
+    setShowAssign(true)
+  }
+
+  async function confirmAssign(){
+    if(!selectedTemplate) return
+    setAssigning(true)
+    try{
+      for(const s of userSchedules) await deleteDoc(doc(db,'schedules',s.id))
+      const startDate=today()
+      const end=new Date(); end.setDate(end.getDate()+durDays-1)
+      const endDate=end.toISOString().split('T')[0]
+      let timesToCreate=[...(selectedTemplate.times||['09:00'])],extraFields={}
+      if(selectedTemplate.type==='weekly'){
+        extraFields={repeat:'Weekly',days:selectedTemplate.days||[]}
+      } else if(selectedTemplate.type==='custom_interval'){
+        timesToCreate=[(selectedTemplate.times||['08:00'])[0]]
+        extraFields={mode:'interval',interval:selectedTemplate.intervalHours||4,repeat:'Custom interval'}
       }
-      const startDate = today()
-      const end = new Date()
-      end.setDate(end.getDate() + 14)
-      const endDate = end.toISOString().split('T')[0]
-      for(const time of DEFAULT_TIMES) {
-        const ref = await addDoc(collection(db,'schedules'),{
-          questionId:'__ALL__', userId:user.id, time,
-          repeat:'Daily', interval:null, mode:'time',
-          startDate, endDate, durationDays:15,
-          active:true, isDefaultSession:true
+      for(const time of timesToCreate){
+        const ref=await addDoc(collection(db,'schedules'),{
+          questionId:'__ALL__',userId:user.id,time,
+          repeat:'Daily',interval:null,mode:'time',
+          startDate,endDate,durationDays:durDays,
+          active:true,isDefaultSession:true,
+          templateId:selectedTemplate.id,templateName:selectedTemplate.name,
+          ...extraFields
         })
         await updateDoc(doc(db,'schedules',ref.id),{id:ref.id})
       }
-      setApplySuccess(true)
-      setTimeout(()=>setApplySuccess(false), 4000)
-    } catch(e) { alert('Error: ' + e.message) }
-    setApplying(false)
+      setAssignSuccess(true)
+    }catch(e){alert('Error: '+e.message)}
+    setAssigning(false)
   }
 
-  async function toggleSchedule(s){ await updateDoc(doc(db,'schedules',s.id),{active:!s.active}) }
   async function removeSchedule(s){ await deleteDoc(doc(db,'schedules',s.id)) }
-  async function addQuestion(q){
-    const ref = await addDoc(collection(db,'schedules'),{
-      questionId:q.id, userId:user.id, time:'08:00',
-      repeat:'Daily', interval:null, mode:'time',
-      startDate:today(), active:true
-    })
-    await updateDoc(doc(db,'schedules',ref.id),{id:ref.id})
-  }
-  async function saveScheduleEdit(sId, edits){ setSaving(sId); await updateDoc(doc(db,'schedules',sId),edits); setSaving(null) }
   function qInfo(id){ return questions.find(q=>q.id===id) }
+  function tSummary(t){
+    if(!t) return ''
+    if(t.type==='custom_interval') return `Every ${t.intervalHours}h from ${(t.times||['08:00'])[0]}`
+    if(t.type==='weekly') return `${(t.days||[]).join(', ')} at ${(t.times||['09:00'])[0]}`
+    return (t.times||[]).join(' · ')
+  }
 
   return (
     <div style={{position:'fixed',inset:0,background:'rgba(10,10,20,.7)',backdropFilter:'blur(6px)',zIndex:200,display:'flex',alignItems:'flex-start',justifyContent:'center',padding:20,overflowY:'auto'}}>
       <div style={{background:'#E8E4FF',borderRadius:24,width:'100%',maxWidth:620,boxShadow:'0 32px 80px rgba(0,0,0,.2)',animation:'pop .25s ease',marginTop:20,marginBottom:20}}>
+
+        {/* Header */}
         <div style={{background:'#1A1A2E',borderRadius:'24px 24px 0 0',padding:'24px 28px'}}>
           <div style={{display:'flex',alignItems:'center',gap:14}}>
             <div style={{width:46,height:46,borderRadius:14,background:'#EDE9FE',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:800,fontSize:18,color:'#6C63FF',flexShrink:0}}>{user.name?.split(' ').map(n=>n[0]).join('')||'?'}</div>
@@ -362,62 +372,102 @@ function UserProfileModal({user, questions, onClose}) {
             </div>
             <button onClick={onClose} style={{background:'#FFFFFF1A',border:'none',color:'#E8E4FF',borderRadius:10,padding:'8px 14px',fontSize:13,cursor:'pointer'}}>Close</button>
           </div>
-          <button onClick={applyDefault} disabled={applying} style={{marginTop:16,width:'100%',background:applySuccess?'#1A6644':'linear-gradient(135deg,#6C63FF,#4A42CC)',color:'#fff',border:'none',borderRadius:12,padding:'11px',fontSize:14,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:8,transition:'background .3s'}}>
-            {applying?<><Spin/> Applying…</>:applySuccess?'✓ Applied — 5×/day for 15 days':'⚡ Apply Default Schedule (15 days · 5×/day · all 92 questions)'}
+          <button onClick={openAssign} style={{marginTop:16,width:'100%',background:'#6C63FF',color:'#fff',border:'none',borderRadius:12,padding:'11px',fontSize:14,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>
+            ⚡ Assign Schedule
           </button>
-          {defaultSched&&daysLeft!==null&&<div style={{marginTop:8,fontSize:12,color:'#A89FFF',textAlign:'center'}}>{daysLeft>0?`${daysLeft} day${daysLeft!==1?'s':''} remaining · ends ${defaultSched.endDate}`:'Schedule has ended'}</div>}
+          {defaultSched&&daysLeft!==null&&<div style={{marginTop:8,fontSize:12,color:'#A89FFF',textAlign:'center'}}>{daysLeft>0?`${daysLeft} day${daysLeft!==1?'s':''} remaining · ${defaultSched.templateName||'Schedule'} · ends ${defaultSched.endDate}`:'Schedule has ended'}</div>}
         </div>
 
+        {/* Body */}
         <div style={{padding:'20px 24px'}}>
-          <div style={{display:'flex',gap:8,marginBottom:20}}>
-            {[['active',`Active Schedule (${userSchedules.length})`],['add','Add Questions']].map(([t,l])=>(
-              <button key={t} onClick={()=>setTab(t)} style={{flex:1,padding:'10px',borderRadius:12,border:`1.5px solid ${tab===t?'#1A1A2E':'#E5E0D8'}`,background:tab===t?'#1A1A2E':'#fff',color:tab===t?'#E8E4FF':'#9B98B8',fontSize:13,fontWeight:600,cursor:'pointer'}}>{l}</button>
-            ))}
-          </div>
-
-          {tab==='active'&&<>
-            {userSchedules.length===0&&<div style={{textAlign:'center',padding:'40px 20px',color:'#C8C0B0'}}><p style={{fontSize:15}}>No schedule assigned yet.</p><p style={{fontSize:13,marginTop:4}}>Click the button above to apply the default schedule.</p></div>}
-            {userSchedules.length>0&&<>
-              <div style={{fontSize:11,fontWeight:700,color:'#9B98B8',letterSpacing:1.5,textTransform:'uppercase',marginBottom:10}}>
-                {userSchedules.some(s=>s.isDefaultSession)?'Default Schedule (All 92 Questions)':'Individual Schedules'}
+          {showAssign?(
+            assignSuccess?(
+              <div style={{textAlign:'center',padding:'32px 20px'}}>
+                <div style={{fontSize:36,marginBottom:10}}>✓</div>
+                <div style={{fontWeight:700,fontSize:17,color:'#1A6644',marginBottom:6}}>Schedule Assigned</div>
+                <div style={{fontSize:13,color:'#6B6888',marginBottom:20,lineHeight:1.6}}>{selectedTemplate?.name} · {durDays} days</div>
+                <button onClick={()=>{setShowAssign(false);setAssignSuccess(false)}} style={{padding:'10px 28px',borderRadius:12,border:'none',background:'#1A1A2E',color:'#E8E4FF',fontSize:14,fontWeight:700,cursor:'pointer'}}>Done</button>
               </div>
-              {userSchedules.filter(s=>s.isDefaultSession).length>0&&(
-                <div style={{background:'#fff',borderRadius:14,padding:'16px',border:'1.5px solid #E8E3DA',marginBottom:12}}>
-                  <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:8}}>
-                    <div>
-                      <div style={{fontWeight:600,fontSize:14,color:'#1A1A2E'}}>All 92 Questions · 5 sessions/day</div>
-                      <div style={{fontSize:12,color:'#9B98B8',marginTop:2}}>9:00 AM · 12:00 PM · 3:00 PM · 6:00 PM · 9:00 PM</div>
+            ):(
+              <div>
+                <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:16}}>
+                  <div style={{fontSize:14,fontWeight:700,color:'#1A1A2E'}}>Assign Schedule</div>
+                  <button onClick={()=>setShowAssign(false)} style={{background:'none',border:'1.5px solid #E5E0D8',borderRadius:8,padding:'5px 12px',fontSize:12,color:'#6B6888',cursor:'pointer'}}>Cancel</button>
+                </div>
+
+                <div style={{fontSize:10,fontWeight:700,color:'#6B6888',letterSpacing:1,textTransform:'uppercase',marginBottom:10}}>Template</div>
+                {templates.length===0&&<div style={{textAlign:'center',padding:'20px',color:'#C8C0B0',fontSize:13,marginBottom:16,lineHeight:1.6}}>No templates yet — create one in the Schedule tab.</div>}
+                <div style={{display:'flex',flexDirection:'column',gap:8,marginBottom:18}}>
+                  {templates.map(t=>(
+                    <div key={t.id} onClick={()=>{setSelectedTemplate(t);setDurDays(t.defaultDuration)}} style={{background:'#fff',borderRadius:14,padding:'14px 16px',border:`1.5px solid ${selectedTemplate?.id===t.id?'#6C63FF':'#E8E3DA'}`,cursor:'pointer',transition:'border-color .15s'}}>
+                      <div style={{display:'flex',alignItems:'center',gap:12}}>
+                        <div style={{flex:1}}>
+                          <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:3}}>
+                            <span style={{fontWeight:600,fontSize:14,color:'#1A1A2E'}}>{t.name}</span>
+                            {t.isDefault&&<span style={{fontSize:10,fontWeight:700,color:'#6C63FF',background:'#EDE9FE',borderRadius:20,padding:'1px 7px'}}>DEFAULT</span>}
+                          </div>
+                          <div style={{fontSize:12,color:'#6B6888'}}>{tSummary(t)}</div>
+                          <div style={{fontSize:11,color:'#9B98B8',marginTop:2}}>{t.defaultDuration} days</div>
+                        </div>
+                        <div style={{width:20,height:20,borderRadius:'50%',border:`2px solid ${selectedTemplate?.id===t.id?'#6C63FF':'#D1D5DB'}`,background:selectedTemplate?.id===t.id?'#6C63FF':'transparent',flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center'}}>
+                          {selectedTemplate?.id===t.id&&<div style={{width:8,height:8,borderRadius:'50%',background:'#fff'}}/>}
+                        </div>
+                      </div>
                     </div>
-                    <span style={{fontSize:11,color:'#1A6644',background:'#D1FAE5',borderRadius:20,padding:'3px 10px',fontWeight:600}}>Active</span>
+                  ))}
+                </div>
+
+                <div style={{marginBottom:20}}>
+                  <div style={{fontSize:10,fontWeight:700,color:'#6B6888',letterSpacing:1,textTransform:'uppercase',marginBottom:10}}>Duration</div>
+                  <div style={{display:'flex',gap:6,flexWrap:'wrap',alignItems:'center'}}>
+                    {[15,30,60].map(d=>(
+                      <button key={d} onClick={()=>setDurDays(d)} style={{padding:'7px 12px',borderRadius:10,border:`1.5px solid ${durDays===d?'#1A1A2E':'#E5E0D8'}`,background:durDays===d?'#1A1A2E':'#fff',color:durDays===d?'#E8E4FF':'#9B98B8',fontSize:12,fontWeight:600,cursor:'pointer'}}>
+                        {d} days
+                      </button>
+                    ))}
+                    <div style={{display:'flex',alignItems:'center',gap:6}}>
+                      <input type="number" min={1} max={365} value={durDays} onChange={e=>setDurDays(Math.max(1,+e.target.value))} style={{...inp,padding:'7px 10px',borderRadius:8,width:72}}/>
+                      <span style={{fontSize:12,color:'#9B98B8'}}>days</span>
+                    </div>
                   </div>
-                  {defaultSched&&<div style={{fontSize:12,color:'#9B98B8',marginBottom:12}}>{defaultSched.startDate} → {defaultSched.endDate} ({daysLeft>0?`${daysLeft} days left`:'ended'})</div>}
-                  <button onClick={()=>{ if(window.confirm('Remove this schedule?')) userSchedules.forEach(s=>removeSchedule(s)) }} style={{padding:'6px 14px',borderRadius:8,border:'1.5px solid #FEE2E2',background:'#fff',color:'#EF4444',fontSize:12,fontWeight:600,cursor:'pointer'}}>Remove Schedule</button>
+                </div>
+
+                <button onClick={confirmAssign} disabled={assigning||!selectedTemplate} style={{width:'100%',padding:12,borderRadius:12,border:'none',background:selectedTemplate&&!assigning?'#6C63FF':'#E5E0D8',color:selectedTemplate&&!assigning?'#fff':'#9B98B8',fontSize:14,fontWeight:700,cursor:selectedTemplate&&!assigning?'pointer':'default',display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>
+                  {assigning?<><Spin/> Assigning…</>:'Confirm & Assign'}
+                </button>
+              </div>
+            )
+          ):(
+            <>
+              <div style={{fontSize:11,fontWeight:700,color:'#9B98B8',letterSpacing:1.5,textTransform:'uppercase',marginBottom:14}}>Active Schedule ({userSchedules.length})</div>
+              {userSchedules.length===0&&(
+                <div style={{textAlign:'center',padding:'40px 20px',color:'#C8C0B0'}}>
+                  <p style={{fontSize:15}}>No schedule assigned yet.</p>
+                  <p style={{fontSize:13,marginTop:6}}>Click "Assign Schedule" above to get started.</p>
                 </div>
               )}
-              {userSchedules.filter(s=>!s.isDefaultSession).map(s=>{
-                const q=qInfo(s.questionId)
-                if(!q)return null
-                return <ScheduleRow key={s.id} s={s} q={q} saving={saving} onSave={saveScheduleEdit} onToggle={toggleSchedule} onRemove={removeSchedule}/>
-              })}
-            </>}
-          </>}
-
-          {tab==='add'&&<>
-            <input value={addSearch} onChange={e=>setAddSearch(e.target.value)} placeholder="Search questions to add…" style={{...inp,marginBottom:12}}/>
-            <p style={{fontSize:12,color:'#9B98B8',marginBottom:14}}>Click any question to add it to this client's schedule.</p>
-            <div style={{display:'flex',flexDirection:'column',gap:8,maxHeight:400,overflowY:'auto'}}>
-              {availableToAdd.map(q=>(
-                <div key={q.id} onClick={()=>addQuestion(q)} style={{background:'#fff',borderRadius:12,padding:'12px 14px',border:'1.5px solid #E8E3DA',display:'flex',alignItems:'center',gap:10,cursor:'pointer'}}>
-                  <div style={{flex:1}}>
-                    <div style={{display:'flex',gap:6,marginBottom:4,flexWrap:'wrap'}}><TBadge type={q.type}/>{q.category&&q.category!=='General'&&<span style={{fontSize:11,color:'#6C63FF',background:'#EDE9FE',borderRadius:20,padding:'2px 8px',fontWeight:600}}>{q.category}</span>}</div>
-                    <p style={{fontSize:13,color:'#1A1A2E',fontWeight:500,margin:0,lineHeight:1.4}}>{q.text.length>80?q.text.slice(0,80)+'…':q.text}</p>
+              {userSchedules.length>0&&<>
+                {userSchedules.filter(s=>s.isDefaultSession).length>0&&(
+                  <div style={{background:'#fff',borderRadius:14,padding:'16px',border:'1.5px solid #E8E3DA',marginBottom:12}}>
+                    <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:8}}>
+                      <div>
+                        <div style={{fontWeight:600,fontSize:14,color:'#1A1A2E'}}>{userSchedules.find(s=>s.templateName)?.templateName||'All Questions'}</div>
+                        <div style={{fontSize:12,color:'#9B98B8',marginTop:2}}>{userSchedules.filter(s=>s.isDefaultSession).map(s=>s.time).join(' · ')}</div>
+                      </div>
+                      <span style={{fontSize:11,color:'#1A6644',background:'#D1FAE5',borderRadius:20,padding:'3px 10px',fontWeight:600,flexShrink:0}}>Active</span>
+                    </div>
+                    {defaultSched&&<div style={{fontSize:12,color:'#9B98B8',marginBottom:12}}>{defaultSched.startDate} → {defaultSched.endDate} ({daysLeft!=null&&daysLeft>0?`${daysLeft} days left`:'ended'})</div>}
+                    <button onClick={()=>{ if(window.confirm('Remove this schedule?')) userSchedules.forEach(s=>removeSchedule(s)) }} style={{padding:'6px 14px',borderRadius:8,border:'1.5px solid #FEE2E2',background:'#fff',color:'#EF4444',fontSize:12,fontWeight:600,cursor:'pointer'}}>Remove Schedule</button>
                   </div>
-                  <span style={{color:'#6C63FF',fontSize:20,flexShrink:0}}>+</span>
-                </div>
-              ))}
-              {availableToAdd.length===0&&<div style={{textAlign:'center',padding:30,color:'#C8C0B0'}}><p>No more questions to add.</p></div>}
-            </div>
-          </>}
+                )}
+                {userSchedules.filter(s=>!s.isDefaultSession).map(s=>{
+                  const q=qInfo(s.questionId)
+                  if(!q) return null
+                  return <ScheduleRow key={s.id} s={s} q={q} saving={saving} onSave={async(sId,edits)=>{setSaving(sId);await updateDoc(doc(db,'schedules',sId),edits);setSaving(null)}} onToggle={s=>updateDoc(doc(db,'schedules',s.id),{active:!s.active})} onRemove={removeSchedule}/>
+                })}
+              </>}
+            </>
+          )}
         </div>
       </div>
     </div>
