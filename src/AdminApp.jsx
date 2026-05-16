@@ -200,6 +200,7 @@ function ClientProfileView({client, questions, onBack}) {
   const [addFolder,setAddFolder]=useState(null)
   const [addTemplate,setAddTemplate]=useState(null)
   const [addDurDays,setAddDurDays]=useState(15)
+  const [addStartDate,setAddStartDate]=useState(today())
   const [adding,setAdding]=useState(false)
   const [addSuccess,setAddSuccess]=useState(false)
   const [toggling,setToggling]=useState(null)
@@ -276,8 +277,8 @@ function ClientProfileView({client, questions, onBack}) {
     if(!addTemplate||!addFolder)return
     setAdding(true)
     try{
-      const startDate=today()
-      const end=new Date();end.setDate(end.getDate()+addDurDays-1)
+      const startDate=addStartDate||today()
+      const end=new Date(startDate);end.setDate(end.getDate()+addDurDays-1)
       const endDate=end.toISOString().split('T')[0]
       const assignmentId=Date.now().toString(36)+Math.random().toString(36).slice(2,6)
       let timesToCreate=[...(addTemplate.times||['09:00'])],extraFields={}
@@ -301,7 +302,7 @@ function ClientProfileView({client, questions, onBack}) {
     setAdding(false)
   }
 
-  function closeAdd(){setShowAddQ(false);setAddStep(1);setAddFolder(null);setAddTemplate(null);setAddDurDays(15);setAddSuccess(false)}
+  function closeAdd(){setShowAddQ(false);setAddStep(1);setAddFolder(null);setAddTemplate(null);setAddDurDays(15);setAddStartDate(today());setAddSuccess(false)}
 
   const clientResponses=responses.filter(r=>{
     if(r.answer==='__skipped__')return false
@@ -483,6 +484,10 @@ function ClientProfileView({client, questions, onBack}) {
                           </div>
                         </div>
                       ))}
+                    </div>
+                    <div style={{marginBottom:18}}>
+                      <div style={{fontSize:10,fontWeight:700,color:'#6B6888',letterSpacing:1,textTransform:'uppercase',marginBottom:10}}>Start Date</div>
+                      <input type="date" value={addStartDate} onChange={e=>setAddStartDate(e.target.value)} style={{...inp,padding:'8px 12px',borderRadius:10,width:'auto'}}/>
                     </div>
                     <div style={{marginBottom:20}}>
                       <div style={{fontSize:10,fontWeight:700,color:'#6B6888',letterSpacing:1,textTransform:'uppercase',marginBottom:10}}>Duration</div>
@@ -841,7 +846,7 @@ function QuestionsView() {
   const [form,setForm]=useState({type:'scale',text:'',scaleMin:0,scaleMax:100,scaleMinLabel:'Not at all',scaleMaxLabel:'More than I ever have',options:'',category:'General',mechanism:'',folder:'Book EMA'})
   const [saving,setSaving]=useState(false)
   const [assignTarget,setAssignTarget]=useState(null); const [assigning,setAssigning]=useState(null); const [assignSuccess,setAssignSuccess]=useState(null); const [assignSearch,setAssignSearch]=useState('')
-  const [assignStep,setAssignStep]=useState(1); const [assignUser,setAssignUser]=useState(null); const [selectedTemplate,setSelectedTemplate]=useState(null)
+  const [assignStep,setAssignStep]=useState(1); const [assignUser,setAssignUser]=useState(null); const [selectedTemplate,setSelectedTemplate]=useState(null); const [assignStartDate,setAssignStartDate]=useState(today())
   const [templates,setTemplates]=useState([])
   const isMobile=useMobile()
 
@@ -876,7 +881,7 @@ function QuestionsView() {
 
   function closeAssignModal(){
     setAssignTarget(null); setAssignSuccess(null); setAssignSearch('')
-    setAssignStep(1); setAssignUser(null); setSelectedTemplate(null)
+    setAssignStep(1); setAssignUser(null); setSelectedTemplate(null); setAssignStartDate(today())
   }
 
   async function confirmAssign(){
@@ -885,9 +890,9 @@ function QuestionsView() {
     try{
       const existingSnap=await getDocs(query(collection(db,'schedules'),where('userId','==',assignUser.id)))
       for(const d of existingSnap.docs) await deleteDoc(doc(db,'schedules',d.id))
-      const startDate=today()
+      const startDate=assignStartDate||today()
       const durDays=selectedTemplate.defaultDuration||15
-      const end=new Date(); end.setDate(end.getDate()+durDays-1)
+      const end=new Date(startDate); end.setDate(end.getDate()+durDays-1)
       const endDate=end.toISOString().split('T')[0]
       let timesToCreate=[...(selectedTemplate.times||['09:00'])],extraFields={}
       if(selectedTemplate.type==='weekly'){
@@ -1003,6 +1008,10 @@ function QuestionsView() {
                     </div>
                   </div>
                 ))}
+              </div>
+              <div style={{marginBottom:16}}>
+                <div style={{fontSize:10,fontWeight:700,color:'#6B6888',letterSpacing:1,textTransform:'uppercase',marginBottom:10}}>Start Date</div>
+                <input type="date" value={assignStartDate} onChange={e=>setAssignStartDate(e.target.value)} style={{...inp,padding:'8px 12px',borderRadius:10,width:'auto'}}/>
               </div>
               <div style={{display:'flex',gap:10}}>
                 <button onClick={()=>{setAssignStep(1);setAssignUser(null)}} style={{flex:1,padding:11,borderRadius:12,border:'1.5px solid #E5E0D8',background:'#fff',color:'#6B6888',fontSize:14,fontWeight:600,cursor:'pointer'}}>← Back</button>
