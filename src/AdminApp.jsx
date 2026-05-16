@@ -87,7 +87,7 @@ function Sidebar({active,setActive,onLogout,open,onClose}) {
     return()=>{document.body.style.overflow=''}
   },[open,isMobile])
   const nav=[
-    {id:'questions',label:'Questions',icon:<svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="2" width="12" height="14" rx="2"/><line x1="6" y1="6" x2="12" y2="6"/><line x1="6" y1="9" x2="12" y2="9"/><line x1="6" y1="12" x2="10" y2="12"/></svg>},
+    {id:'modules',label:'Modules',icon:<svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="2" width="12" height="14" rx="2"/><line x1="6" y1="6" x2="12" y2="6"/><line x1="6" y1="9" x2="12" y2="9"/><line x1="6" y1="12" x2="10" y2="12"/></svg>},
     {id:'schedule',label:'Schedule',icon:<svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="9" r="7"/><polyline points="9,5 9,9 12,11"/></svg>},
     {id:'clients',label:'Clients',icon:<svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="6" r="3"/><path d="M3 16c0-3.3 2.7-6 6-6s6 2.7 6 6"/></svg>},
     {id:'team',label:'Team',icon:<svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="6.5" cy="6" r="2.5"/><path d="M1 16c0-3 2.5-5 5.5-5"/><circle cx="12" cy="6" r="2.5"/><path d="M10.5 11c1.5-.6 4.5.2 5.5 5"/></svg>},
@@ -264,7 +264,8 @@ function ClientProfileView({client, questions, onBack}) {
       endDate,times:group.map(s=>s.time).filter(Boolean),
       active:group.some(s=>s.active),
       removed:isRemoved,expired:isExpired&&!isRemoved,
-      daysLeft:dl,assignmentId:first.assignmentId||first.id,ids:group.map(s=>s.id)
+      daysLeft:dl,assignmentId:first.assignmentId||first.id,ids:group.map(s=>s.id),
+      assignmentName:first.assignmentName||''
     }
   }
 
@@ -295,6 +296,7 @@ function ClientProfileView({client, questions, onBack}) {
       const end=new Date(startDate);end.setDate(end.getDate()+addDurDays-1)
       const endDate=end.toISOString().split('T')[0]
       const assignmentId=Date.now().toString(36)+Math.random().toString(36).slice(2,6)
+      const assignmentName=`${addFolder} — ${startDate} — ${addTemplate.name}`
       let timesToCreate=[...(addTemplate.times||['09:00'])],extraFields={}
       if(addTemplate.type==='weekly'){extraFields={repeat:'Weekly',days:addTemplate.days||[]}}
       else if(addTemplate.type==='custom_interval'){
@@ -306,7 +308,7 @@ function ClientProfileView({client, questions, onBack}) {
           questionId:'__ALL__',userId:client.id,time,
           repeat:'Daily',interval:null,mode:'time',
           startDate,endDate,durationDays:addDurDays,
-          active:true,removed:false,folder:addFolder,assignmentId,
+          active:true,removed:false,folder:addFolder,assignmentId,assignmentName,
           templateId:addTemplate.id,templateName:addTemplate.name,...extraFields
         })
         await updateDoc(doc(db,'schedules',ref.id),{id:ref.id})
@@ -460,8 +462,8 @@ function ClientProfileView({client, questions, onBack}) {
 
                 {addStep===1&&(
                   <>
-                    <div style={{fontSize:10,fontWeight:700,color:'#6B6888',letterSpacing:1,textTransform:'uppercase',marginBottom:10}}>Select Folder</div>
-                    {folderNames.length===0&&<div style={{textAlign:'center',padding:'30px',color:'#C8C0B0',fontSize:13}}>No question folders found.</div>}
+                    <div style={{fontSize:10,fontWeight:700,color:'#6B6888',letterSpacing:1,textTransform:'uppercase',marginBottom:10}}>Select Module</div>
+                    {folderNames.length===0&&<div style={{textAlign:'center',padding:'30px',color:'#C8C0B0',fontSize:13}}>No modules found.</div>}
                     <div style={{display:'flex',flexDirection:'column',gap:8}}>
                       {folderNames.map(f=>(
                         <div key={f} onClick={()=>{setAddFolder(f);const def=templates.find(t=>t.isDefault)||templates[0]||null;setAddTemplate(def);setAddDurDays(def?.defaultDuration||15);setAddStep(2)}}
@@ -553,7 +555,7 @@ function ClientProfileView({client, questions, onBack}) {
                       <div style={{width:42,height:42,borderRadius:12,background:'#EDE9FE',display:'flex',alignItems:'center',justifyContent:'center',fontSize:20,flexShrink:0}}>📁</div>
                       <div style={{flex:1,minWidth:0}}>
                         <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:5,flexWrap:'wrap'}}>
-                          <span style={{fontWeight:700,fontSize:15,color:'#1A1A2E'}}>{meta.folder}</span>
+                          <span style={{fontWeight:700,fontSize:15,color:'#1A1A2E'}}>{meta.assignmentName||meta.folder}</span>
                           {qCount>0&&<span style={{fontSize:11,color:'#6C63FF',background:'#EDE9FE',borderRadius:20,padding:'2px 8px',fontWeight:600}}>{qCount} question{qCount!==1?'s':''}</span>}
                           {meta.active
                             ?<span style={{fontSize:11,color:'#1A6644',background:'#D1FAE5',borderRadius:20,padding:'2px 8px',fontWeight:600}}>Active</span>
@@ -590,7 +592,7 @@ function ClientProfileView({client, questions, onBack}) {
                           <div style={{width:34,height:34,borderRadius:10,background:'#F0EDE8',display:'flex',alignItems:'center',justifyContent:'center',fontSize:16,flexShrink:0}}>📁</div>
                           <div style={{flex:1,minWidth:0}}>
                             <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:3,flexWrap:'wrap'}}>
-                              <span style={{fontWeight:600,fontSize:13,color:'#1A1A2E'}}>{meta.folder}</span>
+                              <span style={{fontWeight:600,fontSize:13,color:'#1A1A2E'}}>{meta.assignmentName||meta.folder}</span>
                               <span style={{fontSize:10,fontWeight:700,color:sc,background:sbg,borderRadius:20,padding:'1px 7px'}}>{meta.removed?'Removed':'Expired'}</span>
                             </div>
                             <div style={{fontSize:11,color:'#9B98B8'}}>{meta.templateName} · {meta.startDate} → {meta.endDate}</div>
@@ -1057,88 +1059,106 @@ function InvitesView() {
   )
 }
 
-// ── Questions View ────────────────────────────────────────────────────────────
-function QuestionsView() {
-  const [questions,setQuestions]=useState([]); const [users,setUsers]=useState([]); const [loading,setLoading]=useState(true)
-  const [selectedFolder,setSelectedFolder]=useState(null)
+// ── Modules View ──────────────────────────────────────────────────────────────
+function ModulesView() {
+  const [questions,setQuestions]=useState([]); const [moduleList,setModuleList]=useState([]); const [users,setUsers]=useState([]); const [templates,setTemplates]=useState([]); const [loading,setLoading]=useState(true)
+  const [showNewModuleForm,setShowNewModuleForm]=useState(false)
+  const [newModuleName,setNewModuleName]=useState(''); const [newModuleDesc,setNewModuleDesc]=useState(''); const [savingModule,setSavingModule]=useState(false)
+  const [selectedModule,setSelectedModule]=useState(null)
+  const [renamingModule,setRenamingModule]=useState(false); const [renameValue,setRenameValue]=useState(''); const [savingRename,setSavingRename]=useState(false)
   const [editing,setEditing]=useState(null); const [showForm,setShowForm]=useState(false)
   const [catFilter,setCatFilter]=useState('All'); const [search,setSearch]=useState('')
-  const [form,setForm]=useState({type:'scale',text:'',scaleMin:0,scaleMax:100,scaleMinLabel:'Not at all',scaleMaxLabel:'More than I ever have',options:'',category:'General',mechanism:'',folder:'Book EMA'})
+  const [form,setForm]=useState({type:'scale',text:'',scaleMin:0,scaleMax:100,scaleMinLabel:'Not at all',scaleMaxLabel:'More than I ever have',options:'',category:'General',mechanism:'',folder:''})
   const [saving,setSaving]=useState(false)
   const [assignTarget,setAssignTarget]=useState(null); const [assigning,setAssigning]=useState(null); const [assignSuccess,setAssignSuccess]=useState(null); const [assignSearch,setAssignSearch]=useState('')
   const [assignStep,setAssignStep]=useState(1); const [assignUser,setAssignUser]=useState(null); const [selectedTemplate,setSelectedTemplate]=useState(null); const [assignStartDate,setAssignStartDate]=useState(today())
-  const [templates,setTemplates]=useState([])
   const isMobile=useMobile()
 
   useEffect(()=>{
     const u1=onSnapshot(collection(db,'questions'),snap=>{setQuestions(snap.docs.map(d=>({id:d.id,...d.data()}))); setLoading(false)})
-    const u2=onSnapshot(collection(db,'users'),snap=>{setUsers(snap.docs.map(d=>({id:d.id,...d.data()})))})
-    const u3=onSnapshot(collection(db,'scheduleTemplates'),snap=>{setTemplates(snap.docs.map(d=>({id:d.id,...d.data()})))})
-    return()=>{u1();u2();u3()}
+    const u2=onSnapshot(collection(db,'users'),snap=>setUsers(snap.docs.map(d=>({id:d.id,...d.data()}))))
+    const u3=onSnapshot(collection(db,'scheduleTemplates'),snap=>setTemplates(snap.docs.map(d=>({id:d.id,...d.data()}))))
+    const u4=onSnapshot(collection(db,'modules'),snap=>setModuleList(snap.docs.map(d=>({id:d.id,...d.data()}))))
+    return()=>{u1();u2();u3();u4()}
   },[])
 
-  // Build folder map
   const folderMap={}
   questions.forEach(q=>{const f=q.folder||'Uncategorized'; if(!folderMap[f])folderMap[f]=[]; folderMap[f].push(q)})
-  const folderNames=Object.keys(folderMap).sort()
+  const allModuleNames=Array.from(new Set([...moduleList.map(m=>m.name),...Object.keys(folderMap)])).sort()
+  function getModuleDoc(name){return moduleList.find(m=>m.name===name)||null}
 
-  function openNew(){
-    setEditing(null)
-    setForm({type:'scale',text:'',scaleMin:0,scaleMax:100,scaleMinLabel:'Not at all',scaleMaxLabel:'More than I ever have',options:'',category:'General',mechanism:'',folder:selectedFolder||'Book EMA'})
-    setShowForm(true)
+  async function createModule(){
+    if(!newModuleName.trim())return
+    setSavingModule(true)
+    const ref=await addDoc(collection(db,'modules'),{name:newModuleName.trim(),description:newModuleDesc.trim(),createdAt:today()})
+    await updateDoc(doc(db,'modules',ref.id),{id:ref.id})
+    setSavingModule(false); setShowNewModuleForm(false); setNewModuleName(''); setNewModuleDesc('')
   }
+
+  async function saveRename(){
+    if(!renameValue.trim()||renameValue.trim()===selectedModule.name)return
+    setSavingRename(true)
+    const oldName=selectedModule.name; const newName=renameValue.trim()
+    const modDoc=getModuleDoc(oldName)
+    if(modDoc) await updateDoc(doc(db,'modules',modDoc.id),{name:newName})
+    else{const ref=await addDoc(collection(db,'modules'),{name:newName,description:'',createdAt:today()}); await updateDoc(doc(db,'modules',ref.id),{id:ref.id})}
+    for(const q of questions.filter(q=>q.folder===oldName)) await updateDoc(doc(db,'questions',q.id),{folder:newName,module:newName})
+    setSelectedModule(s=>({...s,name:newName}))
+    setRenamingModule(false); setSavingRename(false)
+  }
+
+  function openNewQuestion(){setEditing(null);setForm({type:'scale',text:'',scaleMin:0,scaleMax:100,scaleMinLabel:'Not at all',scaleMaxLabel:'More than I ever have',options:'',category:'General',mechanism:'',folder:selectedModule?.name||''});setShowForm(true)}
   function openEdit(q){setEditing(q);setForm({...q,options:q.options?.join('\n')||''});setShowForm(true)}
 
-  async function save(){
+  async function saveQuestion(){
     if(!form.text.trim())return; setSaving(true)
-    const data={...form,scaleMin:+form.scaleMin,scaleMax:+form.scaleMax,options:form.type==='choice'?form.options.split('\n').map(s=>s.trim()).filter(Boolean):[],scheduled:editing?.scheduled||[]}
+    const data={...form,scaleMin:+form.scaleMin,scaleMax:+form.scaleMax,options:form.type==='choice'?form.options.split('\n').map(s=>s.trim()).filter(Boolean):[],scheduled:editing?.scheduled||[],module:form.folder}
     if(editing){await setDoc(doc(db,'questions',editing.id),data,{merge:true})}
     else{const ref=await addDoc(collection(db,'questions'),data);await updateDoc(doc(db,'questions',ref.id),{id:ref.id})}
-    setShowForm(false); setSaving(false)
+    setShowForm(false); setSaving(false); setEditing(null)
   }
 
-  async function del(id){await deleteDoc(doc(db,'questions',id))}
+  async function delQuestion(id){await deleteDoc(doc(db,'questions',id))}
 
-  function closeAssignModal(){
-    setAssignTarget(null); setAssignSuccess(null); setAssignSearch('')
-    setAssignStep(1); setAssignUser(null); setSelectedTemplate(null); setAssignStartDate(today())
+  function closeAssignModal(){setAssignTarget(null);setAssignSuccess(null);setAssignSearch('');setAssignStep(1);setAssignUser(null);setSelectedTemplate(null);setAssignStartDate(today())}
+
+  function tSummary(t){
+    if(!t)return''
+    if(t.type==='custom_interval')return`Every ${t.intervalHours}h from ${(t.times||['08:00'])[0]}`
+    if(t.type==='weekly')return`${(t.days||[]).join(', ')} at ${(t.times||['09:00'])[0]}`
+    return(t.times||[]).join(' · ')
   }
 
   async function confirmAssign(){
-    if(!selectedTemplate) return
+    if(!selectedTemplate)return
     setAssigning(assignUser.id)
     try{
-      const existingSnap=await getDocs(query(collection(db,'schedules'),where('userId','==',assignUser.id)))
-      for(const d of existingSnap.docs) await deleteDoc(doc(db,'schedules',d.id))
       const startDate=assignStartDate||today()
       const durDays=selectedTemplate.defaultDuration||15
       const end=new Date(startDate); end.setDate(end.getDate()+durDays-1)
       const endDate=end.toISOString().split('T')[0]
+      const assignmentId=Date.now().toString(36)+Math.random().toString(36).slice(2,6)
+      const assignmentName=`${assignTarget} — ${startDate} — ${selectedTemplate.name}`
       let timesToCreate=[...(selectedTemplate.times||['09:00'])],extraFields={}
-      if(selectedTemplate.type==='weekly'){
-        extraFields={repeat:'Weekly',days:selectedTemplate.days||[]}
-      } else if(selectedTemplate.type==='custom_interval'){
-        timesToCreate=[(selectedTemplate.times||['08:00'])[0]]
-        extraFields={mode:'interval',interval:selectedTemplate.intervalHours||4,repeat:'Custom interval'}
-      }
+      if(selectedTemplate.type==='weekly'){extraFields={repeat:'Weekly',days:selectedTemplate.days||[]}}
+      else if(selectedTemplate.type==='custom_interval'){timesToCreate=[(selectedTemplate.times||['08:00'])[0]];extraFields={mode:'interval',interval:selectedTemplate.intervalHours||4,repeat:'Custom interval'}}
       for(const time of timesToCreate){
         const ref=await addDoc(collection(db,'schedules'),{
           questionId:'__ALL__',userId:assignUser.id,time,
           repeat:'Daily',interval:null,mode:'time',
           startDate,endDate,durationDays:durDays,
-          active:true,isDefaultSession:true,
-          templateId:selectedTemplate.id,templateName:selectedTemplate.name,
-          ...extraFields
+          active:true,removed:false,
+          folder:assignTarget,assignmentId,assignmentName,
+          templateId:selectedTemplate.id,templateName:selectedTemplate.name,...extraFields
         })
         await updateDoc(doc(db,'schedules',ref.id),{id:ref.id})
       }
       setAssignSuccess(assignUser.id)
-      setTimeout(()=>setAssignSuccess(null),3000)
     }catch(e){alert('Error: '+e.message)}
     setAssigning(null)
   }
 
-  // Shared form panel
+  // Question Form Panel
   const FormPanel=(
     <div style={{background:'#fff',borderRadius:20,padding:24,border:'1.5px solid #E8E3DA',marginBottom:20,animation:'fadeUp .3s ease'}}>
       <h3 style={{fontWeight:700,fontSize:16,color:'#1A1A2E',marginBottom:16}}>{editing?'Edit Question':'New Question'}</h3>
@@ -1146,18 +1166,18 @@ function QuestionsView() {
       <Field label="Question Text"><textarea value={form.text} onChange={e=>setForm(f=>({...f,text:e.target.value}))} rows={3} placeholder="Enter question…" style={{...inp,lineHeight:1.6,resize:'none'}}/></Field>
       {form.type==='scale'&&<div style={{background:'#FAFAF8',borderRadius:14,padding:16,border:'1px solid #E5E0D8',marginBottom:18}}><Lbl>Scale Range</Lbl><div style={{display:'flex',gap:12,marginBottom:12,flexDirection:isMobile?'column':'row'}}>{[['Min','scaleMin'],['Max','scaleMax']].map(([l,k])=><div key={k} style={{flex:1}}><div style={{fontSize:11,color:'#9B98B8',marginBottom:4}}>{l}</div><input type="number" value={form[k]} onChange={e=>setForm(f=>({...f,[k]:e.target.value}))} style={{...inp,padding:'8px 10px',borderRadius:8}}/></div>)}</div><div style={{display:'flex',gap:12,flexDirection:isMobile?'column':'row'}}>{[['Min Label','scaleMinLabel','e.g. Not at all'],['Max Label','scaleMaxLabel','e.g. Extremely']].map(([l,k,p])=><div key={k} style={{flex:1}}><div style={{fontSize:11,color:'#9B98B8',marginBottom:4}}>{l}</div><input value={form[k]} onChange={e=>setForm(f=>({...f,[k]:e.target.value}))} placeholder={p} style={{...inp,padding:'8px 10px',borderRadius:8,fontSize:13}}/></div>)}</div></div>}
       {form.type==='choice'&&<Field label="Options (one per line)"><textarea value={form.options} onChange={e=>setForm(f=>({...f,options:e.target.value}))} rows={5} placeholder={'Very well\nWell\nOkay\nPoorly\nTerribly'} style={{...inp,lineHeight:1.8,resize:'none'}}/></Field>}
-      <Field label="Folder"><input value={form.folder||''} onChange={e=>setForm(f=>({...f,folder:e.target.value}))} placeholder="e.g. Book EMA" style={inp}/></Field>
+      <Field label="Module (folder)"><input value={form.folder||''} onChange={e=>setForm(f=>({...f,folder:e.target.value}))} placeholder="e.g. Book EMA" style={inp}/></Field>
       <Field label="Category"><input value={form.category} onChange={e=>setForm(f=>({...f,category:e.target.value}))} placeholder="e.g. Cognitive Mechanisms" style={inp}/></Field>
       <Field label="Mechanism (optional)"><input value={form.mechanism} onChange={e=>setForm(f=>({...f,mechanism:e.target.value}))} placeholder="e.g. Body dissatisfaction" style={inp}/></Field>
       <div style={{display:'flex',gap:10}}>
-        <button onClick={()=>setShowForm(false)} style={{flex:1,padding:11,borderRadius:12,border:'1.5px solid #E5E0D8',background:'#fff',color:'#9B98B8',fontSize:14,fontWeight:600,cursor:'pointer'}}>Cancel</button>
-        <button onClick={save} disabled={!form.text.trim()||saving} style={{flex:2,padding:11,borderRadius:12,border:'none',background:form.text.trim()?'#1A1A2E':'#E5E0D8',color:form.text.trim()?'#E8E4FF':'#9B98B8',fontSize:14,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>{saving?<Spin/>:(editing?'Save Changes':'Create Question')}</button>
+        <button onClick={()=>{setShowForm(false);setEditing(null)}} style={{flex:1,padding:11,borderRadius:12,border:'1.5px solid #E5E0D8',background:'#fff',color:'#9B98B8',fontSize:14,fontWeight:600,cursor:'pointer'}}>Cancel</button>
+        <button onClick={saveQuestion} disabled={!form.text.trim()||saving} style={{flex:2,padding:11,borderRadius:12,border:'none',background:form.text.trim()?'#1A1A2E':'#E5E0D8',color:form.text.trim()?'#E8E4FF':'#9B98B8',fontSize:14,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>{saving?<Spin/>:(editing?'Save Changes':'Add Question')}</button>
       </div>
-      {editing&&<div style={{marginTop:16,paddingTop:16,borderTop:'1px solid #F0EDE8'}}><button onClick={async()=>{if(window.confirm('Delete this question? This cannot be undone.')){await del(editing.id);setShowForm(false)}}} style={{width:'100%',padding:11,borderRadius:12,border:'1.5px solid #FEE2E2',background:'#fff',color:'#EF4444',fontSize:14,fontWeight:600,cursor:'pointer'}}>Delete Question</button></div>}
+      {editing&&<div style={{marginTop:16,paddingTop:16,borderTop:'1px solid #F0EDE8'}}><button onClick={async()=>{if(window.confirm('Delete this question? This cannot be undone.')){await delQuestion(editing.id);setShowForm(false);setEditing(null)}}} style={{width:'100%',padding:11,borderRadius:12,border:'1.5px solid #FEE2E2',background:'#fff',color:'#EF4444',fontSize:14,fontWeight:600,cursor:'pointer'}}>Delete Question</button></div>}
     </div>
   )
 
-  // ── Assign Modal (two-step: pick client → configure schedule) ────────────────
+  // Assign Modal (two-step: pick client → configure schedule)
   const AssignModal = assignTarget && (
     <div style={{position:'fixed',inset:0,background:'rgba(10,10,20,.7)',backdropFilter:'blur(6px)',zIndex:200,display:'flex',alignItems:'center',justifyContent:'center',padding:20}}>
       <div style={{background:'#E8E4FF',borderRadius:24,width:'100%',maxWidth:480,boxShadow:'0 32px 80px rgba(0,0,0,.2)',animation:'pop .25s ease',maxHeight:'85vh',display:'flex',flexDirection:'column'}}>
@@ -1206,11 +1226,7 @@ function QuestionsView() {
           ):(
             <>
               <div style={{fontSize:10,fontWeight:700,color:'#6B6888',letterSpacing:1,textTransform:'uppercase',marginBottom:12}}>Choose Schedule Template</div>
-              {templates.length===0&&(
-                <div style={{textAlign:'center',padding:'30px 20px',color:'#C8C0B0',fontSize:13,lineHeight:1.6}}>
-                  No templates yet.<br/>Create one in the Schedule tab first.
-                </div>
-              )}
+              {templates.length===0&&<div style={{textAlign:'center',padding:'30px 20px',color:'#C8C0B0',fontSize:13,lineHeight:1.6}}>No templates yet.<br/>Create one in the Schedule tab first.</div>}
               <div style={{display:'flex',flexDirection:'column',gap:8,marginBottom:16}}>
                 {templates.map(t=>(
                   <div key={t.id} onClick={()=>setSelectedTemplate(t)} style={{background:'#fff',borderRadius:14,padding:'14px 16px',border:`1.5px solid ${selectedTemplate?.id===t.id?'#6C63FF':'#E8E3DA'}`,cursor:'pointer',transition:'border-color .15s'}}>
@@ -1220,7 +1236,7 @@ function QuestionsView() {
                           <span style={{fontWeight:600,fontSize:14,color:'#1A1A2E'}}>{t.name}</span>
                           {t.isDefault&&<span style={{fontSize:10,fontWeight:700,color:'#6C63FF',background:'#EDE9FE',borderRadius:20,padding:'1px 7px'}}>DEFAULT</span>}
                         </div>
-                        <div style={{fontSize:12,color:'#6B6888',marginBottom:2}}>{t.type==='custom_interval'?`Every ${t.intervalHours}h from ${(t.times||['08:00'])[0]}`:t.type==='weekly'?`${(t.days||[]).join(', ')} at ${(t.times||['09:00'])[0]}`:(t.times||[]).join(' · ')}</div>
+                        <div style={{fontSize:12,color:'#6B6888',marginBottom:2}}>{tSummary(t)}</div>
                         <div style={{fontSize:11,color:'#9B98B8'}}>{t.defaultDuration} days</div>
                       </div>
                       <div style={{width:20,height:20,borderRadius:'50%',border:`2px solid ${selectedTemplate?.id===t.id?'#6C63FF':'#D1D5DB'}`,background:selectedTemplate?.id===t.id?'#6C63FF':'transparent',flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center'}}>
@@ -1247,98 +1263,118 @@ function QuestionsView() {
     </div>
   )
 
-  // ── Folder List View ──────────────────────────────────────────────────────────
-  if(!selectedFolder){
+  // ── Module Detail View ────────────────────────────────────────────────────────
+  if(selectedModule){
+    const moduleQs=folderMap[selectedModule.name]||[]
+    const cats=['All',...Array.from(new Set(moduleQs.map(q=>q.category||'General')))]
+    const filtered=moduleQs.filter(q=>{
+      const mc=catFilter==='All'||(q.category||'General')===catFilter
+      const ms=!search||q.text?.toLowerCase().includes(search.toLowerCase())||(q.mechanism||'').toLowerCase().includes(search.toLowerCase())
+      return mc&&ms
+    })
     return(
       <div>
         {AssignModal}
-        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:24}}>
-          <div>
-            <h2 style={{fontFamily:"'Inter',sans-serif",fontWeight:800,fontSize:24,color:'#1A1A2E'}}>Question Bank</h2>
-            <p style={{fontSize:13,color:'#9B98B8',marginTop:4}}>{questions.length} questions · {folderNames.length} folder{folderNames.length!==1?'s':''}</p>
+        <div style={{display:'flex',alignItems:'center',gap:14,marginBottom:24,flexWrap:'wrap'}}>
+          <button onClick={()=>{setSelectedModule(null);setShowForm(false);setEditing(null);setRenamingModule(false)}} style={{background:'none',border:'1.5px solid #E5E0D8',borderRadius:10,padding:'8px 14px',fontSize:13,color:'#6B6888',cursor:'pointer',fontWeight:600,flexShrink:0}}>← Modules</button>
+          <div style={{flex:1,minWidth:0}}>
+            {renamingModule?(
+              <div style={{display:'flex',alignItems:'center',gap:8}}>
+                <input value={renameValue} onChange={e=>setRenameValue(e.target.value)} style={{...inp,padding:'7px 12px',fontSize:16,fontWeight:700,flex:1}} onKeyDown={e=>e.key==='Enter'&&saveRename()} autoFocus/>
+                <button onClick={saveRename} disabled={savingRename} style={{padding:'7px 14px',borderRadius:10,border:'none',background:'#1A1A2E',color:'#E8E4FF',fontSize:12,fontWeight:700,cursor:'pointer',flexShrink:0,display:'flex',alignItems:'center',gap:4}}>{savingRename?<Spin/>:'Save'}</button>
+                <button onClick={()=>setRenamingModule(false)} style={{padding:'7px 12px',borderRadius:10,border:'1.5px solid #E5E0D8',background:'#fff',color:'#9B98B8',fontSize:12,cursor:'pointer',flexShrink:0}}>Cancel</button>
+              </div>
+            ):(
+              <div style={{display:'flex',alignItems:'center',gap:8}}>
+                <h2 style={{fontFamily:"'Inter',sans-serif",fontWeight:800,fontSize:22,color:'#1A1A2E',margin:0}}>{selectedModule.name}</h2>
+                <button onClick={()=>{setRenamingModule(true);setRenameValue(selectedModule.name)}} style={{padding:'4px 10px',borderRadius:8,border:'1.5px solid #E5E0D8',background:'#fff',color:'#9B98B8',fontSize:11,fontWeight:600,cursor:'pointer',flexShrink:0}}>Rename</button>
+              </div>
+            )}
+            <p style={{fontSize:13,color:'#9B98B8',margin:'2px 0 0'}}>{filtered.length} of {moduleQs.length} questions</p>
           </div>
-          <button onClick={openNew} style={{background:'#1A1A2E',color:'#E8E4FF',border:'none',borderRadius:14,padding:'11px 20px',fontSize:14,fontWeight:700,cursor:'pointer'}}>+ New Question</button>
+          <button onClick={()=>{setAssignTarget(selectedModule.name);setAssignSuccess(null);setAssignSearch('');setAssignStep(1);setAssignUser(null)}} style={{background:'#6C63FF',color:'#fff',border:'none',borderRadius:14,padding:'11px 20px',fontSize:14,fontWeight:700,cursor:'pointer',flexShrink:0}}>Assign to Client</button>
+          <button onClick={openNewQuestion} style={{background:'#1A1A2E',color:'#E8E4FF',border:'none',borderRadius:14,padding:'11px 20px',fontSize:14,fontWeight:700,cursor:'pointer',flexShrink:0}}>+ Add Question</button>
+        </div>
+        <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search questions or mechanisms…" style={{...inp,marginBottom:14}}/>
+        <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:20}}>
+          {cats.map(c=><button key={c} onClick={()=>setCatFilter(c)} style={{padding:'6px 14px',borderRadius:20,border:`1.5px solid ${catFilter===c?'#1A1A2E':'#E5E0D8'}`,background:catFilter===c?'#1A1A2E':'#fff',color:catFilter===c?'#E8E4FF':'#9B98B8',fontSize:12,fontWeight:600,cursor:'pointer',whiteSpace:'nowrap'}}>{c}</button>)}
         </div>
         {showForm&&FormPanel}
-        {loading&&<div style={{display:'flex',justifyContent:'center',padding:40}}><Spin/></div>}
-        <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(240px,1fr))',gap:16}}>
-          {folderNames.map(f=>{
-            const qs=folderMap[f]||[]
-            const catCounts={}; qs.forEach(q=>{const c=q.category||'General'; catCounts[c]=(catCounts[c]||0)+1})
-            const topCats=Object.entries(catCounts).sort((a,b)=>b[1]-a[1]).slice(0,2)
-            return(
-              <div key={f} onClick={()=>{setSelectedFolder(f);setCatFilter('All');setSearch('');setShowForm(false)}}
-                style={{background:'#fff',borderRadius:20,padding:24,border:'1.5px solid #E8E3DA',cursor:'pointer',display:'flex',flexDirection:'column'}}>
-                <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',marginBottom:14}}>
-                  <div style={{width:44,height:44,borderRadius:12,background:'#EDE9FE',display:'flex',alignItems:'center',justifyContent:'center',fontSize:22}}>📁</div>
-                  <span style={{color:'#C8C0B0',fontSize:18}}>→</span>
+        <div style={{display:'flex',flexDirection:'column',gap:12}}>
+          {filtered.map(q=>(
+            <div key={q.id} style={{background:'#fff',borderRadius:18,padding:'20px 22px',border:'1.5px solid #E8E3DA'}}>
+              <div style={{display:'flex',alignItems:'flex-start',gap:14}}>
+                <div style={{flex:1}}>
+                  <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:8,flexWrap:'wrap'}}><TBadge type={q.type}/>{q.category&&q.category!=='General'&&<span style={{fontSize:11,color:'#6C63FF',background:'#EDE9FE',borderRadius:20,padding:'3px 10px',fontWeight:600}}>{q.category}</span>}{q.mechanism&&<span style={{fontSize:11,color:'#9B98B8'}}>{q.mechanism}</span>}</div>
+                  <p style={{fontSize:15,color:'#1A1A2E',lineHeight:1.5,fontWeight:500,margin:0}}>{q.text}</p>
+                  {q.type==='scale'&&<div style={{display:'flex',alignItems:'center',gap:8,marginTop:10}}><span style={{fontSize:11,color:'#9B98B8'}}>{q.scaleMinLabel||q.scaleMin}</span><div style={{width:80,height:3,background:'linear-gradient(90deg,#6C63FF,#A89FFF)',borderRadius:4}}/><span style={{fontSize:11,color:'#9B98B8'}}>{q.scaleMaxLabel||q.scaleMax}</span></div>}
+                  {q.type==='choice'&&q.options?.length>0&&<div style={{display:'flex',gap:6,marginTop:10,flexWrap:'wrap'}}>{q.options.map(o=><span key={o} style={{fontSize:11,color:'#6B6888',background:'#E8E4FF',borderRadius:20,padding:'3px 10px'}}>{o}</span>)}</div>}
                 </div>
-                <div style={{fontWeight:700,fontSize:17,color:'#1A1A2E',marginBottom:4}}>{f}</div>
-                <div style={{fontSize:13,color:'#9B98B8',marginBottom:12}}>{qs.length} question{qs.length!==1?'s':''}</div>
-                {topCats.length>0&&<div style={{display:'flex',gap:6,flexWrap:'wrap',marginBottom:14}}>
-                  {topCats.map(([c,n])=><span key={c} style={{fontSize:10,fontWeight:600,color:'#6C63FF',background:'#EDE9FE',borderRadius:20,padding:'2px 8px'}}>{c} · {n}</span>)}
-                  {Object.keys(catCounts).length>2&&<span style={{fontSize:10,color:'#C8C0B0',alignSelf:'center'}}>+{Object.keys(catCounts).length-2} more</span>}
-                </div>}
-                <button onClick={e=>{e.stopPropagation();setAssignTarget(f);setAssignSuccess(null);setAssignSearch('');setAssignStep(1);setAssignUser(null)}}
-                  style={{marginTop:'auto',padding:'8px 0',borderRadius:10,border:'1.5px solid #6C63FF',background:'#EDE9FE',color:'#6C63FF',fontSize:12,fontWeight:700,cursor:'pointer',width:'100%'}}>
-                  Assign to Client
-                </button>
+                <button onClick={()=>openEdit(q)} style={{padding:'7px 14px',borderRadius:10,border:'1.5px solid #E5E0D8',background:'#fff',color:'#6B6888',fontSize:12,fontWeight:600,cursor:'pointer',flexShrink:0}}>Edit</button>
               </div>
-            )
-          })}
+            </div>
+          ))}
+          {filtered.length===0&&<div style={{textAlign:'center',padding:'60px 20px',color:'#C8C0B0'}}><div style={{fontSize:40,marginBottom:12}}>◈</div><p style={{fontSize:15,fontWeight:500}}>{moduleQs.length===0?'No questions in this module yet — add one above':'No questions match your search'}</p></div>}
         </div>
-        {!loading&&folderNames.length===0&&<div style={{textAlign:'center',padding:'60px 20px',color:'#C8C0B0'}}><div style={{fontSize:40,marginBottom:12}}>📁</div><p style={{fontSize:15,fontWeight:500}}>No questions yet</p></div>}
       </div>
     )
   }
 
-  // ── Folder Detail View ────────────────────────────────────────────────────────
-  const folderQs=folderMap[selectedFolder]||[]
-  const cats=['All',...Array.from(new Set(folderQs.map(q=>q.category||'General')))]
-  const filtered=folderQs.filter(q=>{
-    const mc=catFilter==='All'||(q.category||'General')===catFilter
-    const ms=!search||q.text?.toLowerCase().includes(search.toLowerCase())||(q.mechanism||'').toLowerCase().includes(search.toLowerCase())
-    return mc&&ms
-  })
-
+  // ── Module List View ──────────────────────────────────────────────────────────
   return(
     <div>
       {AssignModal}
-
-      <div style={{display:'flex',alignItems:'center',gap:14,marginBottom:24,flexWrap:'wrap'}}>
-        <button onClick={()=>{setSelectedFolder(null);setShowForm(false)}} style={{background:'none',border:'1.5px solid #E5E0D8',borderRadius:10,padding:'8px 14px',fontSize:13,color:'#6B6888',cursor:'pointer',fontWeight:600,flexShrink:0}}>← Folders</button>
-        <div style={{flex:1,minWidth:0}}>
-          <h2 style={{fontFamily:"'Inter',sans-serif",fontWeight:800,fontSize:22,color:'#1A1A2E',margin:0}}>{selectedFolder}</h2>
-          <p style={{fontSize:13,color:'#9B98B8',margin:'2px 0 0'}}>{filtered.length} of {folderQs.length} questions</p>
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:24}}>
+        <div>
+          <h2 style={{fontFamily:"'Inter',sans-serif",fontWeight:800,fontSize:24,color:'#1A1A2E'}}>Modules</h2>
+          <p style={{fontSize:13,color:'#9B98B8',marginTop:4}}>{questions.length} questions · {allModuleNames.length} module{allModuleNames.length!==1?'s':''}</p>
         </div>
-        <button onClick={()=>{setAssignTarget(selectedFolder);setAssignSuccess(null);setAssignSearch('');setAssignStep(1);setAssignUser(null)}} style={{background:'#6C63FF',color:'#fff',border:'none',borderRadius:14,padding:'11px 20px',fontSize:14,fontWeight:700,cursor:'pointer',flexShrink:0}}>Assign to Client</button>
-        <button onClick={openNew} style={{background:'#1A1A2E',color:'#E8E4FF',border:'none',borderRadius:14,padding:'11px 20px',fontSize:14,fontWeight:700,cursor:'pointer',flexShrink:0}}>+ New Question</button>
+        <button onClick={()=>{setShowNewModuleForm(true);setNewModuleName('');setNewModuleDesc('')}} style={{background:'#1A1A2E',color:'#E8E4FF',border:'none',borderRadius:14,padding:'11px 20px',fontSize:14,fontWeight:700,cursor:'pointer'}}>+ New Module</button>
       </div>
 
-      <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search questions or mechanisms…" style={{...inp,marginBottom:14}}/>
-      <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:20}}>
-        {cats.map(c=><button key={c} onClick={()=>setCatFilter(c)} style={{padding:'6px 14px',borderRadius:20,border:`1.5px solid ${catFilter===c?'#1A1A2E':'#E5E0D8'}`,background:catFilter===c?'#1A1A2E':'#fff',color:catFilter===c?'#E8E4FF':'#9B98B8',fontSize:12,fontWeight:600,cursor:'pointer',whiteSpace:'nowrap'}}>{c}</button>)}
-      </div>
-
-      {showForm&&FormPanel}
-      <div style={{display:'flex',flexDirection:'column',gap:12}}>
-        {filtered.map(q=>(
-          <div key={q.id} style={{background:'#fff',borderRadius:18,padding:'20px 22px',border:'1.5px solid #E8E3DA'}}>
-            <div style={{display:'flex',alignItems:'flex-start',gap:14}}>
-              <div style={{flex:1}}>
-                <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:8,flexWrap:'wrap'}}><TBadge type={q.type}/>{q.category&&q.category!=='General'&&<span style={{fontSize:11,color:'#6C63FF',background:'#EDE9FE',borderRadius:20,padding:'3px 10px',fontWeight:600}}>{q.category}</span>}{q.mechanism&&<span style={{fontSize:11,color:'#9B98B8'}}>{q.mechanism}</span>}</div>
-                <p style={{fontSize:15,color:'#1A1A2E',lineHeight:1.5,fontWeight:500,margin:0}}>{q.text}</p>
-                {q.type==='scale'&&<div style={{display:'flex',alignItems:'center',gap:8,marginTop:10}}><span style={{fontSize:11,color:'#9B98B8'}}>{q.scaleMinLabel||q.scaleMin}</span><div style={{width:80,height:3,background:'linear-gradient(90deg,#6C63FF,#A89FFF)',borderRadius:4}}/><span style={{fontSize:11,color:'#9B98B8'}}>{q.scaleMaxLabel||q.scaleMax}</span></div>}
-                {q.type==='choice'&&q.options?.length>0&&<div style={{display:'flex',gap:6,marginTop:10,flexWrap:'wrap'}}>{q.options.map(o=><span key={o} style={{fontSize:11,color:'#6B6888',background:'#E8E4FF',borderRadius:20,padding:'3px 10px'}}>{o}</span>)}</div>}
-              </div>
-              <div style={{display:'flex',gap:6,flexShrink:0}}>
-                <button onClick={()=>openEdit(q)} style={{padding:'7px 14px',borderRadius:10,border:'1.5px solid #E5E0D8',background:'#fff',color:'#6B6888',fontSize:12,fontWeight:600,cursor:'pointer'}}>Edit</button>
-              </div>
-            </div>
+      {showNewModuleForm&&(
+        <div style={{background:'#fff',borderRadius:20,padding:24,border:'1.5px solid #E8E3DA',marginBottom:20,animation:'fadeUp .3s ease'}}>
+          <h3 style={{fontWeight:700,fontSize:16,color:'#1A1A2E',marginBottom:16}}>New Module</h3>
+          <Field label="Module Name"><input value={newModuleName} onChange={e=>setNewModuleName(e.target.value)} placeholder="e.g. Book EMA" style={inp} autoFocus/></Field>
+          <Field label="Description (optional)"><input value={newModuleDesc} onChange={e=>setNewModuleDesc(e.target.value)} placeholder="e.g. Ecological momentary assessment for the Book study" style={inp}/></Field>
+          <div style={{display:'flex',gap:10}}>
+            <button onClick={()=>setShowNewModuleForm(false)} style={{flex:1,padding:11,borderRadius:12,border:'1.5px solid #E5E0D8',background:'#fff',color:'#9B98B8',fontSize:14,fontWeight:600,cursor:'pointer'}}>Cancel</button>
+            <button onClick={createModule} disabled={!newModuleName.trim()||savingModule} style={{flex:2,padding:11,borderRadius:12,border:'none',background:newModuleName.trim()?'#1A1A2E':'#E5E0D8',color:newModuleName.trim()?'#E8E4FF':'#9B98B8',fontSize:14,fontWeight:700,cursor:newModuleName.trim()?'pointer':'default',display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>
+              {savingModule?<Spin/>:'Create Module'}
+            </button>
           </div>
-        ))}
-        {filtered.length===0&&<div style={{textAlign:'center',padding:'60px 20px',color:'#C8C0B0'}}><div style={{fontSize:40,marginBottom:12}}>◈</div><p style={{fontSize:15,fontWeight:500}}>{folderQs.length===0?'No questions in this folder yet':'No questions match your search'}</p></div>}
+        </div>
+      )}
+
+      {loading&&<div style={{display:'flex',justifyContent:'center',padding:40}}><Spin/></div>}
+      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(240px,1fr))',gap:16}}>
+        {allModuleNames.map(name=>{
+          const qs=folderMap[name]||[]
+          const modDoc=getModuleDoc(name)
+          const catCounts={}; qs.forEach(q=>{const c=q.category||'General'; catCounts[c]=(catCounts[c]||0)+1})
+          const topCats=Object.entries(catCounts).sort((a,b)=>b[1]-a[1]).slice(0,2)
+          return(
+            <div key={name} style={{background:'#fff',borderRadius:20,padding:24,border:'1.5px solid #E8E3DA',display:'flex',flexDirection:'column'}}>
+              <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',marginBottom:14}}>
+                <div style={{width:44,height:44,borderRadius:12,background:'#EDE9FE',display:'flex',alignItems:'center',justifyContent:'center',fontSize:22}}>📁</div>
+                <button onClick={()=>{setSelectedModule({name,...(modDoc||{})});setCatFilter('All');setSearch('');setShowForm(false);setEditing(null)}} style={{padding:'6px 14px',borderRadius:10,border:'1.5px solid #E5E0D8',background:'#fff',color:'#6B6888',fontSize:12,fontWeight:600,cursor:'pointer'}}>Edit →</button>
+              </div>
+              <div style={{fontWeight:700,fontSize:17,color:'#1A1A2E',marginBottom:4}}>{name}</div>
+              {modDoc?.description&&<div style={{fontSize:12,color:'#9B98B8',marginBottom:6,lineHeight:1.4}}>{modDoc.description}</div>}
+              <div style={{fontSize:13,color:'#9B98B8',marginBottom:12}}>{qs.length} question{qs.length!==1?'s':''}</div>
+              {topCats.length>0&&<div style={{display:'flex',gap:6,flexWrap:'wrap',marginBottom:14}}>
+                {topCats.map(([c,n])=><span key={c} style={{fontSize:10,fontWeight:600,color:'#6C63FF',background:'#EDE9FE',borderRadius:20,padding:'2px 8px'}}>{c} · {n}</span>)}
+                {Object.keys(catCounts).length>2&&<span style={{fontSize:10,color:'#C8C0B0',alignSelf:'center'}}>+{Object.keys(catCounts).length-2} more</span>}
+              </div>}
+              <button onClick={()=>{setAssignTarget(name);setAssignSuccess(null);setAssignSearch('');setAssignStep(1);setAssignUser(null)}}
+                style={{marginTop:'auto',padding:'8px 0',borderRadius:10,border:'1.5px solid #6C63FF',background:'#EDE9FE',color:'#6C63FF',fontSize:12,fontWeight:700,cursor:'pointer',width:'100%'}}>
+                Assign to Client
+              </button>
+            </div>
+          )
+        })}
       </div>
+      {!loading&&allModuleNames.length===0&&<div style={{textAlign:'center',padding:'60px 20px',color:'#C8C0B0'}}><div style={{fontSize:40,marginBottom:12}}>📁</div><p style={{fontSize:15,fontWeight:500}}>No modules yet — create one above</p></div>}
     </div>
   )
 }
@@ -1555,7 +1591,7 @@ function ScheduleView() {
 
 // ── Root ──────────────────────────────────────────────────────────────────────
 export default function AdminApp() {
-  const [authed,setAuthed]=useState(null); const [view,setView]=useState('questions')
+  const [authed,setAuthed]=useState(null); const [view,setView]=useState('modules')
   const [questions,setQuestions]=useState([])
   const [sidebarOpen,setSidebarOpen]=useState(false)
   const isMobile=useMobile()
@@ -1587,7 +1623,7 @@ export default function AdminApp() {
           </div>
         )}
         <div style={{padding:isMobile?'16px':'0'}}>
-          {view==='questions'&&<QuestionsView/>}
+          {view==='modules'&&<ModulesView/>}
           {view==='schedule'&&<ScheduleView/>}
           {view==='clients'&&<ClientsView questions={questions}/>}
           {view==='team'&&<TeamView/>}
