@@ -4,7 +4,7 @@ import {
   collection, doc, getDoc, getDocs, setDoc, addDoc, updateDoc, deleteDoc,
   onSnapshot, query, where
 } from 'firebase/firestore'
-import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth'
+import { signInWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail } from 'firebase/auth'
 
 const G = `
   @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&display=swap');
@@ -748,6 +748,8 @@ function TeamView() {
   const [editForm,setEditForm]=useState({role:'Admin',status:'active'})
   const [savingEdit,setSavingEdit]=useState(false)
   const [deleting,setDeleting]=useState(null)
+  const [sendingReset,setSendingReset]=useState(false)
+  const [resetDone,setResetDone]=useState(null)
   const seededRef=useRef(false)
 
   useEffect(()=>{
@@ -772,6 +774,17 @@ function TeamView() {
     await updateDoc(doc(db,'adminUsers',editingMember.id),{role:editForm.role,status:editForm.status})
     setSavingEdit(false)
     setEditingMember(null)
+  }
+
+  async function sendReset(member){
+    setSendingReset(true); setResetDone(null)
+    try{
+      await sendPasswordResetEmail(auth, member.email)
+      setResetDone({ok:true,email:member.email})
+    }catch(e){
+      setResetDone({ok:false,msg:e.code==='auth/user-not-found'?'No Auth account found for this email.':e.message||'Failed to send reset email.'})
+    }
+    setSendingReset(false)
   }
 
   async function removeMember(member){
@@ -866,7 +879,7 @@ function TeamView() {
               <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:20}}>
                 <div style={{width:42,height:42,borderRadius:14,background:'#EDE9FE',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:800,fontSize:16,color:'#6C63FF',flexShrink:0}}>{m.name?.split(' ').map(n=>n[0]).join('').slice(0,2)||'?'}</div>
                 <div style={{flex:1}}><div style={{fontWeight:700,fontSize:15,color:'#1A1A2E'}}>{m.name}</div><div style={{fontSize:12,color:'#9B98B8'}}>{m.email}</div></div>
-                <button onClick={()=>setEditingMember(null)} style={{background:'none',border:'1.5px solid #E5E0D8',borderRadius:8,padding:'5px 12px',fontSize:12,color:'#6B6888',cursor:'pointer'}}>Cancel</button>
+                <button onClick={()=>{setEditingMember(null);setResetDone(null)}} style={{background:'none',border:'1.5px solid #E5E0D8',borderRadius:8,padding:'5px 12px',fontSize:12,color:'#6B6888',cursor:'pointer'}}>Cancel</button>
               </div>
               <Field label="Role">
                 <div style={{display:'flex',gap:8}}>
@@ -881,7 +894,15 @@ function TeamView() {
               <button onClick={saveEdit} disabled={savingEdit} style={{width:'100%',padding:11,borderRadius:12,border:'none',background:'#1A1A2E',color:'#E8E4FF',fontSize:14,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>
                 {savingEdit?<Spin/>:'Save Changes'}
               </button>
-              <div style={{marginTop:16,paddingTop:16,borderTop:'1px solid #F0EDE8'}}>
+              <div style={{marginTop:16,paddingTop:16,borderTop:'1px solid #F0EDE8',display:'flex',flexDirection:'column',gap:10}}>
+                <button onClick={()=>sendReset(m)} disabled={sendingReset} style={{width:'100%',padding:11,borderRadius:12,border:'1.5px solid #E5E0D8',background:'#fff',color:'#6B6888',fontSize:14,fontWeight:600,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>
+                  {sendingReset?<Spin/>:'Send Password Reset Email'}
+                </button>
+                {resetDone&&(
+                  <div style={{borderRadius:10,padding:'9px 14px',background:resetDone.ok?'#ECFDF5':'#FEF2F2',border:`1px solid ${resetDone.ok?'#A7F3D0':'#FECACA'}`,fontSize:12,color:resetDone.ok?'#065F46':'#B91C1C',textAlign:'center'}}>
+                    {resetDone.ok?`Reset email sent to ${resetDone.email}`:resetDone.msg}
+                  </div>
+                )}
                 <button onClick={()=>removeMember(m)} disabled={deleting===m.id} style={{width:'100%',padding:11,borderRadius:12,border:'1.5px solid #FEE2E2',background:'#fff',color:'#EF4444',fontSize:14,fontWeight:600,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>
                   {deleting===m.id?<Spin/>:'Remove Member'}
                 </button>
