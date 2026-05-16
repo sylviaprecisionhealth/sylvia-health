@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { db, auth } from './firebase.js'
 import {
   collection, doc, getDoc, getDocs, setDoc, addDoc, updateDoc, deleteDoc,
@@ -35,6 +35,8 @@ function useMobile(){
 const Spin = () => <div style={{width:18,height:18,border:'2px solid #E5E0D8',borderTop:'2px solid #6C63FF',borderRadius:'50%',animation:'spin .7s linear infinite',flexShrink:0}}/>
 const Badge = ({status}) => { const m={active:['#1A6644','#D1FAE5'],paused:['#92400E','#FEF3C7']}; const [c,bg]=m[status]||['#374151','#F3F4F6']; return <span style={{fontSize:11,fontWeight:600,color:c,background:bg,borderRadius:20,padding:'3px 10px',textTransform:'capitalize'}}>{status}</span> }
 const TBadge = ({type}) => { const m={scale:['#1D4ED8','#DBEAFE'],choice:['#6C63FF','#EDE9FE'],text:['#065F46','#D1FAE5']}; const [c,bg]=m[type]||['#374151','#F3F4F6']; const t=Q_TYPES.find(q=>q.id===type); return <span style={{fontSize:11,fontWeight:600,color:c,background:bg,borderRadius:20,padding:'3px 10px'}}>{t?.icon} {t?.label}</span> }
+const RoleBadge = ({role}) => { const m={'Super Admin':['#7C3AED','#EDE9FE'],'Admin':['#1D4ED8','#DBEAFE'],'Viewer':['#374151','#F3F4F6']}; const [c,bg]=m[role]||['#374151','#F3F4F6']; return <span style={{fontSize:11,fontWeight:600,color:c,background:bg,borderRadius:20,padding:'3px 10px'}}>{role}</span> }
+function makeTempPassword(){const c='ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#';return Array.from({length:12},()=>c[Math.floor(Math.random()*c.length)]).join('')}
 const Lbl = ({children}) => <label style={{fontSize:11,fontWeight:600,color:'#6B6888',letterSpacing:1,textTransform:'uppercase',display:'block',marginBottom:8}}>{children}</label>
 const Field = ({label,children}) => <div style={{marginBottom:18}}><Lbl>{label}</Lbl>{children}</div>
 const inp = {border:'1.5px solid #E5E0D8',borderRadius:12,padding:'11px 14px',fontSize:14,color:'#1A1A2E',background:'#FAFAF8',width:'100%'}
@@ -84,7 +86,7 @@ function Sidebar({active,setActive,onLogout,open,onClose}) {
     if(isMobile) document.body.style.overflow=open?'hidden':''
     return()=>{document.body.style.overflow=''}
   },[open,isMobile])
-  const nav=[{id:'questions',label:'Questions',icon:'◈'},{id:'schedule',label:'Schedule',icon:'◷'},{id:'clients',label:'Clients',icon:'◎'},{id:'invites',label:'Invites',icon:'✉'}]
+  const nav=[{id:'questions',label:'Questions',icon:'◈'},{id:'schedule',label:'Schedule',icon:'◷'},{id:'clients',label:'Clients',icon:'◎'},{id:'team',label:'Team',icon:'👥'},{id:'invites',label:'Invites',icon:'✉'}]
   return (
     <>
       {isMobile&&open&&<div onClick={onClose} style={{position:'fixed',inset:0,background:'rgba(0,0,0,.5)',zIndex:99,backdropFilter:'blur(2px)'}}/>}
@@ -718,6 +720,148 @@ function ClientsView({questions}) {
             </div>
           )
         })})()}
+      </div>
+    </div>
+  )
+}
+
+// ── Team View ─────────────────────────────────────────────────────────────────
+const ROLES = ['Super Admin', 'Admin', 'Viewer']
+
+function TeamView() {
+  const [members,setMembers]=useState([]); const [loading,setLoading]=useState(true)
+  const [showForm,setShowForm]=useState(false)
+  const [formName,setFormName]=useState(''); const [formEmail,setFormEmail]=useState(''); const [formRole,setFormRole]=useState('Admin')
+  const [creating,setCreating]=useState(false); const [createErr,setCreateErr]=useState(''); const [createDone,setCreateDone]=useState(null)
+  const [updatingRole,setUpdatingRole]=useState(null)
+  const seededRef=useRef(false)
+
+  useEffect(()=>{
+    const unsub=onSnapshot(collection(db,'adminUsers'),async snap=>{
+      const docs=snap.docs.map(d=>({id:d.id,...d.data()}))
+      setMembers(docs)
+      setLoading(false)
+      if(docs.length===0&&!seededRef.current){
+        seededRef.current=true
+        await setDoc(doc(db,'adminUsers','seed-justin-wallen'),{
+          name:'Justin Wallen',email:'sylvia.precision.health@gmail.com',
+          role:'Super Admin',status:'active',dateAdded:today(),addedBy:'System'
+        })
+      }
+    })
+    return unsub
+  },[])
+
+  async function changeRole(member,newRole){
+    setUpdatingRole(member.id)
+    await updateDoc(doc(db,'adminUsers',member.id),{role:newRole})
+    setUpdatingRole(null)
+  }
+
+  async function deleteMember(member){
+    if(!window.confirm(`Remove ${member.name} from the team?`))return
+    await deleteDoc(doc(db,'adminUsers',member.id))
+  }
+
+  async function createMember(){
+    if(!formName.trim()||!formEmail.includes('@'))return
+    setCreating(true); setCreateErr('')
+    const tempPassword=makeTempPassword()
+    try{
+      const res=await fetch('/api/create-team-member',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({name:formName.trim(),email:formEmail.trim(),role:formRole,tempPassword,addedBy:'Admin'})
+      })
+      const data=await res.json()
+      if(!res.ok){setCreateErr(data.error||'Failed to create member');setCreating(false);return}
+      setCreateDone({name:formName.trim(),email:formEmail.trim(),tempPassword})
+    }catch(e){setCreateErr(e.message||'Network error')}
+    setCreating(false)
+  }
+
+  function closeForm(){setShowForm(false);setFormName('');setFormEmail('');setFormRole('Admin');setCreateErr('');setCreateDone(null)}
+  const formValid=formName.trim().length>1&&formEmail.includes('@')
+
+  return(
+    <div>
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:16}}>
+        <div>
+          <h2 style={{fontFamily:"'Inter',sans-serif",fontWeight:800,fontSize:24,color:'#1A1A2E'}}>Team</h2>
+          <p style={{fontSize:13,color:'#9B98B8',marginTop:4}}>{members.length} team member{members.length!==1?'s':''}</p>
+        </div>
+        <button onClick={()=>{setShowForm(true);setCreateDone(null)}} style={{background:'#1A1A2E',color:'#E8E4FF',border:'none',borderRadius:14,padding:'11px 20px',fontSize:14,fontWeight:700,cursor:'pointer'}}>+ Add Member</button>
+      </div>
+
+      {/* Role notice banner */}
+      <div style={{background:'#FEF3C7',border:'1.5px solid #FCD34D',borderRadius:14,padding:'12px 16px',marginBottom:20,display:'flex',alignItems:'center',gap:10}}>
+        <span style={{fontSize:16}}>ℹ</span>
+        <span style={{fontSize:13,color:'#92400E',lineHeight:1.5}}>Role-based permissions are coming soon. All team members currently have full access.</span>
+      </div>
+
+      {/* Add Member Form */}
+      {showForm&&!createDone&&(
+        <div style={{background:'#fff',borderRadius:20,padding:24,border:'1.5px solid #E8E3DA',marginBottom:20,animation:'fadeUp .3s ease'}}>
+          <h3 style={{fontWeight:700,fontSize:16,color:'#1A1A2E',marginBottom:16}}>Add Team Member</h3>
+          <Field label="Full Name"><input value={formName} onChange={e=>setFormName(e.target.value)} placeholder="e.g. Sarah Chen" style={inp}/></Field>
+          <Field label="Email"><input type="email" value={formEmail} onChange={e=>setFormEmail(e.target.value)} placeholder="sarah@example.com" style={inp}/></Field>
+          <Field label="Role">
+            <div style={{display:'flex',gap:8}}>
+              {ROLES.map(r=>(
+                <button key={r} onClick={()=>setFormRole(r)} style={{flex:1,padding:'10px 8px',borderRadius:12,border:`2px solid ${formRole===r?'#6C63FF':'#E5E0D8'}`,background:formRole===r?'#EDE9FE':'#FAFAF8',color:formRole===r?'#6C63FF':'#9B98B8',fontSize:12,fontWeight:600,cursor:'pointer'}}>
+                  {r}
+                </button>
+              ))}
+            </div>
+          </Field>
+          {createErr&&<p style={{color:'#EF4444',fontSize:12,marginBottom:12,lineHeight:1.5}}>{createErr}</p>}
+          <div style={{display:'flex',gap:10}}>
+            <button onClick={closeForm} style={{flex:1,padding:11,borderRadius:12,border:'1.5px solid #E5E0D8',background:'#fff',color:'#9B98B8',fontSize:14,fontWeight:600,cursor:'pointer'}}>Cancel</button>
+            <button onClick={createMember} disabled={!formValid||creating} style={{flex:2,padding:11,borderRadius:12,border:'none',background:formValid?'#1A1A2E':'#E5E0D8',color:formValid?'#E8E4FF':'#9B98B8',fontSize:14,fontWeight:700,cursor:formValid?'pointer':'default',display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>
+              {creating?<Spin/>:'Create & Send Invite'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Success state */}
+      {showForm&&createDone&&(
+        <div style={{background:'#fff',borderRadius:20,padding:24,border:'1.5px solid #E8E3DA',marginBottom:20,textAlign:'center',animation:'fadeUp .3s ease'}}>
+          <div style={{fontSize:32,marginBottom:12}}>✓</div>
+          <div style={{fontWeight:700,fontSize:16,color:'#1A1A2E',marginBottom:4}}>{createDone.name} added</div>
+          <div style={{fontSize:13,color:'#9B98B8',marginBottom:16}}>{createDone.email}</div>
+          <div style={{background:'#F4F1EC',borderRadius:12,padding:'12px 16px',marginBottom:16,display:'inline-block'}}>
+            <div style={{fontSize:11,color:'#9B98B8',marginBottom:4,letterSpacing:1}}>TEMPORARY PASSWORD</div>
+            <div style={{fontFamily:'monospace',fontSize:16,fontWeight:700,color:'#1A1A2E',letterSpacing:2}}>{createDone.tempPassword}</div>
+          </div>
+          <p style={{fontSize:12,color:'#C8C0B0',marginBottom:16}}>A welcome email has been sent with login instructions.</p>
+          <button onClick={closeForm} style={{padding:'9px 24px',borderRadius:12,border:'none',background:'#1A1A2E',color:'#E8E4FF',fontSize:13,fontWeight:700,cursor:'pointer'}}>Done</button>
+        </div>
+      )}
+
+      {loading&&<div style={{display:'flex',justifyContent:'center',padding:40}}><Spin/></div>}
+      <div style={{display:'flex',flexDirection:'column',gap:10}}>
+        {members.map(m=>(
+          <div key={m.id} style={{background:'#fff',borderRadius:18,padding:'18px 22px',border:'1.5px solid #E8E3DA',display:'flex',alignItems:'center',gap:16,boxShadow:'0 1px 3px rgba(0,0,0,.04)'}}>
+            <div style={{width:42,height:42,borderRadius:14,background:'#EDE9FE',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:800,fontSize:16,color:'#6C63FF',flexShrink:0}}>
+              {m.name?.split(' ').map(n=>n[0]).join('').slice(0,2)||'?'}
+            </div>
+            <div style={{flex:1,minWidth:0}}>
+              <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap',marginBottom:4}}>
+                <span style={{fontWeight:600,fontSize:15,color:'#1A1A2E'}}>{m.name}</span>
+                <RoleBadge role={m.role}/>
+                <Badge status={m.status||'active'}/>
+              </div>
+              <div style={{fontSize:12,color:'#9B98B8'}}>{m.email}{m.dateAdded&&<> · Added {m.dateAdded}</>}</div>
+            </div>
+            <div style={{display:'flex',alignItems:'center',gap:8,flexShrink:0}}>
+              <select value={m.role} onChange={e=>changeRole(m,e.target.value)} disabled={!!updatingRole} style={{...inp,width:'auto',padding:'6px 10px',fontSize:12,borderRadius:8,color:'#6B6888'}}>
+                {ROLES.map(r=><option key={r} value={r}>{r}</option>)}
+              </select>
+              <button onClick={()=>deleteMember(m)} style={{padding:'6px 10px',borderRadius:8,border:'1.5px solid #FEE2E2',background:'#fff',color:'#EF4444',fontSize:12,cursor:'pointer',flexShrink:0}}>✕</button>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   )
@@ -1375,6 +1519,7 @@ export default function AdminApp() {
           {view==='questions'&&<QuestionsView/>}
           {view==='schedule'&&<ScheduleView/>}
           {view==='clients'&&<ClientsView questions={questions}/>}
+          {view==='team'&&<TeamView/>}
           {view==='invites'&&<InvitesView/>}
         </div>
       </div>
