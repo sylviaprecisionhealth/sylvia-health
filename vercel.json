@@ -1,5 +1,6 @@
 {
   "framework": "vite",
+  "devCommand": "vite",
   "rewrites": [
     { "source": "/admin", "destination": "/admin.html" },
     { "source": "/admin/(.*)", "destination": "/admin.html" },
