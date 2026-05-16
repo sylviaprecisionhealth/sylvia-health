@@ -437,6 +437,11 @@ function UsersView({questions}) {
     return()=>{u1();u2();u3()}
   },[])
 
+  async function deleteUser(u) {
+    if(!window.confirm(`Delete ${u.name}? This cannot be undone.`)) return
+    await deleteDoc(doc(db,'users',u.id))
+  }
+
   return (
     <div>
       <div style={{marginBottom:28}}>
@@ -450,17 +455,20 @@ function UsersView({questions}) {
           const userScheds=schedules.filter(s=>s.userId===u.id||s.userId==='all')
           const activeCount=userScheds.filter(s=>s.active).length
           return(
-            <div key={u.id} onClick={()=>setSelectedUser(u)} style={{background:'#fff',borderRadius:18,padding:'18px 22px',border:'1.5px solid #E8E3DA',display:'flex',alignItems:'center',gap:16,cursor:'pointer',transition:'box-shadow .2s',boxShadow:'0 1px 3px rgba(0,0,0,.04)'}}>
-              <div style={{width:42,height:42,borderRadius:14,background:'#EDE9FE',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:800,fontSize:16,color:'#6C63FF',flexShrink:0}}>{u.name?.split(' ').map(n=>n[0]).join('')||'?'}</div>
-              <div style={{flex:1}}>
-                <div style={{fontWeight:600,fontSize:15,color:'#1A1A2E'}}>{u.name}</div>
-                <div style={{fontSize:12,color:'#9B98B8',marginTop:2}}>{u.email} · Joined {u.joinedDate}</div>
+            <div key={u.id} style={{background:'#fff',borderRadius:18,padding:'18px 22px',border:'1.5px solid #E8E3DA',display:'flex',alignItems:'center',gap:16,transition:'box-shadow .2s',boxShadow:'0 1px 3px rgba(0,0,0,.04)'}}>
+              <div onClick={()=>setSelectedUser(u)} style={{display:'flex',alignItems:'center',gap:16,flex:1,cursor:'pointer',minWidth:0}}>
+                <div style={{width:42,height:42,borderRadius:14,background:'#EDE9FE',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:800,fontSize:16,color:'#6C63FF',flexShrink:0}}>{u.name?.split(' ').map(n=>n[0]).join('')||'?'}</div>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontWeight:600,fontSize:15,color:'#1A1A2E'}}>{u.name}</div>
+                  <div style={{fontSize:12,color:'#9B98B8',marginTop:2}}>{u.email} · Joined {u.joinedDate}</div>
+                </div>
+                <div style={{textAlign:'right',flexShrink:0}}>
+                  <Badge status={u.status||'active'}/>
+                  <div style={{fontSize:11,color:'#9B98B8',marginTop:5}}>{activeCount} active question{activeCount!==1?'s':''}</div>
+                </div>
+                <span style={{color:'#C8C0B0',fontSize:20}}>›</span>
               </div>
-              <div style={{textAlign:'right',flexShrink:0}}>
-                <Badge status={u.status||'active'}/>
-                <div style={{fontSize:11,color:'#9B98B8',marginTop:5}}>{activeCount} active question{activeCount!==1?'s':''}</div>
-              </div>
-              <span style={{color:'#C8C0B0',fontSize:20}}>›</span>
+              <button onClick={e=>{e.stopPropagation();deleteUser(u)}} style={{padding:'6px 10px',borderRadius:8,border:'1.5px solid #FEE2E2',background:'#fff',color:'#EF4444',fontSize:12,cursor:'pointer',flexShrink:0}}>✕</button>
             </div>
           )
         })}
@@ -541,6 +549,11 @@ function InvitesView() {
     sendWelcomeEmail(trimmedName, trimmedEmail, code)
   }
 
+  async function deleteInvite(inv) {
+    if(!window.confirm(`Delete invite for ${inv.name}? This cannot be undone.`)) return
+    await deleteDoc(doc(db,'invites',inv.id))
+  }
+
   function copy(code){navigator.clipboard?.writeText(code); setCopied(code); setTimeout(()=>setCopied(null),2000)}
   const valid=name.trim().length>1&&email.includes('@')
   const pending=invites.filter(i=>!i.used), used=invites.filter(i=>i.used)
@@ -591,6 +604,7 @@ function InvitesView() {
             <div style={{display:'flex',alignItems:'center',gap:8,flexShrink:0}}>
               <div style={{background:'#E8E4FF',borderRadius:8,padding:'5px 10px',fontWeight:700,fontSize:12,color:'#6B6888',letterSpacing:1.5}}>{inv.code}</div>
               <button onClick={()=>copy(inv.code)} style={{padding:'5px 10px',borderRadius:8,border:'1.5px solid #E5E0D8',background:copied===inv.code?'#D1FAE5':'#fff',color:copied===inv.code?'#1A6644':'#6B6888',fontSize:11,fontWeight:600,cursor:'pointer'}}>{copied===inv.code?'✓':'Copy'}</button>
+              <button onClick={()=>deleteInvite(inv)} style={{padding:'5px 8px',borderRadius:8,border:'1.5px solid #FEE2E2',background:'#fff',color:'#EF4444',fontSize:11,cursor:'pointer'}}>✕</button>
             </div>
           </div>
         ))}
@@ -601,6 +615,7 @@ function InvitesView() {
             <div style={{width:38,height:38,borderRadius:10,background:'#D1FAE5',display:'flex',alignItems:'center',justifyContent:'center',fontSize:16,flexShrink:0}}>✓</div>
             <div style={{flex:1}}><div style={{fontWeight:600,fontSize:14,color:'#1A1A2E'}}>{inv.name}</div><div style={{fontSize:12,color:'#9B98B8',marginTop:2}}>{inv.email}</div></div>
             <Badge status="active"/>
+            <button onClick={()=>deleteInvite(inv)} style={{padding:'5px 8px',borderRadius:8,border:'1.5px solid #FEE2E2',background:'#fff',color:'#EF4444',fontSize:11,cursor:'pointer'}}>✕</button>
           </div>
         ))}
       </div>}
