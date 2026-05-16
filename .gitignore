@@ -3,3 +3,4 @@ dist/
 *.json.local
 sylvia-health-firebase-adminsdk-*.json
 .env.local
+.vercel
