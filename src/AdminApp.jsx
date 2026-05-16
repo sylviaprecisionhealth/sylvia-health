@@ -84,7 +84,7 @@ function Sidebar({active,setActive,onLogout,open,onClose}) {
     if(isMobile) document.body.style.overflow=open?'hidden':''
     return()=>{document.body.style.overflow=''}
   },[open,isMobile])
-  const nav=[{id:'questions',label:'Questions',icon:'◈'},{id:'schedule',label:'Schedule',icon:'◷'},{id:'default',label:'Default Schedule',icon:'★'},{id:'users',label:'Users',icon:'◎'},{id:'responses',label:'Responses',icon:'◉'},{id:'invites',label:'Invites',icon:'✉'}]
+  const nav=[{id:'questions',label:'Questions',icon:'◈'},{id:'schedule',label:'Schedule',icon:'◷'},{id:'users',label:'Users',icon:'◎'},{id:'responses',label:'Responses',icon:'◉'},{id:'invites',label:'Invites',icon:'✉'}]
   return (
     <>
       {isMobile&&open&&<div onClick={onClose} style={{position:'fixed',inset:0,background:'rgba(0,0,0,.5)',zIndex:99,backdropFilter:'blur(2px)'}}/>}
@@ -157,100 +157,6 @@ function ScheduleEntryEditor({entry, onChange}) {
   )
 }
 
-// ── Default Schedule View ─────────────────────────────────────────────────────
-function DefaultScheduleView({questions}) {
-  const [items, setItems] = useState([]) // [{questionId, time, mode, interval, repeat}]
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-  const [search, setSearch] = useState('')
-  const [catFilter, setCatFilter] = useState('All')
-  const [saved, setSaved] = useState(false)
-
-  useEffect(()=>{
-    const unsub = onSnapshot(doc(db,'config','defaultSchedule'), snap=>{
-      if(snap.exists()) setItems(snap.data().items || [])
-      setLoading(false)
-    })
-    return unsub
-  },[])
-
-  async function saveDefault() {
-    setSaving(true)
-    await setDoc(doc(db,'config','defaultSchedule'), {items, updatedAt: new Date().toISOString()})
-    setSaved(true); setTimeout(()=>setSaved(false), 2000)
-    setSaving(false)
-  }
-
-  function isSelected(qId) { return items.some(i=>i.questionId===qId) }
-
-  function toggleQuestion(q) {
-    if(isSelected(q.id)) {
-      setItems(prev=>prev.filter(i=>i.questionId!==q.id))
-    } else {
-      setItems(prev=>[...prev,{questionId:q.id,time:'08:00',repeat:'Daily',mode:'time',interval:4}])
-    }
-  }
-
-  function updateEntry(qId, entry) {
-    setItems(prev=>prev.map(i=>i.questionId===qId?{...i,...entry}:i))
-  }
-
-  const cats = ['All',...Array.from(new Set(questions.map(q=>q.category||'General')))]
-  const filtered = questions.filter(q=>{
-    const mc = catFilter==='All'||(q.category||'General')===catFilter
-    const ms = !search||q.text?.toLowerCase().includes(search.toLowerCase())
-    return mc&&ms
-  })
-
-  return (
-    <div>
-      <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',marginBottom:8}}>
-        <div>
-          <h2 style={{fontFamily:"'Inter',sans-serif",fontWeight:800,fontSize:24,color:'#1A1A2E'}}>Default Schedule</h2>
-          <p style={{fontSize:13,color:'#9B98B8',marginTop:4}}>{items.length} questions selected · Apply to any user in one click from the Users tab</p>
-        </div>
-        <button onClick={saveDefault} disabled={saving} style={{background:saved?'#1A6644':'#1A1A2E',color:'#E8E4FF',border:'none',borderRadius:14,padding:'11px 20px',fontSize:14,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',gap:8,flexShrink:0}}>
-          {saving?<Spin/>:saved?'Saved ✓':'Save Default'}
-        </button>
-      </div>
-
-      <div style={{background:'#DBEAFE',borderRadius:12,padding:'12px 16px',marginBottom:20}}>
-        <div style={{fontSize:12,color:'#1D4ED8',fontWeight:600,marginBottom:2}}>How this works</div>
-        <div style={{fontSize:12,color:'#1D4ED8',lineHeight:1.6}}>Select questions below and set a time or interval for each. Save, then go to Users → click a client → "Apply Default Schedule" to assign this bundle to them instantly.</div>
-      </div>
-
-      <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search questions…" style={{...inp,marginBottom:12}}/>
-      <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:20}}>
-        {cats.map(c=><button key={c} onClick={()=>setCatFilter(c)} style={{padding:'5px 12px',borderRadius:20,border:`1.5px solid ${catFilter===c?'#1A1A2E':'#E5E0D8'}`,background:catFilter===c?'#1A1A2E':'#fff',color:catFilter===c?'#E8E4FF':'#9B98B8',fontSize:11,fontWeight:600,cursor:'pointer',whiteSpace:'nowrap'}}>{c}</button>)}
-      </div>
-
-      {loading&&<div style={{display:'flex',justifyContent:'center',padding:40}}><Spin/></div>}
-      <div style={{display:'flex',flexDirection:'column',gap:10}}>
-        {filtered.map(q=>{
-          const selected = isSelected(q.id)
-          const entry = items.find(i=>i.questionId===q.id)
-          return (
-            <div key={q.id} style={{background:'#fff',borderRadius:16,padding:'16px 18px',border:`1.5px solid ${selected?'#6C63FF':'#E8E3DA'}`,transition:'border-color .2s'}}>
-              <div style={{display:'flex',alignItems:'flex-start',gap:12}}>
-                <div onClick={()=>toggleQuestion(q)} style={{width:22,height:22,borderRadius:6,border:`2px solid ${selected?'#6C63FF':'#D1D5DB'}`,background:selected?'#6C63FF':'#fff',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0,marginTop:2}}>
-                  {selected&&<span style={{color:'#fff',fontSize:13,fontWeight:700}}>✓</span>}
-                </div>
-                <div style={{flex:1}}>
-                  <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:4,flexWrap:'wrap'}}>
-                    <TBadge type={q.type}/>
-                    {q.category&&q.category!=='General'&&<span style={{fontSize:11,color:'#6C63FF',background:'#EDE9FE',borderRadius:20,padding:'2px 8px',fontWeight:600}}>{q.category}</span>}
-                  </div>
-                  <p style={{fontSize:14,color:'#1A1A2E',lineHeight:1.4,fontWeight:500,margin:0,cursor:'pointer'}} onClick={()=>toggleQuestion(q)}>{q.text}</p>
-                  {selected&&entry&&<ScheduleEntryEditor entry={entry} onChange={e=>updateEntry(q.id,e)}/>}
-                </div>
-              </div>
-            </div>
-          )
-        })}
-      </div>
-    </div>
-  )
-}
 
 // ── Schedule Row (extracted to avoid hooks-in-map) ────────────────────────────
 function ScheduleRow({s, q, saving, onSave, onToggle, onRemove}) {
@@ -478,13 +384,10 @@ function UserProfileModal({user, questions, onClose}) {
 function UsersView({questions}) {
   const [users,setUsers]=useState([]); const [schedules,setSchedules]=useState([]); const [loading,setLoading]=useState(true)
   const [selectedUser,setSelectedUser]=useState(null)
-  const [defaultSchedule,setDefaultSchedule]=useState(null)
-
   useEffect(()=>{
     const u1=onSnapshot(collection(db,'users'),s=>{setUsers(s.docs.map(d=>({id:d.id,...d.data()})));setLoading(false)})
     const u2=onSnapshot(collection(db,'schedules'),s=>{setSchedules(s.docs.map(d=>({id:d.id,...d.data()})))})
-    const u3=onSnapshot(doc(db,'config','defaultSchedule'),snap=>{if(snap.exists())setDefaultSchedule(snap.data())})
-    return()=>{u1();u2();u3()}
+    return()=>{u1();u2()}
   },[])
 
   async function deleteUser(u) {
@@ -1381,7 +1284,7 @@ export default function AdminApp() {
     return unsub
   },[])
 
-  // Load questions globally so UsersView and DefaultScheduleView share them
+  // Load questions globally so UsersView shares them
   useEffect(()=>{
     if(!authed)return
     const unsub=onSnapshot(collection(db,'questions'),snap=>{setQuestions(snap.docs.map(d=>({id:d.id,...d.data()})))})
@@ -1405,7 +1308,6 @@ export default function AdminApp() {
         <div style={{padding:isMobile?'16px':'0'}}>
           {view==='questions'&&<QuestionsView/>}
           {view==='schedule'&&<ScheduleView/>}
-          {view==='default'&&<DefaultScheduleView questions={questions}/>}
           {view==='users'&&<UsersView questions={questions}/>}
           {view==='responses'&&<ResponsesView questions={questions}/>}
           {view==='invites'&&<InvitesView/>}
