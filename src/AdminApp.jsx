@@ -86,7 +86,13 @@ function Sidebar({active,setActive,onLogout,open,onClose}) {
     if(isMobile) document.body.style.overflow=open?'hidden':''
     return()=>{document.body.style.overflow=''}
   },[open,isMobile])
-  const nav=[{id:'questions',label:'Questions',icon:'◈'},{id:'schedule',label:'Schedule',icon:'◷'},{id:'clients',label:'Clients',icon:'◎'},{id:'team',label:'Team',icon:'👥'},{id:'invites',label:'Invites',icon:'✉'}]
+  const nav=[
+    {id:'questions',label:'Questions',icon:<svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="2" width="12" height="14" rx="2"/><line x1="6" y1="6" x2="12" y2="6"/><line x1="6" y1="9" x2="12" y2="9"/><line x1="6" y1="12" x2="10" y2="12"/></svg>},
+    {id:'schedule',label:'Schedule',icon:<svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="9" r="7"/><polyline points="9,5 9,9 12,11"/></svg>},
+    {id:'clients',label:'Clients',icon:<svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="6" r="3"/><path d="M3 16c0-3.3 2.7-6 6-6s6 2.7 6 6"/></svg>},
+    {id:'team',label:'Team',icon:<svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="6.5" cy="6" r="2.5"/><path d="M1 16c0-3 2.5-5 5.5-5"/><circle cx="12" cy="6" r="2.5"/><path d="M10.5 11c1.5-.6 4.5.2 5.5 5"/></svg>},
+    {id:'invites',label:'Invites',icon:<svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="4" width="14" height="10" rx="2"/><polyline points="2,4 9,11 16,4"/></svg>},
+  ]
   return (
     <>
       {isMobile&&open&&<div onClick={onClose} style={{position:'fixed',inset:0,background:'rgba(0,0,0,.5)',zIndex:99,backdropFilter:'blur(2px)'}}/>}
@@ -98,7 +104,7 @@ function Sidebar({active,setActive,onLogout,open,onClose}) {
         <div style={{flex:1,padding:'0 12px'}}>
           {nav.map(n=>(
             <button key={n.id} onClick={()=>{setActive(n.id);if(isMobile)onClose()}} style={{width:'100%',display:'flex',alignItems:'center',gap:10,padding:'11px 14px',borderRadius:12,border:'none',cursor:'pointer',marginBottom:4,background:active===n.id?'#E8DDD4':'transparent',transition:'background .15s'}}>
-              <span style={{fontSize:16,color:active===n.id?'#8B3A2A':'#1A0F0A'}}>{n.icon}</span>
+              <span style={{display:'flex',flexShrink:0,color:active===n.id?'#8B3A2A':'#1A0F0A'}}>{n.icon}</span>
               <span style={{fontWeight:active===n.id?600:400,fontSize:14,color:'#1A0F0A'}}>{n.label}</span>
               {active===n.id&&<div style={{marginLeft:'auto',width:5,height:5,borderRadius:'50%',background:'#8B3A2A'}}/>}
             </button>
