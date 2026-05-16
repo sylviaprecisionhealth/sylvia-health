@@ -37,7 +37,7 @@ function WelcomeScreen({onLogin, onRegister}) {
   return (
     <div style={{minHeight:'100vh',background:'#080A16',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:32,fontFamily:"-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif"}}>
       <style>{G}</style>
-      <div style={{animation:'fadeUp .6s ease',textAlign:'center',maxWidth:320,width:'100%'}}>
+      <div style={{animation:'fadeUp .6s ease',textAlign:'center',maxWidth:420,width:'100%'}}>
         <div style={{fontSize:11,color:'#4a4a6a',letterSpacing:3,textTransform:'uppercase',marginBottom:10}}>Welcome to</div>
         <h1 style={{fontFamily:"-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif",color:'#E8E4FF',fontSize:42,fontWeight:800,lineHeight:1,marginBottom:8,letterSpacing:-1}}>Sylvia</h1>
         <p style={{color:'#6B6888',fontSize:14,lineHeight:1.7,marginBottom:48}}>Precision Health — your personal wellness companion, guided by your care team.</p>
@@ -86,8 +86,9 @@ function RegisterScreen({onBack, onSuccess}) {
   const fs = {width:'100%',background:'#0d1120',border:'1.5px solid #1e2640',borderRadius:12,padding:'14px 16px',color:'#E8E4FF',fontSize:14,fontFamily:"-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif"}
 
   return (
-    <div style={{minHeight:'100vh',background:'#080A16',display:'flex',flexDirection:'column',padding:24,fontFamily:"-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif"}}>
+    <div style={{minHeight:'100vh',background:'#080A16',display:'flex',justifyContent:'center',fontFamily:"-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif"}}>
       <style>{G}</style>
+      <div style={{maxWidth:420,width:'100%',display:'flex',flexDirection:'column',padding:24}}>
       <button onClick={onBack} style={{background:'none',border:'none',color:'#6B6888',fontSize:14,cursor:'pointer',alignSelf:'flex-start',marginBottom:24,marginTop:20}}>← Back</button>
       {step===0 && (
         <div style={{flex:1,display:'flex',flexDirection:'column',justifyContent:'center',animation:'fadeUp .4s ease'}}>
@@ -113,6 +114,7 @@ function RegisterScreen({onBack, onSuccess}) {
           <button onClick={register} disabled={!name.trim()||!email.includes('@')||pw.length<6||loading} style={{background:name.trim()&&email.includes('@')&&pw.length>=6?'linear-gradient(135deg,#6ECB8A,#3aaa5e)':'#1e2640',color:name.trim()&&email.includes('@')&&pw.length>=6?'#0a1a10':'#3a3a5c',border:'none',borderRadius:14,padding:15,fontSize:15,fontWeight:700,cursor:'pointer',marginTop:8,display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>{loading?<Spin/>:'Create Account ✦'}</button>
         </div>
       )}
+      </div>
     </div>
   )
 }
@@ -130,8 +132,9 @@ function LoginScreen({onBack, onSuccess}) {
     setLoading(false)
   }
   return (
-    <div style={{minHeight:'100vh',background:'#080A16',display:'flex',flexDirection:'column',padding:24,fontFamily:"-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif"}}>
+    <div style={{minHeight:'100vh',background:'#080A16',display:'flex',justifyContent:'center',fontFamily:"-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif"}}>
       <style>{G}</style>
+      <div style={{maxWidth:420,width:'100%',display:'flex',flexDirection:'column',padding:24}}>
       <button onClick={onBack} style={{background:'none',border:'none',color:'#6B6888',fontSize:14,cursor:'pointer',alignSelf:'flex-start',marginBottom:24,marginTop:20}}>← Back</button>
       <div style={{flex:1,display:'flex',flexDirection:'column',justifyContent:'center',animation:'fadeUp .4s ease'}}>
         <h2 style={{fontFamily:"-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif",color:'#E8E4FF',fontSize:28,marginBottom:8}}>Sign In</h2>
@@ -144,6 +147,7 @@ function LoginScreen({onBack, onSuccess}) {
         ))}
         {err && <p style={{color:'#F2857A',fontSize:12,marginBottom:12}}>{err}</p>}
         <button onClick={login} disabled={loading} style={{background:'linear-gradient(135deg,#6C63FF,#4A42CC)',color:'#fff',border:'none',borderRadius:14,padding:15,fontSize:15,fontWeight:700,cursor:'pointer',marginTop:8,display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>{loading?<Spin/>:'Sign In →'}</button>
+      </div>
       </div>
     </div>
   )
