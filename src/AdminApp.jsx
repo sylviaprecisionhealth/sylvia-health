@@ -84,7 +84,7 @@ function Sidebar({active,setActive,onLogout,open,onClose}) {
     if(isMobile) document.body.style.overflow=open?'hidden':''
     return()=>{document.body.style.overflow=''}
   },[open,isMobile])
-  const nav=[{id:'questions',label:'Questions',icon:'◈'},{id:'schedule',label:'Schedule',icon:'◷'},{id:'users',label:'Users',icon:'◎'},{id:'responses',label:'Responses',icon:'◉'},{id:'invites',label:'Invites',icon:'✉'}]
+  const nav=[{id:'questions',label:'Questions',icon:'◈'},{id:'schedule',label:'Schedule',icon:'◷'},{id:'clients',label:'Clients',icon:'◎'},{id:'invites',label:'Invites',icon:'✉'}]
   return (
     <>
       {isMobile&&open&&<div onClick={onClose} style={{position:'fixed',inset:0,background:'rgba(0,0,0,.5)',zIndex:99,backdropFilter:'blur(2px)'}}/>}
@@ -188,36 +188,48 @@ function ScheduleRow({s, q, saving, onSave, onToggle, onRemove}) {
   )
 }
 
-// ── User Profile Modal ────────────────────────────────────────────────────────
-function UserProfileModal({user, questions, onClose}) {
-  const [liveSchedules, setLiveSchedules] = useState([])
-  const [saving, setSaving] = useState(null)
-  const [templates, setTemplates] = useState([])
-  const [showAssign, setShowAssign] = useState(false)
-  const [selectedTemplate, setSelectedTemplate] = useState(null)
-  const [durDays, setDurDays] = useState(15)
-  const [assigning, setAssigning] = useState(false)
-  const [assignSuccess, setAssignSuccess] = useState(false)
+// ── Client Profile View ───────────────────────────────────────────────────────
+function ClientProfileView({client, questions, onBack}) {
+  const [schedules,setSchedules]=useState([])
+  const [responses,setResponses]=useState([])
+  const [templates,setTemplates]=useState([])
+  const [loading,setLoading]=useState(true)
+  const [activeTab,setActiveTab]=useState('info')
+  const [saving,setSaving]=useState(null)
+  const [showAssign,setShowAssign]=useState(false)
+  const [selectedTemplate,setSelectedTemplate]=useState(null)
+  const [durDays,setDurDays]=useState(15)
+  const [assigning,setAssigning]=useState(false)
+  const [assignSuccess,setAssignSuccess]=useState(false)
+  const [dateFrom,setDateFrom]=useState('')
+  const [dateTo,setDateTo]=useState('')
 
   useEffect(()=>{
-    const u1 = onSnapshot(
-      query(collection(db,'schedules'), where('userId','==',user.id)),
-      snap => setLiveSchedules(snap.docs.map(d=>({id:d.id,...d.data()})))
-    )
-    const u2 = onSnapshot(collection(db,'scheduleTemplates'),
-      snap => setTemplates(snap.docs.map(d=>({id:d.id,...d.data()})))
-    )
-    return ()=>{u1();u2()}
-  },[user.id])
+    const u1=onSnapshot(query(collection(db,'schedules'),where('userId','==',client.id)),
+      snap=>{setSchedules(snap.docs.map(d=>({id:d.id,...d.data()})));setLoading(false)})
+    const u2=onSnapshot(query(collection(db,'responses'),where('userId','==',client.id)),
+      snap=>setResponses(snap.docs.map(d=>({id:d.id,...d.data()}))))
+    const u3=onSnapshot(collection(db,'scheduleTemplates'),
+      snap=>setTemplates(snap.docs.map(d=>({id:d.id,...d.data()}))))
+    return()=>{u1();u2();u3()}
+  },[client.id])
 
-  const userSchedules = liveSchedules
-  const defaultSched  = userSchedules.find(s=>s.isDefaultSession)
-  const daysLeft = defaultSched?.endDate
-    ? Math.max(0, Math.ceil((new Date(defaultSched.endDate)-new Date(today()))/86400000)+1)
-    : null
+  function qInfo(id){return questions.find(q=>q.id===id)}
+
+  const defaultSched=schedules.find(s=>s.isDefaultSession)
+  const daysLeft=defaultSched?.endDate
+    ?Math.max(0,Math.ceil((new Date(defaultSched.endDate)-new Date(today()))/86400000)+1)
+    :null
+
+  function tSummary(t){
+    if(!t)return''
+    if(t.type==='custom_interval')return`Every ${t.intervalHours}h from ${(t.times||['08:00'])[0]}`
+    if(t.type==='weekly')return`${(t.days||[]).join(', ')} at ${(t.times||['09:00'])[0]}`
+    return(t.times||[]).join(' · ')
+  }
 
   function openAssign(){
-    const def = templates.find(t=>t.isDefault)||templates[0]||null
+    const def=templates.find(t=>t.isDefault)||templates[0]||null
     setSelectedTemplate(def)
     setDurDays(def?.defaultDuration||15)
     setAssignSuccess(false)
@@ -225,23 +237,22 @@ function UserProfileModal({user, questions, onClose}) {
   }
 
   async function confirmAssign(){
-    if(!selectedTemplate) return
+    if(!selectedTemplate)return
     setAssigning(true)
     try{
-      for(const s of userSchedules) await deleteDoc(doc(db,'schedules',s.id))
+      for(const s of schedules)await deleteDoc(doc(db,'schedules',s.id))
       const startDate=today()
-      const end=new Date(); end.setDate(end.getDate()+durDays-1)
+      const end=new Date();end.setDate(end.getDate()+durDays-1)
       const endDate=end.toISOString().split('T')[0]
       let timesToCreate=[...(selectedTemplate.times||['09:00'])],extraFields={}
-      if(selectedTemplate.type==='weekly'){
-        extraFields={repeat:'Weekly',days:selectedTemplate.days||[]}
-      } else if(selectedTemplate.type==='custom_interval'){
+      if(selectedTemplate.type==='weekly'){extraFields={repeat:'Weekly',days:selectedTemplate.days||[]}}
+      else if(selectedTemplate.type==='custom_interval'){
         timesToCreate=[(selectedTemplate.times||['08:00'])[0]]
         extraFields={mode:'interval',interval:selectedTemplate.intervalHours||4,repeat:'Custom interval'}
       }
       for(const time of timesToCreate){
         const ref=await addDoc(collection(db,'schedules'),{
-          questionId:'__ALL__',userId:user.id,time,
+          questionId:'__ALL__',userId:client.id,time,
           repeat:'Daily',interval:null,mode:'time',
           startDate,endDate,durationDays:durDays,
           active:true,isDefaultSession:true,
@@ -255,161 +266,329 @@ function UserProfileModal({user, questions, onClose}) {
     setAssigning(false)
   }
 
-  async function removeSchedule(s){ await deleteDoc(doc(db,'schedules',s.id)) }
-  function qInfo(id){ return questions.find(q=>q.id===id) }
-  function tSummary(t){
-    if(!t) return ''
-    if(t.type==='custom_interval') return `Every ${t.intervalHours}h from ${(t.times||['08:00'])[0]}`
-    if(t.type==='weekly') return `${(t.days||[]).join(', ')} at ${(t.times||['09:00'])[0]}`
-    return (t.times||[]).join(' · ')
+  async function removeSchedule(s){await deleteDoc(doc(db,'schedules',s.id))}
+
+  const clientResponses=responses.filter(r=>{
+    if(r.answer==='__skipped__')return false
+    if(dateFrom&&r.date<dateFrom)return false
+    if(dateTo&&r.date>dateTo)return false
+    return true
+  }).sort((a,b)=>a.ts>b.ts?-1:1)
+
+  function getChartData(qId){
+    return clientResponses
+      .filter(r=>r.questionId===qId)
+      .map(r=>({date:r.date,value:+r.answer}))
+      .sort((a,b)=>a.date>b.date?1:-1)
   }
 
-  return (
-    <div style={{position:'fixed',inset:0,background:'rgba(10,10,20,.7)',backdropFilter:'blur(6px)',zIndex:200,display:'flex',alignItems:'flex-start',justifyContent:'center',padding:20,overflowY:'auto'}}>
-      <div style={{background:'#E8E4FF',borderRadius:24,width:'100%',maxWidth:620,boxShadow:'0 32px 80px rgba(0,0,0,.2)',animation:'pop .25s ease',marginTop:20,marginBottom:20}}>
-
-        {/* Header */}
-        <div style={{background:'#1A1A2E',borderRadius:'24px 24px 0 0',padding:'24px 28px'}}>
-          <div style={{display:'flex',alignItems:'center',gap:14}}>
-            <div style={{width:46,height:46,borderRadius:14,background:'#EDE9FE',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:800,fontSize:18,color:'#6C63FF',flexShrink:0}}>{user.name?.split(' ').map(n=>n[0]).join('')||'?'}</div>
-            <div style={{flex:1}}>
-              <div style={{fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:20,color:'#E8E4FF'}}>{user.name}</div>
-              <div style={{fontSize:12,color:'#6B6888',marginTop:2}}>{user.email} · Joined {user.joinedDate}</div>
-            </div>
-            <button onClick={onClose} style={{background:'#FFFFFF1A',border:'none',color:'#E8E4FF',borderRadius:10,padding:'8px 14px',fontSize:13,cursor:'pointer'}}>Close</button>
-          </div>
-          <button onClick={openAssign} style={{marginTop:16,width:'100%',background:'#6C63FF',color:'#fff',border:'none',borderRadius:12,padding:'11px',fontSize:14,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>
-            ⚡ Assign Schedule
-          </button>
-          {defaultSched&&daysLeft!==null&&<div style={{marginTop:8,fontSize:12,color:'#A89FFF',textAlign:'center'}}>{daysLeft>0?`${daysLeft} day${daysLeft!==1?'s':''} remaining · ${defaultSched.templateName||'Schedule'} · ends ${defaultSched.endDate}`:'Schedule has ended'}</div>}
-        </div>
-
-        {/* Body */}
-        <div style={{padding:'20px 24px'}}>
-          {showAssign?(
-            assignSuccess?(
-              <div style={{textAlign:'center',padding:'32px 20px'}}>
-                <div style={{fontSize:36,marginBottom:10}}>✓</div>
-                <div style={{fontWeight:700,fontSize:17,color:'#1A6644',marginBottom:6}}>Schedule Assigned</div>
-                <div style={{fontSize:13,color:'#6B6888',marginBottom:20,lineHeight:1.6}}>{selectedTemplate?.name} · {durDays} days</div>
-                <button onClick={()=>{setShowAssign(false);setAssignSuccess(false)}} style={{padding:'10px 28px',borderRadius:12,border:'none',background:'#1A1A2E',color:'#E8E4FF',fontSize:14,fontWeight:700,cursor:'pointer'}}>Done</button>
-              </div>
-            ):(
-              <div>
-                <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:16}}>
-                  <div style={{fontSize:14,fontWeight:700,color:'#1A1A2E'}}>Assign Schedule</div>
-                  <button onClick={()=>setShowAssign(false)} style={{background:'none',border:'1.5px solid #E5E0D8',borderRadius:8,padding:'5px 12px',fontSize:12,color:'#6B6888',cursor:'pointer'}}>Cancel</button>
-                </div>
-
-                <div style={{fontSize:10,fontWeight:700,color:'#6B6888',letterSpacing:1,textTransform:'uppercase',marginBottom:10}}>Template</div>
-                {templates.length===0&&<div style={{textAlign:'center',padding:'20px',color:'#C8C0B0',fontSize:13,marginBottom:16,lineHeight:1.6}}>No templates yet — create one in the Schedule tab.</div>}
-                <div style={{display:'flex',flexDirection:'column',gap:8,marginBottom:18}}>
-                  {templates.map(t=>(
-                    <div key={t.id} onClick={()=>{setSelectedTemplate(t);setDurDays(t.defaultDuration)}} style={{background:'#fff',borderRadius:14,padding:'14px 16px',border:`1.5px solid ${selectedTemplate?.id===t.id?'#6C63FF':'#E8E3DA'}`,cursor:'pointer',transition:'border-color .15s'}}>
-                      <div style={{display:'flex',alignItems:'center',gap:12}}>
-                        <div style={{flex:1}}>
-                          <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:3}}>
-                            <span style={{fontWeight:600,fontSize:14,color:'#1A1A2E'}}>{t.name}</span>
-                            {t.isDefault&&<span style={{fontSize:10,fontWeight:700,color:'#6C63FF',background:'#EDE9FE',borderRadius:20,padding:'1px 7px'}}>DEFAULT</span>}
-                          </div>
-                          <div style={{fontSize:12,color:'#6B6888'}}>{tSummary(t)}</div>
-                          <div style={{fontSize:11,color:'#9B98B8',marginTop:2}}>{t.defaultDuration} days</div>
-                        </div>
-                        <div style={{width:20,height:20,borderRadius:'50%',border:`2px solid ${selectedTemplate?.id===t.id?'#6C63FF':'#D1D5DB'}`,background:selectedTemplate?.id===t.id?'#6C63FF':'transparent',flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center'}}>
-                          {selectedTemplate?.id===t.id&&<div style={{width:8,height:8,borderRadius:'50%',background:'#fff'}}/>}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <div style={{marginBottom:20}}>
-                  <div style={{fontSize:10,fontWeight:700,color:'#6B6888',letterSpacing:1,textTransform:'uppercase',marginBottom:10}}>Duration</div>
-                  <div style={{display:'flex',gap:6,flexWrap:'wrap',alignItems:'center'}}>
-                    {[15,30,60].map(d=>(
-                      <button key={d} onClick={()=>setDurDays(d)} style={{padding:'7px 12px',borderRadius:10,border:`1.5px solid ${durDays===d?'#1A1A2E':'#E5E0D8'}`,background:durDays===d?'#1A1A2E':'#fff',color:durDays===d?'#E8E4FF':'#9B98B8',fontSize:12,fontWeight:600,cursor:'pointer'}}>
-                        {d} days
-                      </button>
-                    ))}
-                    <div style={{display:'flex',alignItems:'center',gap:6}}>
-                      <input type="number" min={1} max={365} value={durDays} onChange={e=>setDurDays(Math.max(1,+e.target.value))} style={{...inp,padding:'7px 10px',borderRadius:8,width:72}}/>
-                      <span style={{fontSize:12,color:'#9B98B8'}}>days</span>
-                    </div>
-                  </div>
-                </div>
-
-                <button onClick={confirmAssign} disabled={assigning||!selectedTemplate} style={{width:'100%',padding:12,borderRadius:12,border:'none',background:selectedTemplate&&!assigning?'#6C63FF':'#E5E0D8',color:selectedTemplate&&!assigning?'#fff':'#9B98B8',fontSize:14,fontWeight:700,cursor:selectedTemplate&&!assigning?'pointer':'default',display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>
-                  {assigning?<><Spin/> Assigning…</>:'Confirm & Assign'}
-                </button>
-              </div>
-            )
-          ):(
-            <>
-              <div style={{fontSize:11,fontWeight:700,color:'#9B98B8',letterSpacing:1.5,textTransform:'uppercase',marginBottom:14}}>Active Schedule ({userSchedules.length})</div>
-              {userSchedules.length===0&&(
-                <div style={{textAlign:'center',padding:'40px 20px',color:'#C8C0B0'}}>
-                  <p style={{fontSize:15}}>No schedule assigned yet.</p>
-                  <p style={{fontSize:13,marginTop:6}}>Click "Assign Schedule" above to get started.</p>
-                </div>
-              )}
-              {userSchedules.length>0&&<>
-                {userSchedules.filter(s=>s.isDefaultSession).length>0&&(
-                  <div style={{background:'#fff',borderRadius:14,padding:'16px',border:'1.5px solid #E8E3DA',marginBottom:12}}>
-                    <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:8}}>
-                      <div>
-                        <div style={{fontWeight:600,fontSize:14,color:'#1A1A2E'}}>{userSchedules.find(s=>s.templateName)?.templateName||'All Questions'}</div>
-                        <div style={{fontSize:12,color:'#9B98B8',marginTop:2}}>{userSchedules.filter(s=>s.isDefaultSession).map(s=>s.time).join(' · ')}</div>
-                      </div>
-                      <span style={{fontSize:11,color:'#1A6644',background:'#D1FAE5',borderRadius:20,padding:'3px 10px',fontWeight:600,flexShrink:0}}>Active</span>
-                    </div>
-                    {defaultSched&&<div style={{fontSize:12,color:'#9B98B8',marginBottom:12}}>{defaultSched.startDate} → {defaultSched.endDate} ({daysLeft!=null&&daysLeft>0?`${daysLeft} days left`:'ended'})</div>}
-                    <button onClick={()=>{ if(window.confirm('Remove this schedule?')) userSchedules.forEach(s=>removeSchedule(s)) }} style={{padding:'6px 14px',borderRadius:8,border:'1.5px solid #FEE2E2',background:'#fff',color:'#EF4444',fontSize:12,fontWeight:600,cursor:'pointer'}}>Remove Schedule</button>
-                  </div>
-                )}
-                {userSchedules.filter(s=>!s.isDefaultSession).map(s=>{
-                  const q=qInfo(s.questionId)
-                  if(!q) return null
-                  return <ScheduleRow key={s.id} s={s} q={q} saving={saving} onSave={async(sId,edits)=>{setSaving(sId);await updateDoc(doc(db,'schedules',sId),edits);setSaving(null)}} onToggle={s=>updateDoc(doc(db,'schedules',s.id),{active:!s.active})} onRemove={removeSchedule}/>
-                })}
-              </>}
-            </>
-          )}
+  function MiniChart({data,color='#6C63FF',qId}){
+    if(data.length<2)return<div style={{fontSize:12,color:'#C8C0B0',padding:'8px 0'}}>Not enough data points yet.</div>
+    const W=420,H=80,PX=8,PY=10
+    const vals=data.map(d=>d.value)
+    const min=Math.min(...vals),max=Math.max(...vals)
+    const range=max-min||1
+    const xs=data.map((_,i)=>PX+(i/(data.length-1))*(W-PX*2))
+    const ys=data.map(d=>PY+((max-d.value)/range)*(H-PY*2))
+    const path=xs.map((x,i)=>`${i===0?'M':'L'}${x},${ys[i]}`).join(' ')
+    const area=path+` L${xs[xs.length-1]},${H-PY} L${xs[0]},${H-PY} Z`
+    return(
+      <div>
+        <svg viewBox={`0 0 ${W} ${H}`} style={{width:'100%',height:80}}>
+          <defs>
+            <linearGradient id={`cg-${qId}`} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={color} stopOpacity=".25"/>
+              <stop offset="100%" stopColor={color} stopOpacity="0"/>
+            </linearGradient>
+          </defs>
+          <path d={area} fill={`url(#cg-${qId})`}/>
+          <path d={path} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          {xs.map((x,i)=>(
+            <g key={i}>
+              <circle cx={x} cy={ys[i]} r="3.5" fill={color} stroke="#fff" strokeWidth="1.5"/>
+              <title>{data[i].date}: {data[i].value}</title>
+            </g>
+          ))}
+        </svg>
+        <div style={{display:'flex',justifyContent:'space-between',marginTop:2}}>
+          <span style={{fontSize:10,color:'#C8C0B0'}}>{data[0]?.date}</span>
+          <span style={{fontSize:10,color:'#C8C0B0'}}>{data[data.length-1]?.date}</span>
         </div>
       </div>
+    )
+  }
+
+  function exportCSV(){
+    if(!clientResponses.length)return
+    const rows=[['Date','Time','Question','Category','Type','Answer']]
+    clientResponses.forEach(r=>{
+      const q=qInfo(r.questionId)
+      rows.push([r.date,r.ts?new Date(r.ts).toLocaleTimeString():'',q?.text||r.questionId,q?.category||'',q?.type||'',r.answer])
+    })
+    const csv=rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n')
+    const blob=new Blob([csv],{type:'text/csv'})
+    const url=URL.createObjectURL(blob)
+    const a=document.createElement('a')
+    a.href=url
+    a.download=`${client.name.replace(/ /g,'_')}_responses_${today()}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  const byQuestion={}
+  clientResponses.forEach(r=>{if(!byQuestion[r.questionId])byQuestion[r.questionId]=[];byQuestion[r.questionId].push(r)})
+  const scaleColors=['#6C63FF','#6ECB8A','#F6C549','#F2857A','#7BB8F5','#B48FE8']
+  const tabs=[{id:'info',label:'Info'},{id:'schedule',label:'Schedule'},{id:'responses',label:'Responses'}]
+
+  return(
+    <div style={{animation:'fadeUp .25s ease'}}>
+      <button onClick={onBack} style={{background:'none',border:'1.5px solid #E5E0D8',borderRadius:10,padding:'8px 14px',fontSize:13,color:'#6B6888',cursor:'pointer',fontWeight:600,marginBottom:20}}>← Clients</button>
+
+      <div style={{background:'#1A1A2E',borderRadius:20,padding:'24px 28px',display:'flex',alignItems:'center',gap:16,marginBottom:24}}>
+        <div style={{width:52,height:52,borderRadius:16,background:'#EDE9FE',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:800,fontSize:20,color:'#6C63FF',flexShrink:0}}>{client.name?.split(' ').map(n=>n[0]).join('')||'?'}</div>
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{fontWeight:700,fontSize:22,color:'#E8E4FF',marginBottom:2}}>{client.name}</div>
+          <div style={{fontSize:13,color:'#6B6888'}}>{client.email} · Joined {client.joinedDate}</div>
+        </div>
+        <Badge status={client.status||'active'}/>
+      </div>
+
+      <div style={{display:'flex',gap:4,marginBottom:24,background:'#fff',borderRadius:14,padding:4,border:'1.5px solid #E8E3DA'}}>
+        {tabs.map(t=>(
+          <button key={t.id} onClick={()=>setActiveTab(t.id)} style={{flex:1,padding:'9px 0',borderRadius:10,border:'none',background:activeTab===t.id?'#1A1A2E':'transparent',color:activeTab===t.id?'#E8E4FF':'#9B98B8',fontSize:13,fontWeight:activeTab===t.id?700:500,cursor:'pointer',transition:'all .15s'}}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {activeTab==='info'&&(
+        <div style={{background:'#fff',borderRadius:20,padding:28,border:'1.5px solid #E8E3DA'}}>
+          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:24}}>
+            <div style={{fontSize:11,fontWeight:700,color:'#9B98B8',letterSpacing:1.5,textTransform:'uppercase'}}>Client Information</div>
+            <button style={{padding:'7px 14px',borderRadius:10,border:'1.5px solid #E5E0D8',background:'#fff',color:'#6B6888',fontSize:12,fontWeight:600,cursor:'not-allowed',opacity:.5}}>Edit</button>
+          </div>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:20}}>
+            {[['Name',client.name],['Email',client.email],['Joined',client.joinedDate]].map(([label,value])=>(
+              <div key={label}>
+                <div style={{fontSize:11,fontWeight:600,color:'#9B98B8',letterSpacing:.5,marginBottom:4,textTransform:'uppercase'}}>{label}</div>
+                <div style={{fontSize:14,color:'#1A1A2E',fontWeight:500}}>{value}</div>
+              </div>
+            ))}
+            <div>
+              <div style={{fontSize:11,fontWeight:600,color:'#9B98B8',letterSpacing:.5,marginBottom:4,textTransform:'uppercase'}}>Status</div>
+              <Badge status={client.status||'active'}/>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeTab==='schedule'&&(
+        <div>
+          {!showAssign&&(
+            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:16}}>
+              <div style={{fontSize:11,fontWeight:700,color:'#9B98B8',letterSpacing:1.5,textTransform:'uppercase'}}>Active Schedule ({schedules.length})</div>
+              <button onClick={openAssign} style={{background:'#6C63FF',color:'#fff',border:'none',borderRadius:12,padding:'9px 18px',fontSize:13,fontWeight:700,cursor:'pointer'}}>⚡ Assign Schedule</button>
+            </div>
+          )}
+          {showAssign&&(assignSuccess?(
+            <div style={{background:'#fff',borderRadius:20,padding:32,border:'1.5px solid #E8E3DA',textAlign:'center',marginBottom:16}}>
+              <div style={{fontSize:36,marginBottom:10}}>✓</div>
+              <div style={{fontWeight:700,fontSize:17,color:'#1A6644',marginBottom:6}}>Schedule Assigned</div>
+              <div style={{fontSize:13,color:'#6B6888',marginBottom:20,lineHeight:1.6}}>{selectedTemplate?.name} · {durDays} days</div>
+              <button onClick={()=>{setShowAssign(false);setAssignSuccess(false)}} style={{padding:'10px 28px',borderRadius:12,border:'none',background:'#1A1A2E',color:'#E8E4FF',fontSize:14,fontWeight:700,cursor:'pointer'}}>Done</button>
+            </div>
+          ):(
+            <div style={{background:'#fff',borderRadius:20,padding:24,border:'1.5px solid #E8E3DA',marginBottom:16,animation:'fadeUp .2s ease'}}>
+              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:16}}>
+                <div style={{fontSize:14,fontWeight:700,color:'#1A1A2E'}}>Assign Schedule</div>
+                <button onClick={()=>setShowAssign(false)} style={{background:'none',border:'1.5px solid #E5E0D8',borderRadius:8,padding:'5px 12px',fontSize:12,color:'#6B6888',cursor:'pointer'}}>Cancel</button>
+              </div>
+              <div style={{fontSize:10,fontWeight:700,color:'#6B6888',letterSpacing:1,textTransform:'uppercase',marginBottom:10}}>Template</div>
+              {templates.length===0&&<div style={{textAlign:'center',padding:'20px',color:'#C8C0B0',fontSize:13,marginBottom:16}}>No templates yet — create one in the Schedule tab.</div>}
+              <div style={{display:'flex',flexDirection:'column',gap:8,marginBottom:18}}>
+                {templates.map(t=>(
+                  <div key={t.id} onClick={()=>{setSelectedTemplate(t);setDurDays(t.defaultDuration)}} style={{background:'#FAFAF8',borderRadius:14,padding:'14px 16px',border:`1.5px solid ${selectedTemplate?.id===t.id?'#6C63FF':'#E8E3DA'}`,cursor:'pointer',transition:'border-color .15s'}}>
+                    <div style={{display:'flex',alignItems:'center',gap:12}}>
+                      <div style={{flex:1}}>
+                        <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:3}}>
+                          <span style={{fontWeight:600,fontSize:14,color:'#1A1A2E'}}>{t.name}</span>
+                          {t.isDefault&&<span style={{fontSize:10,fontWeight:700,color:'#6C63FF',background:'#EDE9FE',borderRadius:20,padding:'1px 7px'}}>DEFAULT</span>}
+                        </div>
+                        <div style={{fontSize:12,color:'#6B6888'}}>{tSummary(t)}</div>
+                        <div style={{fontSize:11,color:'#9B98B8',marginTop:2}}>{t.defaultDuration} days</div>
+                      </div>
+                      <div style={{width:20,height:20,borderRadius:'50%',border:`2px solid ${selectedTemplate?.id===t.id?'#6C63FF':'#D1D5DB'}`,background:selectedTemplate?.id===t.id?'#6C63FF':'transparent',flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center'}}>
+                        {selectedTemplate?.id===t.id&&<div style={{width:8,height:8,borderRadius:'50%',background:'#fff'}}/>}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div style={{marginBottom:20}}>
+                <div style={{fontSize:10,fontWeight:700,color:'#6B6888',letterSpacing:1,textTransform:'uppercase',marginBottom:10}}>Duration</div>
+                <div style={{display:'flex',gap:6,flexWrap:'wrap',alignItems:'center'}}>
+                  {[15,30,60].map(d=>(
+                    <button key={d} onClick={()=>setDurDays(d)} style={{padding:'7px 12px',borderRadius:10,border:`1.5px solid ${durDays===d?'#1A1A2E':'#E5E0D8'}`,background:durDays===d?'#1A1A2E':'#fff',color:durDays===d?'#E8E4FF':'#9B98B8',fontSize:12,fontWeight:600,cursor:'pointer'}}>
+                      {d} days
+                    </button>
+                  ))}
+                  <div style={{display:'flex',alignItems:'center',gap:6}}>
+                    <input type="number" min={1} max={365} value={durDays} onChange={e=>setDurDays(Math.max(1,+e.target.value))} style={{...inp,padding:'7px 10px',borderRadius:8,width:72}}/>
+                    <span style={{fontSize:12,color:'#9B98B8'}}>days</span>
+                  </div>
+                </div>
+              </div>
+              <button onClick={confirmAssign} disabled={assigning||!selectedTemplate} style={{width:'100%',padding:12,borderRadius:12,border:'none',background:selectedTemplate&&!assigning?'#6C63FF':'#E5E0D8',color:selectedTemplate&&!assigning?'#fff':'#9B98B8',fontSize:14,fontWeight:700,cursor:selectedTemplate&&!assigning?'pointer':'default',display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>
+                {assigning?<><Spin/> Assigning…</>:'Confirm & Assign'}
+              </button>
+            </div>
+          ))}
+          {!showAssign&&schedules.length===0&&(
+            <div style={{textAlign:'center',padding:'60px 20px',color:'#C8C0B0',background:'#fff',borderRadius:20,border:'1.5px solid #E8E3DA'}}>
+              <div style={{fontSize:36,marginBottom:12}}>◷</div>
+              <p style={{fontSize:15,fontWeight:500}}>No schedule assigned yet</p>
+              <p style={{fontSize:13,marginTop:6}}>Click "Assign Schedule" above to get started.</p>
+            </div>
+          )}
+          {!showAssign&&schedules.length>0&&(
+            <div>
+              {schedules.filter(s=>s.isDefaultSession).length>0&&(
+                <div style={{background:'#fff',borderRadius:16,padding:'18px 20px',border:'1.5px solid #E8E3DA',marginBottom:10}}>
+                  <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:12}}>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:6,flexWrap:'wrap'}}>
+                        <span style={{fontWeight:700,fontSize:15,color:'#1A1A2E'}}>{schedules.find(s=>s.templateName)?.templateName||'All Questions'}</span>
+                        <span style={{fontSize:11,color:'#1A6644',background:'#D1FAE5',borderRadius:20,padding:'2px 8px',fontWeight:600}}>Active</span>
+                      </div>
+                      <div style={{fontSize:13,color:'#6B6888',marginBottom:4}}>{schedules.filter(s=>s.isDefaultSession).map(s=>s.time).join(' · ')}</div>
+                      {defaultSched&&<div style={{fontSize:12,color:'#9B98B8'}}>{defaultSched.startDate} → {defaultSched.endDate} · {daysLeft!=null&&daysLeft>0?`${daysLeft} day${daysLeft!==1?'s':''} left`:'ended'}</div>}
+                    </div>
+                    <button onClick={()=>{if(window.confirm('Remove this schedule?'))schedules.forEach(s=>removeSchedule(s))}} style={{padding:'7px 14px',borderRadius:10,border:'1.5px solid #FEE2E2',background:'#fff',color:'#EF4444',fontSize:12,fontWeight:600,cursor:'pointer',flexShrink:0,whiteSpace:'nowrap'}}>Remove</button>
+                  </div>
+                </div>
+              )}
+              {schedules.filter(s=>!s.isDefaultSession).map(s=>{
+                const q=qInfo(s.questionId)
+                if(!q)return null
+                return<ScheduleRow key={s.id} s={s} q={q} saving={saving} onSave={async(sId,edits)=>{setSaving(sId);await updateDoc(doc(db,'schedules',sId),edits);setSaving(null)}} onToggle={s=>updateDoc(doc(db,'schedules',s.id),{active:!s.active})} onRemove={removeSchedule}/>
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {activeTab==='responses'&&(
+        <div>
+          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:20,flexWrap:'wrap',gap:12}}>
+            <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
+              <span style={{fontSize:12,color:'#9B98B8'}}>From</span>
+              <input type="date" value={dateFrom} onChange={e=>setDateFrom(e.target.value)} style={{border:'1.5px solid #E5E0D8',borderRadius:8,padding:'6px 10px',fontSize:12,color:'#1A1A2E',background:'#fff'}}/>
+              <span style={{fontSize:12,color:'#9B98B8'}}>To</span>
+              <input type="date" value={dateTo} onChange={e=>setDateTo(e.target.value)} style={{border:'1.5px solid #E5E0D8',borderRadius:8,padding:'6px 10px',fontSize:12,color:'#1A1A2E',background:'#fff'}}/>
+            </div>
+            {clientResponses.length>0&&(
+              <button onClick={exportCSV} style={{background:'#1A6644',color:'#fff',border:'none',borderRadius:12,padding:'9px 18px',fontSize:13,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',gap:8}}>↓ Export CSV</button>
+            )}
+          </div>
+          {clientResponses.length===0&&(
+            <div style={{textAlign:'center',padding:'60px 20px',color:'#C8C0B0',background:'#fff',borderRadius:20,border:'1.5px solid #E8E3DA'}}>
+              <div style={{fontSize:40,marginBottom:12}}>◈</div>
+              <p style={{fontSize:15}}>No responses yet{(dateFrom||dateTo)?' in this date range':''}</p>
+            </div>
+          )}
+          {clientResponses.length>0&&<>
+            {Object.keys(byQuestion).filter(qId=>{const q=qInfo(qId);return q?.type==='scale'&&byQuestion[qId].length>=2}).length>0&&(
+              <div style={{background:'#fff',borderRadius:20,padding:24,border:'1.5px solid #E8E3DA',marginBottom:20}}>
+                <div style={{fontSize:11,fontWeight:700,color:'#9B98B8',letterSpacing:1.5,textTransform:'uppercase',marginBottom:16}}>Scale Trends</div>
+                {Object.keys(byQuestion).filter(qId=>qInfo(qId)?.type==='scale').map((qId,idx)=>{
+                  const q=qInfo(qId)
+                  const data=getChartData(qId)
+                  if(data.length<1)return null
+                  const color=scaleColors[idx%scaleColors.length]
+                  const latest=data[data.length-1]?.value
+                  const avg=(data.reduce((s,d)=>s+d.value,0)/data.length).toFixed(1)
+                  return(
+                    <div key={qId} style={{marginBottom:24,paddingBottom:24,borderBottom:'1px solid #E8E4FF'}}>
+                      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10}}>
+                        <p style={{fontSize:13,color:'#1A1A2E',fontWeight:600,margin:0,flex:1,lineHeight:1.4}}>{q?.text?.length>80?q.text.slice(0,80)+'…':q?.text}</p>
+                        <div style={{display:'flex',gap:16,flexShrink:0,marginLeft:12}}>
+                          <div style={{textAlign:'center'}}><div style={{fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:20,color}}>{latest}</div><div style={{fontSize:10,color:'#C8C0B0'}}>Latest</div></div>
+                          <div style={{textAlign:'center'}}><div style={{fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:20,color:'#9B98B8'}}>{avg}</div><div style={{fontSize:10,color:'#C8C0B0'}}>Avg</div></div>
+                        </div>
+                      </div>
+                      <MiniChart data={data} color={color} qId={qId}/>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+            <div style={{background:'#fff',borderRadius:20,padding:24,border:'1.5px solid #E8E3DA'}}>
+              <div style={{fontSize:11,fontWeight:700,color:'#9B98B8',letterSpacing:1.5,textTransform:'uppercase',marginBottom:16}}>All Responses ({clientResponses.length})</div>
+              <div style={{overflowX:'auto'}}>
+                <table style={{width:'100%',borderCollapse:'collapse',fontSize:13}}>
+                  <thead>
+                    <tr style={{borderBottom:'2px solid #E8E4FF'}}>
+                      {['Date','Time','Question','Category','Answer'].map(h=>(
+                        <th key={h} style={{textAlign:'left',padding:'8px 12px',fontSize:11,fontWeight:700,color:'#9B98B8',letterSpacing:.5,whiteSpace:'nowrap'}}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {clientResponses.map((r,i)=>{
+                      const q=qInfo(r.questionId)
+                      return(
+                        <tr key={r.id} style={{borderBottom:'1px solid #E8E4FF',background:i%2===0?'#FAFAF8':'#fff'}}>
+                          <td style={{padding:'10px 12px',color:'#6B6888',whiteSpace:'nowrap'}}>{r.date}</td>
+                          <td style={{padding:'10px 12px',color:'#9B98B8',whiteSpace:'nowrap'}}>{r.ts?new Date(r.ts).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):'-'}</td>
+                          <td style={{padding:'10px 12px',color:'#1A1A2E',maxWidth:280}}><div style={{lineHeight:1.4}}>{q?.text||r.questionId}</div></td>
+                          <td style={{padding:'10px 12px',whiteSpace:'nowrap'}}>{q?.category?<span style={{fontSize:11,color:'#6C63FF',background:'#EDE9FE',borderRadius:20,padding:'2px 8px',fontWeight:600}}>{q.category}</span>:'-'}</td>
+                          <td style={{padding:'10px 12px',fontWeight:600,color:'#1A1A2E',whiteSpace:'nowrap'}}>{r.answer}</td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </>}
+        </div>
+      )}
     </div>
   )
 }
 
-// ── Users View ────────────────────────────────────────────────────────────────
-function UsersView({questions}) {
-  const [users,setUsers]=useState([]); const [schedules,setSchedules]=useState([]); const [loading,setLoading]=useState(true)
-  const [selectedUser,setSelectedUser]=useState(null)
+// ── Clients View ──────────────────────────────────────────────────────────────
+function ClientsView({questions}) {
+  const [users,setUsers]=useState([]);const [schedules,setSchedules]=useState([]);const [loading,setLoading]=useState(true)
+  const [selectedClient,setSelectedClient]=useState(null)
   useEffect(()=>{
     const u1=onSnapshot(collection(db,'users'),s=>{setUsers(s.docs.map(d=>({id:d.id,...d.data()})));setLoading(false)})
     const u2=onSnapshot(collection(db,'schedules'),s=>{setSchedules(s.docs.map(d=>({id:d.id,...d.data()})))})
     return()=>{u1();u2()}
   },[])
 
-  async function deleteUser(u) {
-    if(!window.confirm(`Delete ${u.name}? This cannot be undone.`)) return
+  async function deleteUser(u){
+    if(!window.confirm(`Delete ${u.name}? This cannot be undone.`))return
     await deleteDoc(doc(db,'users',u.id))
   }
 
-  return (
+  if(selectedClient)return<ClientProfileView client={selectedClient} questions={questions} onBack={()=>setSelectedClient(null)}/>
+
+  return(
     <div>
       <div style={{marginBottom:28}}>
-        <h2 style={{fontFamily:"'Inter',sans-serif",fontWeight:800,fontSize:24,color:'#1A1A2E'}}>Users</h2>
-        <p style={{fontSize:13,color:'#9B98B8',marginTop:4}}>{users.length} enrolled client{users.length!==1?'s':''} · Click a user to manage their schedule</p>
+        <h2 style={{fontFamily:"'Inter',sans-serif",fontWeight:800,fontSize:24,color:'#1A1A2E'}}>Clients</h2>
+        <p style={{fontSize:13,color:'#9B98B8',marginTop:4}}>{users.length} enrolled client{users.length!==1?'s':''} · Click a client to view their profile</p>
       </div>
       {loading&&<div style={{display:'flex',justifyContent:'center',padding:40}}><Spin/></div>}
-      {!loading&&users.length===0&&<div style={{textAlign:'center',padding:'60px 20px',color:'#C8C0B0'}}><div style={{fontSize:40,marginBottom:12}}>◎</div><p style={{fontSize:15,fontWeight:500}}>No users yet — send an invite to get started</p></div>}
+      {!loading&&users.length===0&&<div style={{textAlign:'center',padding:'60px 20px',color:'#C8C0B0'}}><div style={{fontSize:40,marginBottom:12}}>◎</div><p style={{fontSize:15,fontWeight:500}}>No clients yet — send an invite to get started</p></div>}
       <div style={{display:'flex',flexDirection:'column',gap:10}}>
         {users.map(u=>{
           const userScheds=schedules.filter(s=>s.userId===u.id||s.userId==='all')
           const activeCount=userScheds.filter(s=>s.active).length
           return(
             <div key={u.id} style={{background:'#fff',borderRadius:18,padding:'18px 22px',border:'1.5px solid #E8E3DA',display:'flex',alignItems:'center',gap:16,transition:'box-shadow .2s',boxShadow:'0 1px 3px rgba(0,0,0,.04)'}}>
-              <div onClick={()=>setSelectedUser(u)} style={{display:'flex',alignItems:'center',gap:16,flex:1,cursor:'pointer',minWidth:0}}>
+              <div onClick={()=>setSelectedClient(u)} style={{display:'flex',alignItems:'center',gap:16,flex:1,cursor:'pointer',minWidth:0}}>
                 <div style={{width:42,height:42,borderRadius:14,background:'#EDE9FE',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:800,fontSize:16,color:'#6C63FF',flexShrink:0}}>{u.name?.split(' ').map(n=>n[0]).join('')||'?'}</div>
                 <div style={{flex:1,minWidth:0}}>
                   <div style={{fontWeight:600,fontSize:15,color:'#1A1A2E'}}>{u.name}</div>
@@ -417,7 +596,7 @@ function UsersView({questions}) {
                 </div>
                 <div style={{textAlign:'right',flexShrink:0}}>
                   <Badge status={u.status||'active'}/>
-                  <div style={{fontSize:11,color:'#9B98B8',marginTop:5}}>{activeCount} active question{activeCount!==1?'s':''}</div>
+                  <div style={{fontSize:11,color:'#9B98B8',marginTop:5}}>{activeCount} active schedule{activeCount!==1?'s':''}</div>
                 </div>
                 <span style={{color:'#C8C0B0',fontSize:20}}>›</span>
               </div>
@@ -426,13 +605,6 @@ function UsersView({questions}) {
           )
         })}
       </div>
-      {selectedUser&&(
-        <UserProfileModal
-          user={selectedUser}
-          questions={questions}
-          onClose={()=>setSelectedUser(null)}
-        />
-      )}
     </div>
   )
 }
@@ -1044,233 +1216,6 @@ function ScheduleView() {
   )
 }
 
-// ── Responses View ────────────────────────────────────────────────────────────
-function ResponsesView({questions}) {
-  const [users,setUsers]       = useState([])
-  const [responses,setResponses] = useState([])
-  const [loading,setLoading]   = useState(true)
-  const [selectedUser,setSelectedUser] = useState(null)
-  const [dateFrom,setDateFrom] = useState('')
-  const [dateTo,setDateTo]     = useState('')
-
-  useEffect(()=>{
-    const u1=onSnapshot(collection(db,'users'),s=>{setUsers(s.docs.map(d=>({id:d.id,...d.data()})))})
-    const u2=onSnapshot(collection(db,'responses'),s=>{setResponses(s.docs.map(d=>({id:d.id,...d.data()})));setLoading(false)})
-    return()=>{u1();u2()}
-  },[])
-
-  function qInfo(id){return questions.find(q=>q.id===id)}
-
-  // Filter responses for selected user + date range
-  const userResponses = selectedUser
-    ? responses.filter(r=>{
-        if(r.userId!==selectedUser.id) return false
-        if(r.answer==='__skipped__') return false
-        if(dateFrom && r.date < dateFrom) return false
-        if(dateTo   && r.date > dateTo)   return false
-        return true
-      }).sort((a,b)=>a.ts>b.ts?-1:1)
-    : []
-
-  // Group by question for chart data (scale questions only)
-  function getChartData(qId) {
-    return userResponses
-      .filter(r=>r.questionId===qId)
-      .map(r=>({date:r.date, value:+r.answer}))
-      .sort((a,b)=>a.date>b.date?1:-1)
-  }
-
-  // Simple SVG line chart
-  function MiniChart({data, color='#6C63FF', q}) {
-    if(data.length < 2) return <div style={{fontSize:12,color:'#C8C0B0',padding:'8px 0'}}>Not enough data points yet.</div>
-    const W=420, H=80, PX=8, PY=10
-    const vals = data.map(d=>d.value)
-    const min = Math.min(...vals), max = Math.max(...vals)
-    const range = max-min || 1
-    const xs = data.map((_,i)=>PX+(i/(data.length-1))*(W-PX*2))
-    const ys = data.map(d=>PY+((max-d.value)/range)*(H-PY*2))
-    const path = xs.map((x,i)=>`${i===0?'M':'L'}${x},${ys[i]}`).join(' ')
-    const area = path+` L${xs[xs.length-1]},${H-PY} L${xs[0]},${H-PY} Z`
-    return(
-      <div>
-        <svg viewBox={`0 0 ${W} ${H}`} style={{width:'100%',height:80}}>
-          <defs>
-            <linearGradient id={`cg-${qId}`} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={color} stopOpacity=".25"/>
-              <stop offset="100%" stopColor={color} stopOpacity="0"/>
-            </linearGradient>
-          </defs>
-          <path d={area} fill={`url(#cg-${qId})`}/>
-          <path d={path} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-          {xs.map((x,i)=>(
-            <g key={i}>
-              <circle cx={x} cy={ys[i]} r="3.5" fill={color} stroke="#fff" strokeWidth="1.5"/>
-              <title>{data[i].date}: {data[i].value}</title>
-            </g>
-          ))}
-        </svg>
-        <div style={{display:'flex',justifyContent:'space-between',marginTop:2}}>
-          <span style={{fontSize:10,color:'#C8C0B0'}}>{data[0]?.date}</span>
-          <span style={{fontSize:10,color:'#C8C0B0'}}>{data[data.length-1]?.date}</span>
-        </div>
-      </div>
-    )
-  }
-
-  // CSV export
-  function exportCSV() {
-    if(!selectedUser||!userResponses.length) return
-    const rows = [['Date','Time','Question','Category','Type','Answer']]
-    userResponses.forEach(r=>{
-      const q=qInfo(r.questionId)
-      rows.push([
-        r.date,
-        r.ts ? new Date(r.ts).toLocaleTimeString() : '',
-        q?.text||r.questionId,
-        q?.category||'',
-        q?.type||'',
-        r.answer
-      ])
-    })
-    const csv = rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n')
-    const blob = new Blob([csv],{type:'text/csv'})
-    const url  = URL.createObjectURL(blob)
-    const a    = document.createElement('a')
-    a.href = url
-    a.download = `${selectedUser.name.replace(/ /g,'_')}_responses_${today()}.csv`
-    a.click()
-    URL.revokeObjectURL(url)
-  }
-
-  // Group userResponses by question
-  const byQuestion = {}
-  userResponses.forEach(r=>{
-    if(!byQuestion[r.questionId]) byQuestion[r.questionId]=[]
-    byQuestion[r.questionId].push(r)
-  })
-
-  const scaleColors = ['#6C63FF','#6ECB8A','#F6C549','#F2857A','#7BB8F5','#B48FE8']
-
-  return (
-    <div>
-      {/* Header */}
-      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:28}}>
-        <div>
-          <h2 style={{fontFamily:"'Inter',sans-serif",fontWeight:800,fontSize:24,color:'#1A1A2E'}}>Responses</h2>
-          <p style={{fontSize:13,color:'#9B98B8',marginTop:4}}>Click a client to view their response history</p>
-        </div>
-        {selectedUser&&userResponses.length>0&&(
-          <button onClick={exportCSV} style={{background:'#1A6644',color:'#fff',border:'none',borderRadius:14,padding:'11px 20px',fontSize:14,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',gap:8}}>
-            ↓ Export CSV
-          </button>
-        )}
-      </div>
-
-      {/* User list */}
-      {!selectedUser&&<>
-        {loading&&<div style={{display:'flex',justifyContent:'center',padding:40}}><Spin/></div>}
-        {!loading&&users.length===0&&<div style={{textAlign:'center',padding:'60px 20px',color:'#C8C0B0'}}><div style={{fontSize:40,marginBottom:12}}>◎</div><p style={{fontSize:15}}>No users yet</p></div>}
-        <div style={{display:'flex',flexDirection:'column',gap:10}}>
-          {users.map(u=>{
-            const count=responses.filter(r=>r.userId===u.id&&r.answer!=='__skipped__').length
-            const last=responses.filter(r=>r.userId===u.id).sort((a,b)=>a.ts>b.ts?-1:1)[0]
-            return(
-              <div key={u.id} onClick={()=>setSelectedUser(u)} style={{background:'#fff',borderRadius:18,padding:'18px 22px',border:'1.5px solid #E8E3DA',display:'flex',alignItems:'center',gap:16,cursor:'pointer'}}>
-                <div style={{width:42,height:42,borderRadius:14,background:'#EDE9FE',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:800,fontSize:16,color:'#6C63FF',flexShrink:0}}>{u.name?.split(' ').map(n=>n[0]).join('')||'?'}</div>
-                <div style={{flex:1}}>
-                  <div style={{fontWeight:600,fontSize:15,color:'#1A1A2E'}}>{u.name}</div>
-                  <div style={{fontSize:12,color:'#9B98B8',marginTop:2}}>{count} response{count!==1?'s':''}{last?` · Last: ${last.date}`:' · No responses yet'}</div>
-                </div>
-                <span style={{color:'#C8C0B0',fontSize:20}}>›</span>
-              </div>
-            )
-          })}
-        </div>
-      </>}
-
-      {/* User detail view */}
-      {selectedUser&&<>
-        {/* Back + filters */}
-        <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:20,flexWrap:'wrap'}}>
-          <button onClick={()=>{setSelectedUser(null);setDateFrom('');setDateTo('')}} style={{background:'none',border:'1.5px solid #E5E0D8',borderRadius:10,padding:'8px 14px',fontSize:13,color:'#6B6888',cursor:'pointer',fontWeight:600}}>← All Users</button>
-          <div style={{display:'flex',alignItems:'center',gap:8,background:'#fff',borderRadius:12,padding:'8px 14px',border:'1.5px solid #E5E0D8'}}>
-            <div style={{width:36,height:36,borderRadius:10,background:'#EDE9FE',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:800,fontSize:14,color:'#6C63FF'}}>{selectedUser.name?.split(' ').map(n=>n[0]).join('')||'?'}</div>
-            <div><div style={{fontWeight:600,fontSize:14,color:'#1A1A2E'}}>{selectedUser.name}</div><div style={{fontSize:11,color:'#9B98B8'}}>{userResponses.length} response{userResponses.length!==1?'s':''}</div></div>
-          </div>
-          <div style={{display:'flex',alignItems:'center',gap:8,marginLeft:'auto'}}>
-            <div style={{fontSize:12,color:'#9B98B8'}}>From</div>
-            <input type="date" value={dateFrom} onChange={e=>setDateFrom(e.target.value)} style={{border:'1.5px solid #E5E0D8',borderRadius:8,padding:'6px 10px',fontSize:12,color:'#1A1A2E',background:'#fff'}}/>
-            <div style={{fontSize:12,color:'#9B98B8'}}>To</div>
-            <input type="date" value={dateTo} onChange={e=>setDateTo(e.target.value)} style={{border:'1.5px solid #E5E0D8',borderRadius:8,padding:'6px 10px',fontSize:12,color:'#1A1A2E',background:'#fff'}}/>
-          </div>
-        </div>
-
-        {userResponses.length===0&&<div style={{textAlign:'center',padding:'60px 20px',color:'#C8C0B0'}}><div style={{fontSize:40,marginBottom:12}}>◈</div><p style={{fontSize:15}}>No responses yet{(dateFrom||dateTo)?' in this date range':''}</p></div>}
-
-        {userResponses.length>0&&<>
-          {/* Charts — scale questions only */}
-          {Object.keys(byQuestion).filter(qId=>{
-            const q=qInfo(qId); return q?.type==='scale' && byQuestion[qId].length>=2
-          }).length>0&&(
-            <div style={{background:'#fff',borderRadius:20,padding:24,border:'1.5px solid #E8E3DA',marginBottom:20}}>
-              <div style={{fontSize:11,fontWeight:700,color:'#9B98B8',letterSpacing:1.5,textTransform:'uppercase',marginBottom:16}}>Scale Trends</div>
-              {Object.keys(byQuestion).filter(qId=>qInfo(qId)?.type==='scale').map((qId,idx)=>{
-                const q=qInfo(qId)
-                const data=getChartData(qId)
-                if(data.length<1)return null
-                const color=scaleColors[idx%scaleColors.length]
-                const latest=data[data.length-1]?.value
-                const avg=(data.reduce((s,d)=>s+d.value,0)/data.length).toFixed(1)
-                return(
-                  <div key={qId} style={{marginBottom:24,paddingBottom:24,borderBottom:'1px solid #E8E4FF'}}>
-                    <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10}}>
-                      <p style={{fontSize:13,color:'#1A1A2E',fontWeight:600,margin:0,flex:1,lineHeight:1.4}}>{q?.text?.length>80?q.text.slice(0,80)+'…':q?.text}</p>
-                      <div style={{display:'flex',gap:16,flexShrink:0,marginLeft:12}}>
-                        <div style={{textAlign:'center'}}><div style={{fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:20,color}}>{latest}</div><div style={{fontSize:10,color:'#C8C0B0'}}>Latest</div></div>
-                        <div style={{textAlign:'center'}}><div style={{fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:20,color:'#9B98B8'}}>{avg}</div><div style={{fontSize:10,color:'#C8C0B0'}}>Avg</div></div>
-                      </div>
-                    </div>
-                    <MiniChart data={data} color={color} q={q} qId={qId}/>
-                  </div>
-                )
-              })}
-            </div>
-          )}
-
-          {/* Full response table */}
-          <div style={{background:'#fff',borderRadius:20,padding:24,border:'1.5px solid #E8E3DA'}}>
-            <div style={{fontSize:11,fontWeight:700,color:'#9B98B8',letterSpacing:1.5,textTransform:'uppercase',marginBottom:16}}>All Responses ({userResponses.length})</div>
-            <div style={{overflowX:'auto'}}>
-              <table style={{width:'100%',borderCollapse:'collapse',fontSize:13}}>
-                <thead>
-                  <tr style={{borderBottom:'2px solid #E8E4FF'}}>
-                    {['Date','Time','Question','Category','Answer'].map(h=>(
-                      <th key={h} style={{textAlign:'left',padding:'8px 12px',fontSize:11,fontWeight:700,color:'#9B98B8',letterSpacing:.5,whiteSpace:'nowrap'}}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {userResponses.map((r,i)=>{
-                    const q=qInfo(r.questionId)
-                    return(
-                      <tr key={r.id} style={{borderBottom:'1px solid #E8E4FF',background:i%2===0?'#FAFAF8':'#fff'}}>
-                        <td style={{padding:'10px 12px',color:'#6B6888',whiteSpace:'nowrap'}}>{r.date}</td>
-                        <td style={{padding:'10px 12px',color:'#9B98B8',whiteSpace:'nowrap'}}>{r.ts?new Date(r.ts).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):'-'}</td>
-                        <td style={{padding:'10px 12px',color:'#1A1A2E',maxWidth:280}}><div style={{lineHeight:1.4}}>{q?.text||r.questionId}</div></td>
-                        <td style={{padding:'10px 12px',whiteSpace:'nowrap'}}>{q?.category?<span style={{fontSize:11,color:'#6C63FF',background:'#EDE9FE',borderRadius:20,padding:'2px 8px',fontWeight:600}}>{q.category}</span>:'-'}</td>
-                        <td style={{padding:'10px 12px',fontWeight:600,color:'#1A1A2E',whiteSpace:'nowrap'}}>{r.answer}</td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </>}
-      </>}
-    </div>
-  )
-}
 
 // ── Root ──────────────────────────────────────────────────────────────────────
 export default function AdminApp() {
@@ -1284,7 +1229,7 @@ export default function AdminApp() {
     return unsub
   },[])
 
-  // Load questions globally so UsersView shares them
+  // Load questions globally so ClientsView shares them
   useEffect(()=>{
     if(!authed)return
     const unsub=onSnapshot(collection(db,'questions'),snap=>{setQuestions(snap.docs.map(d=>({id:d.id,...d.data()})))})
@@ -1308,8 +1253,7 @@ export default function AdminApp() {
         <div style={{padding:isMobile?'16px':'0'}}>
           {view==='questions'&&<QuestionsView/>}
           {view==='schedule'&&<ScheduleView/>}
-          {view==='users'&&<UsersView questions={questions}/>}
-          {view==='responses'&&<ResponsesView questions={questions}/>}
+          {view==='clients'&&<ClientsView questions={questions}/>}
           {view==='invites'&&<InvitesView/>}
         </div>
       </div>
