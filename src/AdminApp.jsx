@@ -498,10 +498,13 @@ function InvitesView() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: recipientName, email: recipientEmail, code })
       })
-      const data = await res.json()
+      const text = await res.text()
+      console.log('send-invite raw response:', res.status, text)
+      let data = null
+      try { data = JSON.parse(text) } catch { data = null }
       if(!res.ok) {
-        const msg = data?.error || JSON.stringify(data)
-        console.error('send-invite error:', res.status, data)
+        const msg = data?.error || text || `HTTP ${res.status}`
+        console.error('send-invite error:', res.status, data ?? text)
         setEmailSent(`HTTP ${res.status}: ${msg}`)
       } else {
         console.log('Email sent:', data)
