@@ -222,6 +222,12 @@ function ClientProfileView({client, questions, onBack}) {
 
   function qInfo(id){return questions.find(q=>q.id===id)}
 
+  async function deleteClient(){
+    if(!window.confirm(`Permanently delete ${client.name}? This cannot be undone.`))return
+    await deleteDoc(doc(db,'users',client.id))
+    onBack()
+  }
+
   function tSummary(t){
     if(!t)return''
     if(t.type==='custom_interval')return`Every ${t.intervalHours}h from ${(t.times||['08:00'])[0]}`
@@ -417,6 +423,9 @@ function ClientProfileView({client, questions, onBack}) {
               <Badge status={client.status||'active'}/>
             </div>
           </div>
+          <div style={{marginTop:24,paddingTop:24,borderTop:'1px solid #F0EDE8'}}>
+            <button onClick={deleteClient} style={{width:'100%',padding:11,borderRadius:12,border:'1.5px solid #FEE2E2',background:'#fff',color:'#EF4444',fontSize:14,fontWeight:600,cursor:'pointer'}}>Delete Client</button>
+          </div>
         </div>
       )}
 
@@ -554,8 +563,8 @@ function ClientProfileView({client, questions, onBack}) {
                         <button onClick={()=>toggleAssignment(group)} disabled={!!toggling||!!removing} style={{padding:'6px 12px',borderRadius:8,border:'1.5px solid #E5E0D8',background:'#fff',color:'#6B6888',fontSize:11,fontWeight:600,cursor:'pointer',display:'flex',alignItems:'center',gap:4}}>
                           {isToggling?<Spin/>:(meta.active?'Pause':'Resume')}
                         </button>
-                        <button onClick={()=>removeAssignment(group)} disabled={!!toggling||!!removing} style={{padding:'6px 10px',borderRadius:8,border:'1.5px solid #FEE2E2',background:'#fff',color:'#EF4444',fontSize:11,cursor:'pointer',display:'flex',alignItems:'center',gap:4}}>
-                          {isRemoving?<Spin/>:'✕'}
+                        <button onClick={()=>removeAssignment(group)} disabled={!!toggling||!!removing} style={{padding:'6px 10px',borderRadius:8,border:'1.5px solid #FEE2E2',background:'#fff',color:'#EF4444',fontSize:11,fontWeight:600,cursor:'pointer',display:'flex',alignItems:'center',gap:4}}>
+                          {isRemoving?<Spin/>:'Remove'}
                         </button>
                       </div>
                     </div>
@@ -682,11 +691,6 @@ function ClientsView({questions}) {
     return()=>{u1();u2()}
   },[])
 
-  async function deleteUser(u){
-    if(!window.confirm(`Delete ${u.name}? This cannot be undone.`))return
-    await deleteDoc(doc(db,'users',u.id))
-  }
-
   if(selectedClient)return<ClientProfileView client={selectedClient} questions={questions} onBack={()=>setSelectedClient(null)}/>
 
   return(
@@ -716,7 +720,6 @@ function ClientsView({questions}) {
                 </div>
                 <span style={{color:'#C8C0B0',fontSize:20}}>›</span>
               </div>
-              <button onClick={e=>{e.stopPropagation();deleteUser(u)}} style={{padding:'6px 10px',borderRadius:8,border:'1.5px solid #FEE2E2',background:'#fff',color:'#EF4444',fontSize:12,cursor:'pointer',flexShrink:0}}>✕</button>
             </div>
           )
         })})()}
@@ -733,7 +736,10 @@ function TeamView() {
   const [showForm,setShowForm]=useState(false)
   const [formName,setFormName]=useState(''); const [formEmail,setFormEmail]=useState(''); const [formRole,setFormRole]=useState('Admin')
   const [creating,setCreating]=useState(false); const [createErr,setCreateErr]=useState(''); const [createDone,setCreateDone]=useState(null)
-  const [updatingRole,setUpdatingRole]=useState(null)
+  const [editingMember,setEditingMember]=useState(null)
+  const [editForm,setEditForm]=useState({role:'Admin',status:'active'})
+  const [savingEdit,setSavingEdit]=useState(false)
+  const [deleting,setDeleting]=useState(null)
   const seededRef=useRef(false)
 
   useEffect(()=>{
@@ -752,15 +758,20 @@ function TeamView() {
     return unsub
   },[])
 
-  async function changeRole(member,newRole){
-    setUpdatingRole(member.id)
-    await updateDoc(doc(db,'adminUsers',member.id),{role:newRole})
-    setUpdatingRole(null)
+  async function saveEdit(){
+    if(!editingMember)return
+    setSavingEdit(true)
+    await updateDoc(doc(db,'adminUsers',editingMember.id),{role:editForm.role,status:editForm.status})
+    setSavingEdit(false)
+    setEditingMember(null)
   }
 
-  async function deleteMember(member){
-    if(!window.confirm(`Remove ${member.name} from the team?`))return
+  async function removeMember(member){
+    if(!window.confirm(`Remove ${member.name} from the team? This cannot be undone.`))return
+    setDeleting(member.id)
     await deleteDoc(doc(db,'adminUsers',member.id))
+    setDeleting(null)
+    setEditingMember(null)
   }
 
   async function createMember(){
@@ -842,25 +853,48 @@ function TeamView() {
       {loading&&<div style={{display:'flex',justifyContent:'center',padding:40}}><Spin/></div>}
       <div style={{display:'flex',flexDirection:'column',gap:10}}>
         {members.map(m=>(
-          <div key={m.id} style={{background:'#fff',borderRadius:18,padding:'18px 22px',border:'1.5px solid #E8E3DA',display:'flex',alignItems:'center',gap:16,boxShadow:'0 1px 3px rgba(0,0,0,.04)'}}>
-            <div style={{width:42,height:42,borderRadius:14,background:'#EDE9FE',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:800,fontSize:16,color:'#6C63FF',flexShrink:0}}>
-              {m.name?.split(' ').map(n=>n[0]).join('').slice(0,2)||'?'}
-            </div>
-            <div style={{flex:1,minWidth:0}}>
-              <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap',marginBottom:4}}>
-                <span style={{fontWeight:600,fontSize:15,color:'#1A1A2E'}}>{m.name}</span>
-                <RoleBadge role={m.role}/>
-                <Badge status={m.status||'active'}/>
+          editingMember?.id===m.id?(
+            <div key={m.id} style={{background:'#fff',borderRadius:18,padding:22,border:'1.5px solid #6C63FF',boxShadow:'0 0 0 1px rgba(108,99,255,.12)',animation:'fadeUp .2s ease'}}>
+              <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:20}}>
+                <div style={{width:42,height:42,borderRadius:14,background:'#EDE9FE',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:800,fontSize:16,color:'#6C63FF',flexShrink:0}}>{m.name?.split(' ').map(n=>n[0]).join('').slice(0,2)||'?'}</div>
+                <div style={{flex:1}}><div style={{fontWeight:700,fontSize:15,color:'#1A1A2E'}}>{m.name}</div><div style={{fontSize:12,color:'#9B98B8'}}>{m.email}</div></div>
+                <button onClick={()=>setEditingMember(null)} style={{background:'none',border:'1.5px solid #E5E0D8',borderRadius:8,padding:'5px 12px',fontSize:12,color:'#6B6888',cursor:'pointer'}}>Cancel</button>
               </div>
-              <div style={{fontSize:12,color:'#9B98B8'}}>{m.email}{m.dateAdded&&<> · Added {m.dateAdded}</>}</div>
+              <Field label="Role">
+                <div style={{display:'flex',gap:8}}>
+                  {ROLES.map(r=><button key={r} onClick={()=>setEditForm(f=>({...f,role:r}))} style={{flex:1,padding:'9px 6px',borderRadius:10,border:`2px solid ${editForm.role===r?'#6C63FF':'#E5E0D8'}`,background:editForm.role===r?'#EDE9FE':'#FAFAF8',color:editForm.role===r?'#6C63FF':'#9B98B8',fontSize:12,fontWeight:600,cursor:'pointer'}}>{r}</button>)}
+                </div>
+              </Field>
+              <Field label="Status">
+                <div style={{display:'flex',gap:8}}>
+                  {['active','inactive'].map(s=><button key={s} onClick={()=>setEditForm(f=>({...f,status:s}))} style={{flex:1,padding:'9px 6px',borderRadius:10,border:`2px solid ${editForm.status===s?'#1A1A2E':'#E5E0D8'}`,background:editForm.status===s?'#1A1A2E':'#FAFAF8',color:editForm.status===s?'#E8E4FF':'#9B98B8',fontSize:12,fontWeight:600,cursor:'pointer',textTransform:'capitalize'}}>{s}</button>)}
+                </div>
+              </Field>
+              <button onClick={saveEdit} disabled={savingEdit} style={{width:'100%',padding:11,borderRadius:12,border:'none',background:'#1A1A2E',color:'#E8E4FF',fontSize:14,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>
+                {savingEdit?<Spin/>:'Save Changes'}
+              </button>
+              <div style={{marginTop:16,paddingTop:16,borderTop:'1px solid #F0EDE8'}}>
+                <button onClick={()=>removeMember(m)} disabled={deleting===m.id} style={{width:'100%',padding:11,borderRadius:12,border:'1.5px solid #FEE2E2',background:'#fff',color:'#EF4444',fontSize:14,fontWeight:600,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>
+                  {deleting===m.id?<Spin/>:'Remove Member'}
+                </button>
+              </div>
             </div>
-            <div style={{display:'flex',alignItems:'center',gap:8,flexShrink:0}}>
-              <select value={m.role} onChange={e=>changeRole(m,e.target.value)} disabled={!!updatingRole} style={{...inp,width:'auto',padding:'6px 10px',fontSize:12,borderRadius:8,color:'#6B6888'}}>
-                {ROLES.map(r=><option key={r} value={r}>{r}</option>)}
-              </select>
-              <button onClick={()=>deleteMember(m)} style={{padding:'6px 10px',borderRadius:8,border:'1.5px solid #FEE2E2',background:'#fff',color:'#EF4444',fontSize:12,cursor:'pointer',flexShrink:0}}>✕</button>
+          ):(
+            <div key={m.id} style={{background:'#fff',borderRadius:18,padding:'18px 22px',border:'1.5px solid #E8E3DA',display:'flex',alignItems:'center',gap:16,boxShadow:'0 1px 3px rgba(0,0,0,.04)'}}>
+              <div style={{width:42,height:42,borderRadius:14,background:'#EDE9FE',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:800,fontSize:16,color:'#6C63FF',flexShrink:0}}>
+                {m.name?.split(' ').map(n=>n[0]).join('').slice(0,2)||'?'}
+              </div>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap',marginBottom:4}}>
+                  <span style={{fontWeight:600,fontSize:15,color:'#1A1A2E'}}>{m.name}</span>
+                  <RoleBadge role={m.role}/>
+                  <Badge status={m.status||'active'}/>
+                </div>
+                <div style={{fontSize:12,color:'#9B98B8'}}>{m.email}{m.dateAdded&&<> · Added {m.dateAdded}</>}</div>
+              </div>
+              <button onClick={()=>{setEditingMember(m);setEditForm({role:m.role||'Admin',status:m.status||'active'})}} style={{padding:'6px 14px',borderRadius:8,border:'1.5px solid #E5E0D8',background:'#fff',color:'#6B6888',fontSize:12,fontWeight:600,cursor:'pointer',flexShrink:0}}>Edit</button>
             </div>
-          </div>
+          )
         ))}
       </div>
     </div>
@@ -872,6 +906,9 @@ function InvitesView() {
   const [invites,setInvites]=useState([]); const [loading,setLoading]=useState(true); const [copied,setCopied]=useState(null)
   const [name,setName]=useState(''); const [email,setEmail]=useState(''); const [creating,setCreating]=useState(false); const [done,setDone]=useState(null); const [showForm,setShowForm]=useState(false); const [emailSent,setEmailSent]=useState(null)
   const [search,setSearch]=useState('')
+  const [menuOpen,setMenuOpen]=useState(null)
+  const [resending,setResending]=useState(null)
+  const [resendResult,setResendResult]=useState({})
 
   useEffect(()=>{ const unsub=onSnapshot(collection(db,'invites'),snap=>{setInvites(snap.docs.map(d=>({id:d.id,...d.data()}))); setLoading(false)}); return unsub },[])
 
@@ -913,6 +950,17 @@ function InvitesView() {
   async function deleteInvite(inv) {
     if(!window.confirm(`Delete invite for ${inv.name}? This cannot be undone.`)) return
     await deleteDoc(doc(db,'invites',inv.id))
+    setMenuOpen(null)
+  }
+
+  async function resendEmail(inv){
+    setResending(inv.id)
+    try{
+      const res=await fetch('/api/send-invite',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:inv.name,email:inv.email,code:inv.code})})
+      setResendResult(s=>({...s,[inv.id]:res.ok?'sent':'error'}))
+      setTimeout(()=>setResendResult(s=>({...s,[inv.id]:null})),3000)
+    }catch(e){setResendResult(s=>({...s,[inv.id]:'error'}))}
+    setResending(null)
   }
 
   function copy(code){navigator.clipboard?.writeText(code); setCopied(code); setTimeout(()=>setCopied(null),2000)}
@@ -961,24 +1009,41 @@ function InvitesView() {
       {loading&&<div style={{display:'flex',justifyContent:'center',padding:40}}><Spin/></div>}
       {!loading&&pending.length>0&&<><div style={{fontSize:11,fontWeight:700,color:'#9B98B8',letterSpacing:1.5,textTransform:'uppercase',marginBottom:12}}>Pending</div>
         {pending.map(inv=>(
-          <div key={inv.id} style={{background:'#fff',borderRadius:16,padding:'16px 20px',border:'1.5px solid #E8E3DA',marginBottom:10,display:'flex',alignItems:'center',gap:14}}>
-            <div style={{width:38,height:38,borderRadius:10,background:'#DBEAFE',display:'flex',alignItems:'center',justifyContent:'center',fontSize:16,flexShrink:0}}>✉</div>
-            <div style={{flex:1}}><div style={{fontWeight:600,fontSize:14,color:'#1A1A2E'}}>{inv.name}</div><div style={{fontSize:12,color:'#9B98B8',marginTop:2}}>{inv.email} · {inv.createdAt}</div></div>
-            <div style={{display:'flex',alignItems:'center',gap:8,flexShrink:0}}>
-              <div style={{background:'#E8E4FF',borderRadius:8,padding:'5px 10px',fontWeight:700,fontSize:12,color:'#6B6888',letterSpacing:1.5}}>{inv.code}</div>
-              <button onClick={()=>copy(inv.code)} style={{padding:'5px 10px',borderRadius:8,border:'1.5px solid #E5E0D8',background:copied===inv.code?'#D1FAE5':'#fff',color:copied===inv.code?'#1A6644':'#6B6888',fontSize:11,fontWeight:600,cursor:'pointer'}}>{copied===inv.code?'✓':'Copy'}</button>
-              <button onClick={()=>deleteInvite(inv)} style={{padding:'5px 8px',borderRadius:8,border:'1.5px solid #FEE2E2',background:'#fff',color:'#EF4444',fontSize:11,cursor:'pointer'}}>✕</button>
+          <div key={inv.id} style={{background:'#fff',borderRadius:16,border:'1.5px solid #E8E3DA',marginBottom:10,overflow:'hidden'}}>
+            <div style={{padding:'16px 20px',display:'flex',alignItems:'center',gap:14}}>
+              <div style={{width:38,height:38,borderRadius:10,background:'#DBEAFE',display:'flex',alignItems:'center',justifyContent:'center',fontSize:16,flexShrink:0}}>✉</div>
+              <div style={{flex:1}}><div style={{fontWeight:600,fontSize:14,color:'#1A1A2E'}}>{inv.name}</div><div style={{fontSize:12,color:'#9B98B8',marginTop:2}}>{inv.email} · {inv.createdAt}</div></div>
+              <div style={{display:'flex',alignItems:'center',gap:8,flexShrink:0}}>
+                <div style={{background:'#E8E4FF',borderRadius:8,padding:'5px 10px',fontWeight:700,fontSize:12,color:'#6B6888',letterSpacing:1.5}}>{inv.code}</div>
+                <button onClick={()=>setMenuOpen(menuOpen===inv.id?null:inv.id)} style={{padding:'5px 10px',borderRadius:8,border:'1.5px solid #E5E0D8',background:menuOpen===inv.id?'#F4F1EC':'#fff',color:'#6B6888',fontSize:16,fontWeight:700,cursor:'pointer',lineHeight:1}}>⋯</button>
+              </div>
             </div>
+            {menuOpen===inv.id&&(
+              <div style={{padding:'10px 16px 14px',borderTop:'1px solid #F0EDE8',background:'#FAFAF8',display:'flex',gap:8,flexWrap:'wrap',alignItems:'center'}}>
+                <button onClick={()=>{copy(inv.code);setMenuOpen(null)}} style={{padding:'6px 14px',borderRadius:8,border:'1.5px solid #E5E0D8',background:copied===inv.code?'#D1FAE5':'#fff',color:copied===inv.code?'#1A6644':'#6B6888',fontSize:12,fontWeight:600,cursor:'pointer'}}>{copied===inv.code?'✓ Copied':'Copy Code'}</button>
+                <button onClick={()=>resendEmail(inv)} disabled={resending===inv.id} style={{padding:'6px 14px',borderRadius:8,border:'1.5px solid #E5E0D8',background:resendResult[inv.id]==='sent'?'#D1FAE5':'#fff',color:resendResult[inv.id]==='sent'?'#1A6644':'#6B6888',fontSize:12,fontWeight:600,cursor:'pointer',display:'flex',alignItems:'center',gap:4}}>
+                  {resending===inv.id?<><Spin/> Sending…</>:resendResult[inv.id]==='sent'?'✓ Email Sent':'Resend Email'}
+                </button>
+                <button onClick={()=>deleteInvite(inv)} style={{padding:'6px 14px',borderRadius:8,border:'1.5px solid #FEE2E2',background:'#fff',color:'#EF4444',fontSize:12,fontWeight:600,cursor:'pointer',marginLeft:'auto'}}>Delete</button>
+              </div>
+            )}
           </div>
         ))}
       </>}
       {!loading&&used.length>0&&<div style={{marginTop:pending.length?20:0}}><div style={{fontSize:11,fontWeight:700,color:'#9B98B8',letterSpacing:1.5,textTransform:'uppercase',marginBottom:12}}>Accepted</div>
         {used.map(inv=>(
-          <div key={inv.id} style={{background:'#fff',borderRadius:16,padding:'14px 20px',border:'1.5px solid #E8E3DA',marginBottom:10,display:'flex',alignItems:'center',gap:14,opacity:.65}}>
-            <div style={{width:38,height:38,borderRadius:10,background:'#D1FAE5',display:'flex',alignItems:'center',justifyContent:'center',fontSize:16,flexShrink:0}}>✓</div>
-            <div style={{flex:1}}><div style={{fontWeight:600,fontSize:14,color:'#1A1A2E'}}>{inv.name}</div><div style={{fontSize:12,color:'#9B98B8',marginTop:2}}>{inv.email}</div></div>
-            <Badge status="active"/>
-            <button onClick={()=>deleteInvite(inv)} style={{padding:'5px 8px',borderRadius:8,border:'1.5px solid #FEE2E2',background:'#fff',color:'#EF4444',fontSize:11,cursor:'pointer'}}>✕</button>
+          <div key={inv.id} style={{background:'#fff',borderRadius:16,border:'1.5px solid #E8E3DA',marginBottom:10,overflow:'hidden',opacity:.65}}>
+            <div style={{padding:'14px 20px',display:'flex',alignItems:'center',gap:14}}>
+              <div style={{width:38,height:38,borderRadius:10,background:'#D1FAE5',display:'flex',alignItems:'center',justifyContent:'center',fontSize:16,flexShrink:0}}>✓</div>
+              <div style={{flex:1}}><div style={{fontWeight:600,fontSize:14,color:'#1A1A2E'}}>{inv.name}</div><div style={{fontSize:12,color:'#9B98B8',marginTop:2}}>{inv.email}</div></div>
+              <Badge status="active"/>
+              <button onClick={()=>setMenuOpen(menuOpen===inv.id?null:inv.id)} style={{padding:'5px 10px',borderRadius:8,border:'1.5px solid #E5E0D8',background:menuOpen===inv.id?'#F4F1EC':'#fff',color:'#6B6888',fontSize:16,fontWeight:700,cursor:'pointer',lineHeight:1}}>⋯</button>
+            </div>
+            {menuOpen===inv.id&&(
+              <div style={{padding:'10px 16px 14px',borderTop:'1px solid #F0EDE8',background:'#FAFAF8',display:'flex',gap:8}}>
+                <button onClick={()=>deleteInvite(inv)} style={{padding:'6px 14px',borderRadius:8,border:'1.5px solid #FEE2E2',background:'#fff',color:'#EF4444',fontSize:12,fontWeight:600,cursor:'pointer'}}>Delete</button>
+              </div>
+            )}
           </div>
         ))}
       </div>}
@@ -1082,6 +1147,7 @@ function QuestionsView() {
         <button onClick={()=>setShowForm(false)} style={{flex:1,padding:11,borderRadius:12,border:'1.5px solid #E5E0D8',background:'#fff',color:'#9B98B8',fontSize:14,fontWeight:600,cursor:'pointer'}}>Cancel</button>
         <button onClick={save} disabled={!form.text.trim()||saving} style={{flex:2,padding:11,borderRadius:12,border:'none',background:form.text.trim()?'#1A1A2E':'#E5E0D8',color:form.text.trim()?'#E8E4FF':'#9B98B8',fontSize:14,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>{saving?<Spin/>:(editing?'Save Changes':'Create Question')}</button>
       </div>
+      {editing&&<div style={{marginTop:16,paddingTop:16,borderTop:'1px solid #F0EDE8'}}><button onClick={async()=>{if(window.confirm('Delete this question? This cannot be undone.')){await del(editing.id);setShowForm(false)}}} style={{width:'100%',padding:11,borderRadius:12,border:'1.5px solid #FEE2E2',background:'#fff',color:'#EF4444',fontSize:14,fontWeight:600,cursor:'pointer'}}>Delete Question</button></div>}
     </div>
   )
 
@@ -1261,7 +1327,6 @@ function QuestionsView() {
               </div>
               <div style={{display:'flex',gap:6,flexShrink:0}}>
                 <button onClick={()=>openEdit(q)} style={{padding:'7px 14px',borderRadius:10,border:'1.5px solid #E5E0D8',background:'#fff',color:'#6B6888',fontSize:12,fontWeight:600,cursor:'pointer'}}>Edit</button>
-                <button onClick={()=>del(q.id)} style={{padding:'7px 12px',borderRadius:10,border:'1.5px solid #FEE2E2',background:'#fff',color:'#EF4444',fontSize:12,fontWeight:600,cursor:'pointer'}}>✕</button>
               </div>
             </div>
           </div>
@@ -1431,6 +1496,7 @@ function ScheduleView() {
           {saving?<Spin/>:editing?'Save Changes':'Create Template'}
         </button>
       </div>
+      {editing&&<div style={{marginTop:16,paddingTop:16,borderTop:'1px solid #F0EDE8'}}><button onClick={async()=>{if(window.confirm(`Delete "${editing.name}"? This cannot be undone.`)){await del(editing);setShowForm(false);setEditing(null)}}} style={{width:'100%',padding:11,borderRadius:12,border:'1.5px solid #FEE2E2',background:'#fff',color:'#EF4444',fontSize:14,fontWeight:600,cursor:'pointer'}}>Delete Template</button></div>}
     </div>
   )
 
@@ -1471,7 +1537,6 @@ function ScheduleView() {
               <div style={{display:'flex',gap:6,flexShrink:0,flexWrap:'wrap',justifyContent:'flex-end'}}>
                 {!t.isDefault&&<button onClick={()=>setDefault(t)} style={{padding:'6px 12px',borderRadius:8,border:'1.5px solid #E5E0D8',background:'#fff',color:'#6B6888',fontSize:11,fontWeight:600,cursor:'pointer',whiteSpace:'nowrap'}}>Set Default</button>}
                 <button onClick={()=>openEdit(t)} style={{padding:'6px 12px',borderRadius:8,border:'1.5px solid #E5E0D8',background:'#fff',color:'#6B6888',fontSize:11,fontWeight:600,cursor:'pointer'}}>Edit</button>
-                <button onClick={()=>del(t)} style={{padding:'6px 10px',borderRadius:8,border:'1.5px solid #FEE2E2',background:'#fff',color:'#EF4444',fontSize:11,cursor:'pointer'}}>✕</button>
               </div>
             </div>
           </div>
