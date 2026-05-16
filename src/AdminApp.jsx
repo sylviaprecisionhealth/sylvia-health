@@ -216,7 +216,7 @@ function DefaultScheduleView({questions}) {
 
       <div style={{background:'#DBEAFE',borderRadius:12,padding:'12px 16px',marginBottom:20}}>
         <div style={{fontSize:12,color:'#1D4ED8',fontWeight:600,marginBottom:2}}>How this works</div>
-        <div style={{fontSize:12,color:'#1D4ED8',lineHeight:1.6}}>Select questions below and set a time or interval for each. Save, then go to Users → click a patient → "Apply Default Schedule" to assign this bundle to them instantly.</div>
+        <div style={{fontSize:12,color:'#1D4ED8',lineHeight:1.6}}>Select questions below and set a time or interval for each. Save, then go to Users → click a client → "Apply Default Schedule" to assign this bundle to them instantly.</div>
       </div>
 
       <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search questions…" style={{...inp,marginBottom:12}}/>
@@ -404,7 +404,7 @@ function UserProfileModal({user, questions, onClose}) {
 
           {tab==='add'&&<>
             <input value={addSearch} onChange={e=>setAddSearch(e.target.value)} placeholder="Search questions to add…" style={{...inp,marginBottom:12}}/>
-            <p style={{fontSize:12,color:'#9B98B8',marginBottom:14}}>Click any question to add it to this patient's schedule.</p>
+            <p style={{fontSize:12,color:'#9B98B8',marginBottom:14}}>Click any question to add it to this client's schedule.</p>
             <div style={{display:'flex',flexDirection:'column',gap:8,maxHeight:400,overflowY:'auto'}}>
               {availableToAdd.map(q=>(
                 <div key={q.id} onClick={()=>addQuestion(q)} style={{background:'#fff',borderRadius:12,padding:'12px 14px',border:'1.5px solid #E8E3DA',display:'flex',alignItems:'center',gap:10,cursor:'pointer'}}>
@@ -446,7 +446,7 @@ function UsersView({questions}) {
     <div>
       <div style={{marginBottom:28}}>
         <h2 style={{fontFamily:"'Inter',sans-serif",fontWeight:800,fontSize:24,color:'#1A1A2E'}}>Users</h2>
-        <p style={{fontSize:13,color:'#9B98B8',marginTop:4}}>{users.length} enrolled patient{users.length!==1?'s':''} · Click a user to manage their schedule</p>
+        <p style={{fontSize:13,color:'#9B98B8',marginTop:4}}>{users.length} enrolled client{users.length!==1?'s':''} · Click a user to manage their schedule</p>
       </div>
       {loading&&<div style={{display:'flex',justifyContent:'center',padding:40}}><Spin/></div>}
       {!loading&&users.length===0&&<div style={{textAlign:'center',padding:'60px 20px',color:'#C8C0B0'}}><div style={{fontSize:40,marginBottom:12}}>◎</div><p style={{fontSize:15,fontWeight:500}}>No users yet — send an invite to get started</p></div>}
@@ -538,13 +538,13 @@ function InvitesView() {
   return (
     <div>
       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:28}}>
-        <div><h2 style={{fontFamily:"'Inter',sans-serif",fontWeight:800,fontSize:24,color:'#1A1A2E'}}>Patient Invites</h2><p style={{fontSize:13,color:'#9B98B8',marginTop:4}}>{pending.length} pending · {used.length} accepted</p></div>
+        <div><h2 style={{fontFamily:"'Inter',sans-serif",fontWeight:800,fontSize:24,color:'#1A1A2E'}}>Client Invites</h2><p style={{fontSize:13,color:'#9B98B8',marginTop:4}}>{pending.length} pending · {used.length} accepted</p></div>
         <button onClick={()=>{setShowForm(true);setDone(null);setName('');setEmail('')}} style={{background:'#1A1A2E',color:'#E8E4FF',border:'none',borderRadius:14,padding:'11px 20px',fontSize:14,fontWeight:700,cursor:'pointer'}}>+ New Invite</button>
       </div>
       {showForm&&!done&&(
         <div style={{background:'#fff',borderRadius:20,padding:24,border:'1.5px solid #E8E3DA',marginBottom:20,animation:'fadeUp .3s ease'}}>
           <h3 style={{fontWeight:700,fontSize:16,color:'#1A1A2E',marginBottom:16}}>New Invite</h3>
-          <Field label="Patient Name"><input value={name} onChange={e=>setName(e.target.value)} placeholder="e.g. Jordan Ellis" style={inp}/></Field>
+          <Field label="Client Name"><input value={name} onChange={e=>setName(e.target.value)} placeholder="e.g. Jordan Ellis" style={inp}/></Field>
           <Field label="Email"><input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="jordan@example.com" style={inp}/></Field>
           <div style={{display:'flex',gap:10}}>
             <button onClick={()=>setShowForm(false)} style={{flex:1,padding:11,borderRadius:12,border:'1.5px solid #E5E0D8',background:'#fff',color:'#9B98B8',fontSize:14,fontWeight:600,cursor:'pointer'}}>Cancel</button>
@@ -560,7 +560,7 @@ function InvitesView() {
           <div style={{background:'#1A1A2E',borderRadius:12,padding:'14px 20px',display:'inline-block',marginBottom:12}}>
             <span style={{fontFamily:"'Inter',sans-serif",fontWeight:800,fontSize:22,color:'#A89FFF',letterSpacing:3}}>{done.code}</span>
           </div>
-          <p style={{fontSize:12,color:'#C8C0B0',marginBottom:12}}>Share this code — patient enters it in the Sylvia app to register</p>
+          <p style={{fontSize:12,color:'#C8C0B0',marginBottom:12}}>Share this code — client enters it in the Sylvia app to register</p>
           <div style={{fontSize:12,marginBottom:16,minHeight:20}}>
             {emailSent===null&&<span style={{color:'#9B98B8'}}>Sending welcome email…</span>}
             {emailSent==='sent'&&<span style={{color:'#1A6644'}}>✓ Welcome email sent to {done.email}</span>}
@@ -609,6 +609,13 @@ function QuestionsView() {
   const [form,setForm]=useState({type:'scale',text:'',scaleMin:0,scaleMax:100,scaleMinLabel:'Not at all',scaleMaxLabel:'More than I ever have',options:'',category:'General',mechanism:'',folder:'Book EMA'})
   const [saving,setSaving]=useState(false)
   const [assignTarget,setAssignTarget]=useState(null); const [assigning,setAssigning]=useState(null); const [assignSuccess,setAssignSuccess]=useState(null); const [assignSearch,setAssignSearch]=useState('')
+  const [assignStep,setAssignStep]=useState(1); const [assignUser,setAssignUser]=useState(null)
+  const [schedType,setSchedType]=useState('5x')
+  const [times3,setTimes3]=useState(['09:00','12:00','15:00'])
+  const [time1,setTime1]=useState('09:00')
+  const [wDays,setWDays]=useState([1,3,5]); const [wTime,setWTime]=useState('09:00')
+  const [intN,setIntN]=useState(4); const [intStart,setIntStart]=useState('08:00')
+  const [durType,setDurType]=useState('15'); const [durCustom,setDurCustom]=useState(30)
   const isMobile=useMobile()
 
   useEffect(()=>{
@@ -639,24 +646,37 @@ function QuestionsView() {
 
   async function del(id){await deleteDoc(doc(db,'questions',id))}
 
-  async function assignFolderToUser(user){
-    setAssigning(user.id)
+  function closeAssignModal(){
+    setAssignTarget(null); setAssignSuccess(null); setAssignSearch('')
+    setAssignStep(1); setAssignUser(null)
+  }
+
+  async function confirmAssign(){
+    setAssigning(assignUser.id)
     try{
-      const existingSnap=await getDocs(query(collection(db,'schedules'),where('userId','==',user.id)))
+      const existingSnap=await getDocs(query(collection(db,'schedules'),where('userId','==',assignUser.id)))
       for(const d of existingSnap.docs) await deleteDoc(doc(db,'schedules',d.id))
-      const DEFAULT_TIMES=['09:00','12:00','15:00','18:00','21:00']
       const startDate=today()
-      const end=new Date(); end.setDate(end.getDate()+14)
+      const durDays=durType==='15'?15:durType==='30'?30:durType==='60'?60:+durCustom
+      const end=new Date(); end.setDate(end.getDate()+durDays-1)
       const endDate=end.toISOString().split('T')[0]
-      for(const time of DEFAULT_TIMES){
+      let timesToCreate=[],extraFields={}
+      if(schedType==='5x') timesToCreate=['09:00','12:00','15:00','18:00','21:00']
+      else if(schedType==='3x') timesToCreate=[...times3]
+      else if(schedType==='1x') timesToCreate=[time1]
+      else if(schedType==='weekly'){timesToCreate=[wTime];extraFields={repeat:'Weekly',days:wDays}}
+      else if(schedType==='interval'){timesToCreate=[intStart];extraFields={mode:'interval',interval:+intN,repeat:'Custom interval'}}
+      for(const time of timesToCreate){
         const ref=await addDoc(collection(db,'schedules'),{
-          questionId:'__FOLDER__',folder:assignTarget,userId:user.id,
-          time,repeat:'Daily',interval:null,mode:'time',
-          startDate,endDate,durationDays:15,active:true,isFolderSession:true
+          questionId:'__ALL__',userId:assignUser.id,time,
+          repeat:'Daily',interval:null,mode:'time',
+          startDate,endDate,durationDays:durDays,
+          active:true,isDefaultSession:true,...extraFields
         })
         await updateDoc(doc(db,'schedules',ref.id),{id:ref.id})
       }
-      setAssignSuccess(user.id); setTimeout(()=>setAssignSuccess(null),3000)
+      setAssignSuccess(assignUser.id)
+      setTimeout(()=>setAssignSuccess(null),3000)
     }catch(e){alert('Error: '+e.message)}
     setAssigning(null)
   }
@@ -679,37 +699,146 @@ function QuestionsView() {
     </div>
   )
 
-  // ── Assign Modal (shared by both views) ──────────────────────────────────────
+  // ── Assign Modal (two-step: pick client → configure schedule) ────────────────
   const AssignModal = assignTarget && (
     <div style={{position:'fixed',inset:0,background:'rgba(10,10,20,.7)',backdropFilter:'blur(6px)',zIndex:200,display:'flex',alignItems:'center',justifyContent:'center',padding:20}}>
-      <div style={{background:'#E8E4FF',borderRadius:24,width:'100%',maxWidth:480,boxShadow:'0 32px 80px rgba(0,0,0,.2)',animation:'pop .25s ease',maxHeight:'80vh',display:'flex',flexDirection:'column'}}>
-        <div style={{background:'#1A1A2E',borderRadius:'24px 24px 0 0',padding:'24px 28px',display:'flex',alignItems:'center',justifyContent:'space-between',flexShrink:0}}>
+      <div style={{background:'#E8E4FF',borderRadius:24,width:'100%',maxWidth:480,boxShadow:'0 32px 80px rgba(0,0,0,.2)',animation:'pop .25s ease',maxHeight:'85vh',display:'flex',flexDirection:'column'}}>
+        <div style={{background:'#1A1A2E',borderRadius:'24px 24px 0 0',padding:'20px 24px',display:'flex',alignItems:'center',justifyContent:'space-between',flexShrink:0}}>
           <div>
-            <div style={{fontWeight:700,fontSize:18,color:'#E8E4FF'}}>Assign to Patient</div>
-            <div style={{fontSize:12,color:'#6B6888',marginTop:3}}>"{assignTarget}" · 5 sessions/day · 15 days</div>
+            <div style={{fontWeight:700,fontSize:17,color:'#E8E4FF'}}>{assignStep===1?'Assign to Client':'Configure Schedule'}</div>
+            <div style={{fontSize:12,color:'#6B6888',marginTop:2}}>{assignStep===1?`"${assignTarget}"`:assignUser?.name+` · "${assignTarget}"`}</div>
           </div>
-          <button onClick={()=>{setAssignTarget(null);setAssignSuccess(null);setAssignSearch('')}} style={{background:'#FFFFFF1A',border:'none',color:'#E8E4FF',borderRadius:10,padding:'8px 14px',fontSize:13,cursor:'pointer'}}>Close</button>
+          <button onClick={closeAssignModal} style={{background:'#FFFFFF1A',border:'none',color:'#E8E4FF',borderRadius:10,padding:'8px 14px',fontSize:13,cursor:'pointer'}}>Close</button>
         </div>
-        <div style={{padding:'16px 24px',borderBottom:'1px solid #E8E3DA',flexShrink:0}}>
-          <input value={assignSearch} onChange={e=>setAssignSearch(e.target.value)} placeholder="Search by name or email…" style={{...inp,margin:0}}/>
-        </div>
-        <div style={{padding:'16px 24px',overflowY:'auto'}}>
-          {users.length===0&&<div style={{textAlign:'center',padding:30,color:'#C8C0B0'}}>No patients found.</div>}
-          <div style={{display:'flex',flexDirection:'column',gap:10}}>
-            {users.filter(u=>!assignSearch||u.name?.toLowerCase().includes(assignSearch.toLowerCase())||u.email?.toLowerCase().includes(assignSearch.toLowerCase())).map(u=>(
-              <div key={u.id} style={{background:'#fff',borderRadius:16,padding:'14px 18px',border:`1.5px solid ${assignSuccess===u.id?'#6ECB8A':'#E8E3DA'}`,display:'flex',alignItems:'center',gap:12,transition:'border-color .2s'}}>
-                <div style={{width:40,height:40,borderRadius:12,background:'#EDE9FE',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:700,fontSize:15,color:'#6C63FF',flexShrink:0}}>{u.name?.split(' ').map(n=>n[0]).join('')||'?'}</div>
-                <div style={{flex:1}}>
-                  <div style={{fontWeight:600,fontSize:14,color:'#1A1A2E'}}>{u.name}</div>
-                  <div style={{fontSize:12,color:'#9B98B8'}}>{u.email}</div>
+
+        {assignStep===1&&<>
+          <div style={{padding:'14px 20px',borderBottom:'1px solid #D8D3F0',flexShrink:0}}>
+            <input value={assignSearch} onChange={e=>setAssignSearch(e.target.value)} placeholder="Search by name or email…" style={{...inp,margin:0}}/>
+          </div>
+          <div style={{padding:'14px 20px',overflowY:'auto'}}>
+            {users.length===0&&<div style={{textAlign:'center',padding:30,color:'#C8C0B0'}}>No clients found.</div>}
+            <div style={{display:'flex',flexDirection:'column',gap:8}}>
+              {users.filter(u=>!assignSearch||u.name?.toLowerCase().includes(assignSearch.toLowerCase())||u.email?.toLowerCase().includes(assignSearch.toLowerCase())).map(u=>(
+                <div key={u.id} style={{background:'#fff',borderRadius:14,padding:'12px 16px',border:'1.5px solid #E8E3DA',display:'flex',alignItems:'center',gap:12}}>
+                  <div style={{width:38,height:38,borderRadius:10,background:'#EDE9FE',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:700,fontSize:14,color:'#6C63FF',flexShrink:0}}>{u.name?.split(' ').map(n=>n[0]).join('')||'?'}</div>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontWeight:600,fontSize:14,color:'#1A1A2E'}}>{u.name}</div>
+                    <div style={{fontSize:12,color:'#9B98B8',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{u.email}</div>
+                  </div>
+                  <button onClick={()=>{setAssignUser(u);setAssignStep(2);setSchedType('5x');setDurType('15')}} style={{padding:'7px 14px',borderRadius:10,border:'none',background:'#6C63FF',color:'#fff',fontSize:12,fontWeight:700,cursor:'pointer',flexShrink:0}}>
+                    Assign →
+                  </button>
                 </div>
-                <button onClick={()=>assignFolderToUser(u)} disabled={!!assigning} style={{padding:'8px 16px',borderRadius:10,border:'none',background:assignSuccess===u.id?'#1A6644':'#6C63FF',color:'#fff',fontSize:12,fontWeight:700,cursor:assigning?'default':'pointer',display:'flex',alignItems:'center',gap:6,flexShrink:0}}>
-                  {assigning===u.id?<Spin/>:assignSuccess===u.id?'✓ Assigned':'Assign'}
+              ))}
+            </div>
+          </div>
+        </>}
+
+        {assignStep===2&&<div style={{padding:'20px',overflowY:'auto',flex:1}}>
+          {assignSuccess===assignUser?.id?(
+            <div style={{textAlign:'center',padding:'32px 20px'}}>
+              <div style={{fontSize:36,marginBottom:10}}>✓</div>
+              <div style={{fontWeight:700,fontSize:17,color:'#1A6644',marginBottom:6}}>Schedule Assigned</div>
+              <div style={{fontSize:13,color:'#6B6888',marginBottom:20,lineHeight:1.5}}>{assignUser.name}<br/>{durType==='custom'?durCustom:durType} days · {schedType==='5x'?'5×/day':schedType==='3x'?'3×/day':schedType==='1x'?'1×/day':schedType==='weekly'?'Weekly':'Custom interval'}</div>
+              <button onClick={closeAssignModal} style={{padding:'10px 28px',borderRadius:12,border:'none',background:'#1A1A2E',color:'#E8E4FF',fontSize:14,fontWeight:700,cursor:'pointer'}}>Done</button>
+            </div>
+          ):(
+            <>
+              <div style={{marginBottom:18}}>
+                <div style={{fontSize:10,fontWeight:700,color:'#6B6888',letterSpacing:1,textTransform:'uppercase',marginBottom:8}}>Schedule Type</div>
+                <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+                  {[['5x','5× Daily'],['3x','3× Daily'],['1x','1× Daily'],['weekly','Weekly'],['interval','Interval']].map(([v,l])=>(
+                    <button key={v} onClick={()=>setSchedType(v)} style={{padding:'7px 11px',borderRadius:10,border:`1.5px solid ${schedType===v?'#6C63FF':'#E5E0D8'}`,background:schedType===v?'#EDE9FE':'#fff',color:schedType===v?'#6C63FF':'#9B98B8',fontSize:12,fontWeight:600,cursor:'pointer'}}>
+                      {l}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {schedType==='5x'&&(
+                <div style={{background:'#F0EEFF',borderRadius:10,padding:'10px 14px',marginBottom:18,fontSize:12,color:'#6B6888',lineHeight:1.6}}>
+                  9:00 AM · 12:00 PM · 3:00 PM · 6:00 PM · 9:00 PM
+                </div>
+              )}
+
+              {schedType==='3x'&&(
+                <div style={{marginBottom:18}}>
+                  <div style={{fontSize:10,fontWeight:600,color:'#6B6888',marginBottom:8,textTransform:'uppercase',letterSpacing:.5}}>Session Times</div>
+                  <div style={{display:'flex',flexDirection:'column',gap:8}}>
+                    {times3.map((t,i)=>(
+                      <div key={i} style={{display:'flex',alignItems:'center',gap:10}}>
+                        <div style={{fontSize:12,color:'#9B98B8',width:72,flexShrink:0}}>Session {i+1}</div>
+                        <input type="time" value={t} onChange={e=>{const n=[...times3];n[i]=e.target.value;setTimes3(n)}} style={{...inp,padding:'7px 10px',borderRadius:8}}/>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {schedType==='1x'&&(
+                <div style={{marginBottom:18}}>
+                  <div style={{fontSize:10,fontWeight:600,color:'#6B6888',marginBottom:8,textTransform:'uppercase',letterSpacing:.5}}>Session Time</div>
+                  <input type="time" value={time1} onChange={e=>setTime1(e.target.value)} style={{...inp,padding:'7px 10px',borderRadius:8}}/>
+                </div>
+              )}
+
+              {schedType==='weekly'&&(
+                <div style={{marginBottom:18}}>
+                  <div style={{fontSize:10,fontWeight:600,color:'#6B6888',marginBottom:8,textTransform:'uppercase',letterSpacing:.5}}>Days</div>
+                  <div style={{display:'flex',gap:5,flexWrap:'wrap',marginBottom:12}}>
+                    {DAYS.map((d,i)=>(
+                      <button key={i} onClick={()=>setWDays(p=>p.includes(i)?p.filter(x=>x!==i):[...p,i].sort())} style={{padding:'5px 10px',borderRadius:8,border:`1.5px solid ${wDays.includes(i)?'#6C63FF':'#E5E0D8'}`,background:wDays.includes(i)?'#EDE9FE':'#fff',color:wDays.includes(i)?'#6C63FF':'#9B98B8',fontSize:12,fontWeight:600,cursor:'pointer'}}>
+                        {d}
+                      </button>
+                    ))}
+                  </div>
+                  <div style={{fontSize:10,fontWeight:600,color:'#6B6888',marginBottom:8,textTransform:'uppercase',letterSpacing:.5}}>Time</div>
+                  <input type="time" value={wTime} onChange={e=>setWTime(e.target.value)} style={{...inp,padding:'7px 10px',borderRadius:8}}/>
+                </div>
+              )}
+
+              {schedType==='interval'&&(
+                <div style={{marginBottom:18}}>
+                  <div style={{display:'flex',gap:12,marginBottom:8}}>
+                    <div style={{flex:1}}>
+                      <div style={{fontSize:10,fontWeight:600,color:'#6B6888',marginBottom:6,textTransform:'uppercase',letterSpacing:.5}}>Every N hours</div>
+                      <input type="number" min={1} max={24} value={intN} onChange={e=>setIntN(+e.target.value)} style={{...inp,padding:'7px 10px',borderRadius:8}}/>
+                    </div>
+                    <div style={{flex:1}}>
+                      <div style={{fontSize:10,fontWeight:600,color:'#6B6888',marginBottom:6,textTransform:'uppercase',letterSpacing:.5}}>Start time</div>
+                      <input type="time" value={intStart} onChange={e=>setIntStart(e.target.value)} style={{...inp,padding:'7px 10px',borderRadius:8}}/>
+                    </div>
+                  </div>
+                  <div style={{fontSize:12,color:'#9B98B8'}}>Sends every {intN} hour{intN!==1?'s':''} starting at {intStart}</div>
+                </div>
+              )}
+
+              <div style={{marginBottom:20}}>
+                <div style={{fontSize:10,fontWeight:700,color:'#6B6888',letterSpacing:1,textTransform:'uppercase',marginBottom:8}}>Duration</div>
+                <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+                  {[['15','15 days'],['30','30 days'],['60','60 days'],['custom','Custom']].map(([v,l])=>(
+                    <button key={v} onClick={()=>setDurType(v)} style={{padding:'7px 12px',borderRadius:10,border:`1.5px solid ${durType===v?'#1A1A2E':'#E5E0D8'}`,background:durType===v?'#1A1A2E':'#fff',color:durType===v?'#E8E4FF':'#9B98B8',fontSize:12,fontWeight:600,cursor:'pointer'}}>
+                      {l}
+                    </button>
+                  ))}
+                </div>
+                {durType==='custom'&&(
+                  <div style={{display:'flex',alignItems:'center',gap:10,marginTop:10}}>
+                    <input type="number" min={1} max={365} value={durCustom} onChange={e=>setDurCustom(+e.target.value)} style={{...inp,padding:'7px 10px',borderRadius:8,width:90}}/>
+                    <span style={{fontSize:13,color:'#6B6888'}}>days</span>
+                  </div>
+                )}
+              </div>
+
+              <div style={{display:'flex',gap:10}}>
+                <button onClick={()=>{setAssignStep(1);setAssignUser(null)}} style={{flex:1,padding:11,borderRadius:12,border:'1.5px solid #E5E0D8',background:'#fff',color:'#6B6888',fontSize:14,fontWeight:600,cursor:'pointer'}}>← Back</button>
+                <button onClick={confirmAssign} disabled={!!assigning} style={{flex:2,padding:11,borderRadius:12,border:'none',background:'#6C63FF',color:'#fff',fontSize:14,fontWeight:700,cursor:assigning?'default':'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>
+                  {assigning===assignUser?.id?<Spin/>:'Confirm & Assign'}
                 </button>
               </div>
-            ))}
-          </div>
-        </div>
+            </>
+          )}
+        </div>}
       </div>
     </div>
   )
@@ -746,9 +875,9 @@ function QuestionsView() {
                   {topCats.map(([c,n])=><span key={c} style={{fontSize:10,fontWeight:600,color:'#6C63FF',background:'#EDE9FE',borderRadius:20,padding:'2px 8px'}}>{c} · {n}</span>)}
                   {Object.keys(catCounts).length>2&&<span style={{fontSize:10,color:'#C8C0B0',alignSelf:'center'}}>+{Object.keys(catCounts).length-2} more</span>}
                 </div>}
-                <button onClick={e=>{e.stopPropagation();setAssignTarget(f);setAssignSuccess(null);setAssignSearch('')}}
+                <button onClick={e=>{e.stopPropagation();setAssignTarget(f);setAssignSuccess(null);setAssignSearch('');setAssignStep(1);setAssignUser(null)}}
                   style={{marginTop:'auto',padding:'8px 0',borderRadius:10,border:'1.5px solid #6C63FF',background:'#EDE9FE',color:'#6C63FF',fontSize:12,fontWeight:700,cursor:'pointer',width:'100%'}}>
-                  Assign to Patient
+                  Assign to Client
                 </button>
               </div>
             )
@@ -778,7 +907,7 @@ function QuestionsView() {
           <h2 style={{fontFamily:"'Inter',sans-serif",fontWeight:800,fontSize:22,color:'#1A1A2E',margin:0}}>{selectedFolder}</h2>
           <p style={{fontSize:13,color:'#9B98B8',margin:'2px 0 0'}}>{filtered.length} of {folderQs.length} questions</p>
         </div>
-        <button onClick={()=>{setAssignTarget(selectedFolder);setAssignSuccess(null);setAssignSearch('')}} style={{background:'#6C63FF',color:'#fff',border:'none',borderRadius:14,padding:'11px 20px',fontSize:14,fontWeight:700,cursor:'pointer',flexShrink:0}}>Assign to Patient</button>
+        <button onClick={()=>{setAssignTarget(selectedFolder);setAssignSuccess(null);setAssignSearch('');setAssignStep(1);setAssignUser(null)}} style={{background:'#6C63FF',color:'#fff',border:'none',borderRadius:14,padding:'11px 20px',fontSize:14,fontWeight:700,cursor:'pointer',flexShrink:0}}>Assign to Client</button>
         <button onClick={openNew} style={{background:'#1A1A2E',color:'#E8E4FF',border:'none',borderRadius:14,padding:'11px 20px',fontSize:14,fontWeight:700,cursor:'pointer',flexShrink:0}}>+ New Question</button>
       </div>
 
@@ -997,7 +1126,7 @@ function ResponsesView({questions}) {
       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:28}}>
         <div>
           <h2 style={{fontFamily:"'Inter',sans-serif",fontWeight:800,fontSize:24,color:'#1A1A2E'}}>Responses</h2>
-          <p style={{fontSize:13,color:'#9B98B8',marginTop:4}}>Click a patient to view their response history</p>
+          <p style={{fontSize:13,color:'#9B98B8',marginTop:4}}>Click a client to view their response history</p>
         </div>
         {selectedUser&&userResponses.length>0&&(
           <button onClick={exportCSV} style={{background:'#1A6644',color:'#fff',border:'none',borderRadius:14,padding:'11px 20px',fontSize:14,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',gap:8}}>
