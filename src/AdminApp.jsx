@@ -9,7 +9,7 @@ import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebas
 const G = `
   @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&display=swap');
   *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-  body{background:#F4F1EC;font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased}
+  body{background:#FFFFFF;font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased}
   ::-webkit-scrollbar{width:4px} ::-webkit-scrollbar-thumb{background:#C8C0B0;border-radius:4px}
   input,textarea,select{font-family:'Inter',sans-serif} input:focus,textarea:focus,select:focus{outline:none}
   @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
@@ -1087,7 +1087,7 @@ export default function AdminApp() {
   if(!authed)return<AdminLogin onLogin={()=>setAuthed(true)}/>
 
   return(
-    <div style={{display:'flex',minHeight:'100vh',background:'#F4F1EC'}}>
+    <div style={{display:'flex',minHeight:'100vh',background:'#FFFFFF'}}>
       <style>{G}</style>
       <Sidebar active={view} setActive={setView} onLogout={()=>signOut(auth)} open={sidebarOpen} onClose={()=>setSidebarOpen(false)}/>
       <div style={{flex:1,overflowY:'auto',minWidth:0,padding:isMobile?0:'40px 44px'}}>
