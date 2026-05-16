@@ -23,6 +23,9 @@ const G = `
   @keyframes pop{from{opacity:0;transform:scale(0.96)}to{opacity:1;transform:scale(1)}}
   @keyframes spin{to{transform:rotate(360deg)}}
   @keyframes slideDown{from{opacity:0;transform:translateY(-20px)}to{opacity:1;transform:translateY(0)}}
+  input[type=range]{-webkit-appearance:none;appearance:none;height:6px;border-radius:3px;background:#E5E0D8;outline:none;cursor:pointer}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:28px;height:28px;border-radius:50%;background:#8B3A2A;cursor:pointer;box-shadow:0 2px 8px rgba(139,58,42,.4)}
+  input[type=range]::-moz-range-thumb{width:28px;height:28px;border:none;border-radius:50%;background:#8B3A2A;cursor:pointer;box-shadow:0 2px 8px rgba(139,58,42,.4)}
 `
 
 function today(){ return new Date().toISOString().split('T')[0] }
@@ -328,22 +331,24 @@ function SessionScreen({questions, userId, sessionTime, resumeIdx, onComplete, o
               </div>
               <input type="range" min={q.scaleMin} max={q.scaleMax} value={scaleVal||0}
                 onChange={e=>{ setScaleVal(+e.target.value); setScaleTouched(true) }}
-                style={{width:'100%',accentColor:'#8B3A2A',marginBottom:4}}/>
+                style={{width:'100%',marginBottom:4}}/>
               <div style={{display:'flex',justifyContent:'space-between',marginBottom:6}}>
                 {[0,0.25,0.5,0.75,1].map((f,i)=>{
                   const v=Math.round(q.scaleMin+(q.scaleMax-q.scaleMin)*f)
                   return(
-                    <div key={i} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:2}}>
-                      <div style={{width:1,height:4,background:'#E5E0D8',borderRadius:1}}/>
-                      {i>0&&i<4&&<span style={{fontSize:10,color:'#C8C0B0'}}>{v}</span>}
+                    <div key={i} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:3}}>
+                      <div style={{width:2,height:6,background:'#C8C0B0',borderRadius:1}}/>
+                      <span style={{fontSize:12,color:'#8B7355',fontWeight:500}}>{v}</span>
                     </div>
                   )
                 })}
               </div>
-              <div style={{display:'flex',justifyContent:'space-between'}}>
-                <span style={{fontSize:12,color:'#8B7355'}}>{q.scaleMinLabel||q.scaleMin}</span>
-                <span style={{fontSize:12,color:'#8B7355'}}>{q.scaleMaxLabel||q.scaleMax}</span>
-              </div>
+              {(q.scaleMinLabel||q.scaleMaxLabel)&&(
+                <div style={{display:'flex',justifyContent:'space-between',marginTop:4}}>
+                  <span style={{fontSize:12,color:'#8B7355'}}>{q.scaleMinLabel}</span>
+                  <span style={{fontSize:12,color:'#8B7355'}}>{q.scaleMaxLabel}</span>
+                </div>
+              )}
               {!scaleTouched&&<p style={{fontSize:12,color:'#C8C0B0',textAlign:'center',marginTop:12}}>Move the slider to answer</p>}
             </div>
           )}
