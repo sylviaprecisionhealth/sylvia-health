@@ -479,15 +479,57 @@ function UsersView({questions}) {
 // ── Invites View ──────────────────────────────────────────────────────────────
 function InvitesView() {
   const [invites,setInvites]=useState([]); const [loading,setLoading]=useState(true); const [copied,setCopied]=useState(null)
-  const [name,setName]=useState(''); const [email,setEmail]=useState(''); const [creating,setCreating]=useState(false); const [done,setDone]=useState(null); const [showForm,setShowForm]=useState(false)
+  const [name,setName]=useState(''); const [email,setEmail]=useState(''); const [creating,setCreating]=useState(false); const [done,setDone]=useState(null); const [showForm,setShowForm]=useState(false); const [emailSent,setEmailSent]=useState(null)
 
   useEffect(()=>{ const unsub=onSnapshot(collection(db,'invites'),snap=>{setInvites(snap.docs.map(d=>({id:d.id,...d.data()}))); setLoading(false)}); return unsub },[])
 
+  async function sendWelcomeEmail(recipientName, recipientEmail, code) {
+    try {
+      await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${import.meta.env.VITE_RESEND_API_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          from: 'onboarding@resend.dev',
+          to: recipientEmail,
+          subject: `Welcome to Sylvia, ${recipientName} — Your Invitation Code`,
+          html: `
+            <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px 24px;background:#ffffff;">
+              <h2 style="font-size:22px;color:#1A1A2E;margin:0 0 8px;">Welcome to Sylvia, ${recipientName}</h2>
+              <p style="font-size:15px;color:#6B6888;line-height:1.6;margin:0 0 24px;">
+                Sylvia is a daily wellness check-in app that helps you track how you're feeling over time. Your care team will use your responses to better support you.
+              </p>
+              <p style="font-size:14px;color:#1A1A2E;margin:0 0 8px;font-weight:600;">Your invite code:</p>
+              <div style="background:#1A1A2E;border-radius:12px;padding:16px 24px;display:inline-block;margin-bottom:24px;">
+                <span style="font-size:24px;font-weight:800;color:#A89FFF;letter-spacing:4px;">${code}</span>
+              </div>
+              <p style="font-size:14px;color:#6B6888;line-height:1.6;margin:0 0 24px;">
+                Enter this code when you open the app to create your account. Get started at the link below.
+              </p>
+              <a href="https://sylvia-health.vercel.app" style="display:inline-block;background:#6C63FF;color:#ffffff;text-decoration:none;font-size:15px;font-weight:700;padding:13px 28px;border-radius:12px;">
+                Get Started →
+              </a>
+              <p style="font-size:12px;color:#C8C0B0;margin-top:32px;">Sylvia Precision Health</p>
+            </div>
+          `
+        })
+      })
+      setEmailSent('sent')
+    } catch(e) {
+      setEmailSent('failed')
+    }
+  }
+
   async function create() {
-    setCreating(true)
+    setCreating(true); setEmailSent(null)
     const code=makeCode()
-    await setDoc(doc(db,'invites',code),{code,name:name.trim(),email:email.trim(),used:false,userId:null,createdAt:today()})
-    setDone({code,name:name.trim(),email:email.trim()}); setCreating(false)
+    const trimmedName=name.trim(), trimmedEmail=email.trim()
+    await setDoc(doc(db,'invites',code),{code,name:trimmedName,email:trimmedEmail,used:false,userId:null,createdAt:today()})
+    setDone({code,name:trimmedName,email:trimmedEmail})
+    setCreating(false)
+    sendWelcomeEmail(trimmedName, trimmedEmail, code)
   }
 
   function copy(code){navigator.clipboard?.writeText(code); setCopied(code); setTimeout(()=>setCopied(null),2000)}
@@ -519,10 +561,15 @@ function InvitesView() {
           <div style={{background:'#1A1A2E',borderRadius:12,padding:'14px 20px',display:'inline-block',marginBottom:12}}>
             <span style={{fontFamily:"'Inter',sans-serif",fontWeight:800,fontSize:22,color:'#A89FFF',letterSpacing:3}}>{done.code}</span>
           </div>
-          <p style={{fontSize:12,color:'#C8C0B0',marginBottom:16}}>Share this code — patient enters it in the Sylvia app to register</p>
+          <p style={{fontSize:12,color:'#C8C0B0',marginBottom:12}}>Share this code — patient enters it in the Sylvia app to register</p>
+          <div style={{fontSize:12,marginBottom:16,minHeight:20}}>
+            {emailSent===null&&<span style={{color:'#9B98B8'}}>Sending welcome email…</span>}
+            {emailSent==='sent'&&<span style={{color:'#1A6644'}}>✓ Welcome email sent to {done.email}</span>}
+            {emailSent==='failed'&&<span style={{color:'#EF4444'}}>Email failed to send — share the code manually</span>}
+          </div>
           <div style={{display:'flex',gap:10,justifyContent:'center'}}>
             <button onClick={()=>copy(done.code)} style={{padding:'8px 20px',borderRadius:10,border:'1.5px solid #E5E0D8',background:copied===done.code?'#D1FAE5':'#fff',color:copied===done.code?'#1A6644':'#6B6888',fontSize:13,fontWeight:600,cursor:'pointer'}}>{copied===done.code?'Copied!':'Copy Code'}</button>
-            <button onClick={()=>{setShowForm(false);setDone(null)}} style={{padding:'8px 20px',borderRadius:10,border:'none',background:'#1A1A2E',color:'#E8E4FF',fontSize:13,fontWeight:700,cursor:'pointer'}}>Done</button>
+            <button onClick={()=>{setShowForm(false);setDone(null);setEmailSent(null)}} style={{padding:'8px 20px',borderRadius:10,border:'none',background:'#1A1A2E',color:'#E8E4FF',fontSize:13,fontWeight:700,cursor:'pointer'}}>Done</button>
           </div>
         </div>
       )}
