@@ -257,7 +257,6 @@ function SessionScreen({questions, userId, sessionTime, resumeIdx, onComplete, o
             {q.type==='scale'&&<span style={{fontSize:11,color:'#7BB8F5',background:'#7BB8F522',borderRadius:20,padding:'3px 10px',fontWeight:600}}>▬ Scale</span>}
             {q.type==='choice'&&<span style={{fontSize:11,color:'#B48FE8',background:'#B48FE822',borderRadius:20,padding:'3px 10px',fontWeight:600}}>◉ Choice</span>}
             {q.type==='text'&&<span style={{fontSize:11,color:'#6ECB8A',background:'#6ECB8A22',borderRadius:20,padding:'3px 10px',fontWeight:600}}>☰ Open</span>}
-            {q.category&&q.category!=='General'&&<span style={{fontSize:11,color:'#A89FFF',background:'#6C63FF22',borderRadius:20,padding:'3px 10px',fontWeight:600,marginLeft:6}}>{q.category}</span>}
           </div>
           <p style={{fontFamily:"-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif",color:'#E8E4FF',fontSize:20,lineHeight:1.5,fontWeight:600,marginBottom:24}}>{q.text}</p>
 
@@ -268,7 +267,18 @@ function SessionScreen({questions, userId, sessionTime, resumeIdx, onComplete, o
               </div>
               <input type="range" min={q.scaleMin} max={q.scaleMax} value={scaleVal||0}
                 onChange={e=>{ setScaleVal(+e.target.value); setScaleTouched(true) }}
-                style={{width:'100%',accentColor:'#6C63FF',marginBottom:10}}/>
+                style={{width:'100%',accentColor:'#6C63FF',marginBottom:4}}/>
+              <div style={{display:'flex',justifyContent:'space-between',marginBottom:6}}>
+                {[0,0.25,0.5,0.75,1].map((f,i)=>{
+                  const v=Math.round(q.scaleMin+(q.scaleMax-q.scaleMin)*f)
+                  return(
+                    <div key={i} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:2}}>
+                      <div style={{width:1,height:4,background:'#2a2a4a',borderRadius:1}}/>
+                      {i>0&&i<4&&<span style={{fontSize:10,color:'#3a3a5c'}}>{v}</span>}
+                    </div>
+                  )
+                })}
+              </div>
               <div style={{display:'flex',justifyContent:'space-between'}}>
                 <span style={{fontSize:12,color:'#6B6888'}}>{q.scaleMinLabel||q.scaleMin}</span>
                 <span style={{fontSize:12,color:'#6B6888'}}>{q.scaleMaxLabel||q.scaleMax}</span>
