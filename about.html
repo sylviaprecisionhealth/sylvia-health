@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>About | Sylvia Precision Health</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400&family=Geist:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --paper:        #FAF6EC;
+      --paper-2:      #F4ECD8;
+      --sand:         #EADFC2;
+      --line:         #E4D8B8;
+      --line-soft:    #EFE5CC;
+      --white:        #FFFEFB;
+      --gold:         #C28E2C;
+      --gold-deep:    #8A5A1F;
+      --gold-soft:    #E5C879;
+      --mauve:        #8C5F88;
+      --plum:         #4B2E4A;
+      --rose:         #E3C5C9;
+      --ink:          #2A2024;
+      --ink-2:        #4D3E3F;
+      --ink-soft:     rgba(42,32,36,0.6);
+      --ink-faint:    rgba(42,32,36,0.35);
+      --border:       rgba(42,32,36,0.12);
+      --font-display: 'Newsreader', 'Source Serif 4', Georgia, serif;
+      --font-sans:    'Geist', ui-sans-serif, system-ui, -apple-system, sans-serif;
+      --shadow-card:  0 18px 40px -28px rgba(74,46,32,0.18);
+      --shadow-button: 0 6px 18px -8px rgba(138,90,31,0.55);
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family: var(--font-sans); background: var(--paper); color: var(--ink); overflow-x: hidden; }
+
+    nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; display: flex; align-items: center; justify-content: space-between; padding: 0 48px; height: 72px; background: rgba(250,246,236,0.85); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); }
+    .nav-logo { font-family: var(--font-display); font-size: 22px; font-weight: 600; color: var(--ink); text-decoration: none; }
+    .nav-links { display: flex; gap: 36px; list-style: none; }
+    .nav-links a { font-size: 14px; color: var(--ink-2); text-decoration: none; transition: color 0.2s; }
+    .nav-links a:hover, .nav-links a.active { color: var(--ink); font-weight: 500; }
+    .btn-primary { display: inline-flex; align-items: center; background: var(--gold); color: #fff; border: none; border-radius: 999px; padding: 12px 24px; font-family: var(--font-sans); font-size: 14px; font-weight: 500; cursor: pointer; text-decoration: none; transition: background 0.2s, transform 0.15s; }
+    .btn-primary:hover { background: var(--gold-deep); transform: translateY(-1px); }
+
+    .section-label { display: inline-block; font-size: 12px; font-weight: 400; color: var(--ink-soft); background: var(--paper-2); border-radius: 999px; padding: 5px 14px; margin-bottom: 20px; }
+
+    /* HERO — centered Luvia style */
+    .about-hero { padding: 160px 80px 80px; text-align: center; border-bottom: 1px solid var(--border); }
+    .hero-eyebrow { font-size: 14px; font-weight: 400; color: var(--ink-soft); margin-bottom: 12px; }
+    .hero-headline { font-family: var(--font-display); font-size: clamp(56px, 8vw, 100px); font-weight: 700; line-height: 1.0; letter-spacing: -2px; color: var(--ink); margin-bottom: 24px; }
+    .hero-subtitle { font-size: 16px; font-weight: 300; color: var(--ink-soft); max-width: 520px; margin: 0 auto 40px; line-height: 1.6; }
+    .hero-tags { display: flex; align-items: center; justify-content: center; gap: 32px; flex-wrap: wrap; }
+    .hero-tag { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink-2); font-weight: 400; }
+    .hero-tag svg { opacity: 0.5; }
+
+    /* CARDS + IMAGE */
+    .cards-image-section {
+      position: relative;
+      margin: 0 350px 16px;
+      border-radius: 24px;
+      overflow: hidden;
+      background-color: #f8efe6;
+      height: 420px;
+    }
+    .cube-bg-img {
+      position: absolute;
+      width: 100%;
+      height: auto;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 0;
+    }
+    .cards-image-bg { display: none; }
+    .cube-3d, .cube-wrap, .ring { display: none; }
+
+    /* Proper 3D CSS cube like Luvia */
+    .cube-wrap {
+      position: absolute;
+      top: 36%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 200px; height: 200px;
+      z-index: 1;
+      transform-style: preserve-3d;
+    }
+    .cube-front { display: none; }
+    .cube-top { display: none; }
+    .cube-side { display: none; }
+
+    /* Use a single element with pseudo-elements for the 3 visible faces */
+    .cube-3d {
+      position: absolute;
+      top: 36%; left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 1;
+      width: 200px;
+      height: 200px;
+    }
+    /* Front face */
+    .cube-3d .face-front {
+      position: absolute;
+      width: 200px; height: 200px;
+      background: linear-gradient(160deg, #D8C9A8 0%, #C4B290 40%, #B09E7C 100%);
+      border-radius: 0 0 12px 12px;
+      bottom: 0;
+      overflow: hidden;
+    }
+    .cube-3d .face-front::after {
+      content: '';
+      position: absolute; inset: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.15) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.15) 1px, transparent 1px);
+      background-size: 32px 32px;
+    }
+    /* Top face — skewed parallelogram */
+    .cube-3d .face-top {
+      position: absolute;
+      width: 200px; height: 80px;
+      background: linear-gradient(135deg, #F0E4C8 0%, #E0D0B0 40%, #D0BC98 100%);
+      top: -52px; left: 0;
+      transform: skewX(-40deg) scaleY(0.7);
+      transform-origin: bottom left;
+      border-radius: 12px 12px 0 0;
+      overflow: hidden;
+    }
+    .cube-3d .face-top::after {
+      content: '';
+      position: absolute; inset: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px);
+      background-size: 32px 32px;
+    }
+    /* Right side face */
+    .cube-3d .face-side {
+      position: absolute;
+      width: 52px; height: 200px;
+      background: linear-gradient(180deg, #A89878 0%, #988870 50%, #887860 100%);
+      right: -50px; bottom: 0;
+      transform: skewY(-50deg);
+      transform-origin: top left;
+      border-radius: 0 12px 12px 0;
+      overflow: hidden;
+    }
+    .cube-3d .face-side::after {
+      content: '';
+      position: absolute; inset: 0;
+      background-image: linear-gradient(rgba(0,0,0,0.05) 1px, transparent 1px);
+      background-size: 100% 32px;
+    }
+
+    .ring { position: absolute; border-radius: 50%; }
+    .ring-1 {
+      width: 700px; height: 200px;
+      top: 36%; left: 50%;
+      transform: translate(-50%, -50%) rotate(-18deg);
+      border: 2px solid rgba(196,130,80,0.5);
+      background: transparent;
+      z-index: 0;
+    }
+    .ring-2 {
+      width: 520px; height: 150px;
+      top: 36%; left: 50%;
+      transform: translate(-50%, -50%) rotate(12deg);
+      border: 2px solid rgba(196,130,80,0.35);
+      background: transparent;
+      z-index: 0;
+    }
+    .ring-3 {
+      width: 360px; height: 105px;
+      top: 36%; left: 50%;
+      transform: translate(-50%, -50%) rotate(-6deg);
+      border: 2px solid rgba(196,130,80,0.2);
+      background: transparent;
+      z-index: 0;
+    }
+
+    /* Auto-scrolling cards */
+    .scroll-cards-wrapper {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      overflow: hidden;
+      z-index: 2;
+      margin: 0;
+      padding: 0;
+    }
+    .scroll-cards {
+      display: flex; gap: 14px;
+      width: max-content;
+      padding: 0 32px;
+      animation: cardScroll 80s linear infinite;
+    }
+    .scroll-cards:hover { animation-play-state: paused; }
+    @keyframes cardScroll {
+      0% { transform: translateX(0); }
+      100% { transform: translateX(-50%); }
+    }
+    .scroll-card {
+      background: rgba(250, 246, 238, 0.92);
+      backdrop-filter: blur(8px);
+      border-radius: 10px;
+      padding: 22px 26px 26px;
+      width: 300px;
+      height: 160px;
+      flex-shrink: 0;
+      box-shadow: 0 2px 16px rgba(28,26,24,0.07);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .scroll-card h3 { font-size: 15px; font-weight: 600; color: var(--ink); line-height: 1.3; }
+    .scroll-card p { font-size: 12px; color: var(--ink-soft); font-weight: 300; line-height: 1.55; margin-top: 8px; }
+
+    /* WHY US */
+    .why-us { padding: 40px 80px 80px; }
+    .why-us-header { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: start; margin-bottom: 40px; }
+    .why-us-header h2 { font-family: var(--font-display); font-size: clamp(32px, 4vw, 48px); font-weight: 600; letter-spacing: -0.8px; line-height: 1.1; }
+    .why-us-header p { font-size: 14px; color: var(--ink-soft); font-weight: 300; line-height: 1.7; padding-top: 8px; max-width: 400px; margin-left: auto; text-align: right; }
+    .mission-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+    .mission-card { background: var(--paper-2); border-radius: 14px; padding: 36px; display: flex; flex-direction: column; justify-content: space-between; min-height: 320px; }
+    .mission-card-label { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--ink-soft); }
+    .mission-card h3 { font-family: var(--font-display); font-size: clamp(18px, 2vw, 24px); font-weight: 600; line-height: 1.3; color: var(--ink); margin-top: 40px; }
+    .mission-photo { background: linear-gradient(160deg, #C8B8A8 0%, #B0A090 50%, #9A8878 100%); border-radius: 14px; min-height: 320px; display: flex; align-items: center; justify-content: center; }
+    .mission-photo svg { opacity: 0.2; }
+    .features-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .feature-col { padding: 24px 0; }
+    .feature-col-icon { margin-bottom: 16px; opacity: 0.4; }
+    .feature-col h4 { font-size: 15px; font-weight: 600; margin-bottom: 8px; }
+    .feature-col p { font-size: 13px; color: var(--ink-soft); font-weight: 300; line-height: 1.6; }
+
+    /* TEAM */
+    .team-section { padding: 80px; border-top: 1px solid var(--border); }
+    .team-header { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: start; margin-bottom: 48px; }
+    .team-header h2 { font-family: var(--font-display); font-size: clamp(32px, 4vw, 48px); font-weight: 600; letter-spacing: -0.8px; line-height: 1.1; }
+    .team-header p { font-size: 14px; color: var(--ink-soft); font-weight: 300; line-height: 1.7; text-align: right; margin-left: auto; max-width: 360px; padding-top: 8px; }
+    .team-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+    .team-photo { width: 100%; aspect-ratio: 3/4; background: linear-gradient(160deg, #C8B8A8 0%, #B0A090 40%, #9A8878 70%, #887060 100%); border-radius: 10px; overflow: hidden; margin-bottom: 16px; display: flex; align-items: center; justify-content: center; }
+    .team-photo svg { opacity: 0.2; }
+    .team-member h3 { font-size: 16px; font-weight: 500; margin-bottom: 4px; }
+    .team-member .role { font-size: 13px; color: var(--ink-soft); font-weight: 300; }
+
+    /* FAQ — 2 col Luvia style */
+    .faq-section { padding: 80px; border-top: 1px solid var(--border); display: grid; grid-template-columns: 1fr 1.5fr; gap: 80px; align-items: start; }
+    .faq-left h2 { font-family: var(--font-display); font-size: clamp(28px, 3vw, 40px); font-weight: 600; letter-spacing: -0.6px; line-height: 1.2; margin-bottom: 16px; }
+    .faq-left p { font-size: 14px; color: var(--ink-soft); font-weight: 300; line-height: 1.6; margin-bottom: 28px; }
+    .faq-item { border-bottom: 1px solid var(--border); }
+    .faq-question { font-size: 14px; font-weight: 400; color: var(--ink); display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 20px 0; cursor: pointer; }
+    .faq-question span { font-size: 20px; color: var(--ink-soft); flex-shrink: 0; transition: transform 0.2s; }
+    .faq-answer { font-size: 13px; color: var(--ink-soft); font-weight: 300; line-height: 1.7; padding-bottom: 20px; display: none; }
+    .faq-item.open .faq-answer { display: block; }
+    .faq-item.open .faq-question span { transform: rotate(45deg); color: var(--gold); }
+    .faq-item.open .faq-question { color: var(--gold); }
+
+    /* FOOTER */
+    footer { background: var(--plum); color: var(--paper); padding: 64px 80px 40px; }
+    .footer-top { display: grid; grid-template-columns: 1.2fr 1fr 1fr 1fr; gap: 48px; padding-bottom: 48px; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 32px; }
+    .footer-brand-name { font-family: var(--font-display); font-size: 20px; font-weight: 600; color: var(--paper); display: block; margin-bottom: 12px; }
+    .footer-brand p { font-size: 13px; color: rgba(250,246,236,0.5); font-weight: 300; line-height: 1.6; max-width: 200px; margin-bottom: 20px; }
+    .subscribe-row { display: flex; gap: 8px; }
+    .subscribe-input { flex: 1; min-width: 0; padding: 10px 14px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); border-radius: 8px; font-family: var(--font-sans); font-size: 13px; color: var(--paper); outline: none; }
+    .subscribe-input::placeholder { color: rgba(250,246,236,0.3); }
+    .subscribe-btn { padding: 10px 16px; background: var(--paper); color: var(--ink); border: none; border-radius: 8px; font-family: var(--font-sans); font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap; }
+    .footer-col h4 { font-size: 12px; font-weight: 500; letter-spacing: 0.5px; color: rgba(250,246,236,0.4); margin-bottom: 16px; }
+    .footer-col ul { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+    .footer-col a { font-size: 13px; color: rgba(250,246,236,0.6); text-decoration: none; font-weight: 300; transition: color 0.2s; }
+    .footer-col a:hover { color: var(--paper); }
+    .footer-bottom { display: flex; justify-content: space-between; font-size: 12px; color: rgba(250,246,236,0.3); }
+
+    /* Hamburger */
+    .menu-btn { display: none; flex-direction: column; gap: 5px; cursor: pointer; padding: 8px; background: none; border: none; z-index: 200; }
+    .menu-btn span { display: block; width: 24px; height: 2px; background: var(--plum); border-radius: 2px; transition: all 0.3s ease; }
+    .menu-btn.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+    .menu-btn.open span:nth-child(2) { opacity: 0; }
+    .menu-btn.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+    .mobile-menu { display: none; position: fixed; top: 72px; left: 0; right: 0; background: rgba(250,246,236,0.97); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); padding: 24px 32px 32px; z-index: 99; flex-direction: column; gap: 4px; }
+    .mobile-menu.open { display: flex; }
+    .mobile-menu a { font-size: 18px; font-weight: 400; color: var(--ink); text-decoration: none; padding: 12px 0; border-bottom: 1px solid var(--border); }
+    .mobile-menu a:last-child { border-bottom: none; }
+    .mobile-menu .mobile-cta { margin-top: 16px; background: var(--gold); color: #fff; border-radius: 999px; padding: 14px 24px; text-align: center; font-weight: 500; font-size: 15px; border-bottom: none; }
+
+    @media (max-width: 900px) {
+      nav { padding: 0 24px; }
+      .nav-links { display: none; }
+      .menu-btn { display: flex !important; }
+      nav > .btn-primary { display: none; }
+      .about-hero { padding: 120px 32px 60px; }
+      .cards-image-section { margin: 0 16px 48px; min-height: 420px; }
+      .cards-image-bg { min-height: 420px; }
+      .scroll-cards { padding: 0 16px 20px; }
+      .why-us { padding: 48px 32px; }
+      .why-us-header { grid-template-columns: 1fr; }
+      .why-us-header p { text-align: left; margin-left: 0; }
+      .mission-grid { grid-template-columns: 1fr; }
+      .features-row { grid-template-columns: 1fr; }
+      .team-section { padding: 48px 32px; }
+      .team-header { grid-template-columns: 1fr; }
+      .team-header p { text-align: left; margin-left: 0; }
+      .team-grid { grid-template-columns: 1fr; }
+      .faq-section { padding: 48px 32px; grid-template-columns: 1fr; gap: 40px; }
+      footer { padding: 48px 32px 32px; }
+      .footer-top { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <a href="index.html" class="nav-logo">
+    <svg viewBox="0 0 120 120" width="52" height="52" role="img" aria-label="Sylvia" style="color:var(--gold-deep);">
+      <g stroke="currentColor" fill="none" stroke-linecap="round">
+        <line x1="60" y1="60" x2="28" y2="32" stroke-width="2.6" opacity=".95"/>
+        <line x1="60" y1="60" x2="92" y2="38" stroke-width="2.6" opacity=".95"/>
+        <line x1="60" y1="60" x2="74" y2="88" stroke-width="2.4" opacity=".9"/>
+        <line x1="60" y1="60" x2="38" y2="94" stroke-width="2.0" opacity=".75"/>
+        <line x1="60" y1="60" x2="18" y2="68" stroke-width="1.6" opacity=".55"/>
+        <line x1="60" y1="60" x2="100" y2="68" stroke-width="1.6" opacity=".55"/>
+        <line x1="28" y1="32" x2="92" y2="38" stroke-width="1.0" opacity=".28"/>
+        <line x1="92" y1="38" x2="100" y2="68" stroke-width="1.4" opacity=".5"/>
+        <line x1="74" y1="88" x2="100" y2="68" stroke-width="1.2" opacity=".42"/>
+        <line x1="38" y1="94" x2="74" y2="88" stroke-width="1.0" opacity=".32"/>
+        <line x1="18" y1="68" x2="38" y2="94" stroke-width="1.2" opacity=".42"/>
+        <line x1="18" y1="68" x2="28" y2="32" stroke-width="1.0" opacity=".3"/>
+      </g>
+      <g fill="currentColor">
+        <circle cx="60" cy="60" r="11.5"/>
+        <circle cx="28" cy="32" r="6.4"/>
+        <circle cx="92" cy="38" r="7.2"/>
+        <circle cx="74" cy="88" r="6.0"/>
+        <circle cx="38" cy="94" r="5.2"/>
+        <circle cx="18" cy="68" r="4.4"/>
+        <circle cx="100" cy="68" r="4.0"/>
+      </g>
+      <text x="60" y="60" text-anchor="middle" dominant-baseline="central" font-family="Newsreader, Georgia, serif" font-weight="500" font-size="15" dy="0.5" fill="var(--paper)">S</text>
+    </svg>Sylvia</a>
+  <ul class="nav-links">
+    <li><a href="index.html" class="active">Home</a></li>
+    <li><a href="about.html">About</a></li>
+    <li><a href="how-it-works.html">How It Works</a></li>
+    <li><a href="workbook.html">Workbook</a></li>
+    <li><a href="pricing.html">Pricing</a></li>
+    <li><a href="faq.html">FAQ</a></li>
+  </ul>
+  <a href="contact.html" class="btn-primary">Request Access</a>
+  <button class="menu-btn" id="menuBtn" aria-label="Toggle menu">
+    <span></span><span></span><span></span>
+  </button>
+</nav>
+
+<div class="mobile-menu" id="mobileMenu">
+  <a href="index.html">Home</a>
+  <a href="about.html">About</a>
+  <a href="how-it-works.html">How It Works</a>
+  <a href="workbook.html">Workbook</a>
+  <a href="pricing.html">Pricing</a>
+  <a href="faq.html">FAQ</a>
+  <a href="contact.html" class="mobile-cta">Request Access</a>
+</div>
+
+<!-- HERO -->
+<div class="about-hero">
+  <p class="hero-eyebrow">We build</p>
+  <h1 class="hero-headline">Precision recovery.</h1>
+  <p class="hero-subtitle">We identify the mechanisms driving each individual's eating disorder, then deliver the personalized recovery roadmap that targets them directly.</p>
+  <div class="hero-tags">
+    <div class="hero-tag">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="var(--ink)" stroke-width="1.2"/><path d="M8 5v3l2 2" stroke="var(--ink)" stroke-width="1.2" stroke-linecap="round"/></svg>
+      Precision
+    </div>
+    <div class="hero-tag">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 10l4-4 3 3 5-5" stroke="var(--ink)" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Recovery
+    </div>
+    <div class="hero-tag">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="var(--ink)" stroke-width="1.2"/><path d="M5 8l2 2 4-4" stroke="var(--ink)" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Science
+    </div>
+    <div class="hero-tag">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="6" r="3" stroke="var(--ink)" stroke-width="1.2"/><path d="M3 14c0-2.761 2.239-5 5-5s5 2.239 5 5" stroke="var(--ink)" stroke-width="1.2" stroke-linecap="round"/></svg>
+      Access
+    </div>
+  </div>
+</div>
+
+<!-- CARDS + IMAGE -->
+<div class="cards-image-section">
+  <img src="cube.png" class="cube-bg-img" alt="" />
+  <div class="scroll-cards-wrapper">
+    <div class="scroll-cards">
+      <!-- Original set -->
+      <div class="scroll-card"><h3>Sustainable Recovery</h3><p>We focus on lasting change rather than temporary symptom management, targeting the core mechanisms that maintain each individual's eating disorder.</p></div>
+      <div class="scroll-card"><h3>Precision Data</h3><p>We analyze your unique symptom patterns to understand exactly what is driving your eating disorder, not what drives the average patient.</p></div>
+      <div class="scroll-card"><h3>Smart Personalization</h3><p>Custom recovery roadmaps built from your own data, designed to help you make progress on the targets with the highest leverage for change.</p></div>
+      <div class="scroll-card"><h3>Real-Time Monitoring</h3><p>We capture your symptoms as they happen throughout the day, eliminating the recall bias that limits traditional weekly assessment methods.</p></div>
+      <div class="scroll-card"><h3>Evidence-Based</h3><p>Every exercise in your Roadmap is drawn from peer-reviewed clinical research and matched specifically to your individual symptom profile.</p></div>
+      <div class="scroll-card"><h3>Scalable Access</h3><p>Bringing personalized eating disorder care to the 80% of individuals who currently receive no specialized treatment at all.</p></div>
+      <!-- Duplicate set for seamless loop -->
+      <div class="scroll-card"><h3>Sustainable Recovery</h3><p>We focus on lasting change rather than temporary symptom management, targeting the core mechanisms that maintain each individual's eating disorder.</p></div>
+      <div class="scroll-card"><h3>Precision Data</h3><p>We analyze your unique symptom patterns to understand exactly what is driving your eating disorder, not what drives the average patient.</p></div>
+      <div class="scroll-card"><h3>Smart Personalization</h3><p>Custom recovery roadmaps built from your own data, designed to help you make progress on the targets with the highest leverage for change.</p></div>
+      <div class="scroll-card"><h3>Real-Time Monitoring</h3><p>We capture your symptoms as they happen throughout the day, eliminating the recall bias that limits traditional weekly assessment methods.</p></div>
+      <div class="scroll-card"><h3>Evidence-Based</h3><p>Every exercise in your Roadmap is drawn from peer-reviewed clinical research and matched specifically to your individual symptom profile.</p></div>
+      <div class="scroll-card"><h3>Scalable Access</h3><p>Bringing personalized eating disorder care to the 80% of individuals who currently receive no specialized treatment at all.</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- WHY US -->
+<section class="why-us">
+  <div class="why-us-header">
+    <div>
+      <div class="section-label">Why us?</div>
+      <h2>Clinical integrity<br>in every layer.</h2>
+    </div>
+    <p>We aim to bring the precision of cutting-edge clinical research to every individual who needs personalized eating disorder care.</p>
+  </div>
+
+  <div class="mission-grid">
+    <div class="mission-card">
+      <div class="mission-card-label">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="var(--ink-soft)" stroke-width="1.1"/><path d="M4.5 7l2 2 3-3" stroke="var(--ink-soft)" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Our mission
+      </div>
+      <h3>We believe that eating disorder recovery should be mathematically precise. Our platform empowers individuals to access personalized, data-driven treatment that was previously available only to a fortunate few.</h3>
+    </div>
+    <div class="mission-photo">
+      <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
+        <circle cx="32" cy="24" r="12" stroke="var(--ink)" stroke-width="1.5"/>
+        <path d="M8 56c0-13.255 10.745-24 24-24s24 10.745 24 24" stroke="var(--ink)" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </div>
+  </div>
+
+  <div class="features-row">
+    <div class="feature-col">
+      <div class="feature-col-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="var(--ink)" stroke-width="1.3"/><path d="M9 12l2 2 4-4" stroke="var(--ink)" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <h4>Evidence-Based Precision</h4>
+      <p>We prioritize analytical rigor to ensure every recommendation is grounded in peer-reviewed clinical research, not trends or assumptions.</p>
+    </div>
+    <div class="feature-col">
+      <div class="feature-col-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="4" stroke="var(--ink)" stroke-width="1.3"/><path d="M8 12l3 3 5-5" stroke="var(--ink)" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <h4>Scalable Access</h4>
+      <p>We build scalable architectures that bring personalized eating disorder care to the 80% of individuals who currently receive no specialized treatment.</p>
+    </div>
+    <div class="feature-col">
+      <div class="feature-col-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M4 6h16M4 12h10M4 18h13" stroke="var(--ink)" stroke-width="1.3" stroke-linecap="round"/></svg>
+      </div>
+      <h4>Integrated Care</h4>
+      <p>We eliminate friction by connecting individuals and clinicians through a unified platform that supports every level of care.</p>
+    </div>
+  </div>
+</section>
+
+<!-- TEAM -->
+<section class="team-section">
+  <div class="team-header">
+    <div>
+      <div class="section-label">Our team</div>
+      <h2>The Minds Behind<br>the Mission</h2>
+    </div>
+    <p>A dedicated team of clinical scientists, researchers, and technologists passionate about transforming eating disorder care.</p>
+  </div>
+  <div class="team-grid">
+    <div class="team-member">
+      <div class="team-photo">
+        <svg width="64" height="64" viewBox="0 0 64 64" fill="none"><circle cx="32" cy="24" r="12" stroke="var(--ink)" stroke-width="1.5"/><path d="M8 56c0-13.255 10.745-24 24-24s24 10.745 24 24" stroke="var(--ink)" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </div>
+      <h3>Cheri Levinson, PhD</h3>
+      <div class="role">Co-Founder, Chief Science Officer</div>
+    </div>
+    <div class="team-member">
+      <div class="team-photo">
+        <svg width="64" height="64" viewBox="0 0 64 64" fill="none"><circle cx="32" cy="24" r="12" stroke="var(--ink)" stroke-width="1.5"/><path d="M8 56c0-13.255 10.745-24 24-24s24 10.745 24 24" stroke="var(--ink)" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </div>
+      <h3>Team Member</h3>
+      <div class="role">Role Title</div>
+    </div>
+    <div class="team-member">
+      <div class="team-photo">
+        <svg width="64" height="64" viewBox="0 0 64 64" fill="none"><circle cx="32" cy="24" r="12" stroke="var(--ink)" stroke-width="1.5"/><path d="M8 56c0-13.255 10.745-24 24-24s24 10.745 24 24" stroke="var(--ink)" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </div>
+      <h3>Team Member</h3>
+      <div class="role">Role Title</div>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="faq-section">
+  <div class="faq-left">
+    <div class="section-label">FAQ</div>
+    <h2>Need Help?<br>We're here to assist.</h2>
+    <p>We aim to provide absolute clarity about Sylvia, our methodology, and how precision eating disorder recovery works.</p>
+    <a href="contact.html" class="btn-primary">Contact us</a>
+  </div>
+  <div class="faq-right">
+    <div class="faq-item" onclick="toggleFaq(this)">
+      <div class="faq-question">Who is Sylvia designed for? <span>+</span></div>
+      <div class="faq-answer">Sylvia is designed for individuals with eating disorders or disordered eating, as well as clinicians, treatment centers, and public health agencies who treat eating disorders.</div>
+    </div>
+    <div class="faq-item" onclick="toggleFaq(this)">
+      <div class="faq-question">Is my personal health data kept private and secure? <span>+</span></div>
+      <div class="faq-answer">Yes. All data is encrypted in transit and at rest. Sylvia is built with clinical-grade data security standards and is designed to be HIPAA-compliant. Your information is never sold or shared with third parties.</div>
+    </div>
+    <div class="faq-item" onclick="toggleFaq(this)">
+      <div class="faq-question">How long does the assessment take? <span>+</span></div>
+      <div class="faq-answer">The assessment phase takes approximately two weeks. During this time, users complete brief smartphone surveys multiple times per day. Each check-in takes only a few minutes.</div>
+    </div>
+    <div class="faq-item" onclick="toggleFaq(this)">
+      <div class="faq-question">Can I share my results with my clinician? <span>+</span></div>
+      <div class="faq-answer">Yes. Sylvia is designed to support clinical integration. You can share your Roadmap and assessment results securely with your existing care team.</div>
+    </div>
+    <div class="faq-item" onclick="toggleFaq(this)">
+      <div class="faq-question">Do I need a wearable device to use Sylvia? <span>+</span></div>
+      <div class="faq-answer">No. Sylvia works entirely through your smartphone. You do not need any wearable device, external sensor, or additional hardware.</div>
+    </div>
+    <div class="faq-item" onclick="toggleFaq(this)">
+      <div class="faq-question">How can organizations implement Sylvia? <span>+</span></div>
+      <div class="faq-answer">Sylvia offers full program implementation support for treatment centers, community mental health centers, and public health agencies. Contact us to discuss implementation for your organization.</div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-top">
+    <div class="footer-brand">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+        <svg viewBox="0 0 120 120" width="32" height="32" role="img" aria-label="Sylvia" style="color:var(--gold-soft);">
+          <g stroke="currentColor" fill="none" stroke-linecap="round">
+            <line x1="60" y1="60" x2="28" y2="32" stroke-width="2.6" opacity=".95"/>
+            <line x1="60" y1="60" x2="92" y2="38" stroke-width="2.6" opacity=".95"/>
+            <line x1="60" y1="60" x2="74" y2="88" stroke-width="2.4" opacity=".9"/>
+            <line x1="60" y1="60" x2="38" y2="94" stroke-width="2.0" opacity=".75"/>
+            <line x1="60" y1="60" x2="18" y2="68" stroke-width="1.6" opacity=".55"/>
+            <line x1="60" y1="60" x2="100" y2="68" stroke-width="1.6" opacity=".55"/>
+            <line x1="28" y1="32" x2="92" y2="38" stroke-width="1.0" opacity=".28"/>
+            <line x1="92" y1="38" x2="100" y2="68" stroke-width="1.4" opacity=".5"/>
+            <line x1="74" y1="88" x2="100" y2="68" stroke-width="1.2" opacity=".42"/>
+            <line x1="38" y1="94" x2="74" y2="88" stroke-width="1.0" opacity=".32"/>
+            <line x1="18" y1="68" x2="38" y2="94" stroke-width="1.2" opacity=".42"/>
+            <line x1="18" y1="68" x2="28" y2="32" stroke-width="1.0" opacity=".3"/>
+          </g>
+          <g fill="currentColor">
+            <circle cx="60" cy="60" r="11.5"/>
+            <circle cx="28" cy="32" r="6.4"/>
+            <circle cx="92" cy="38" r="7.2"/>
+            <circle cx="74" cy="88" r="6.0"/>
+            <circle cx="38" cy="94" r="5.2"/>
+            <circle cx="18" cy="68" r="4.4"/>
+            <circle cx="100" cy="68" r="4.0"/>
+          </g>
+          <text x="60" y="60" text-anchor="middle" dominant-baseline="central" font-family="Newsreader, Georgia, serif" font-weight="500" font-size="15" dy="0.5" fill="var(--plum)">S</text>
+        </svg>
+        <span style="font-family:var(--font-display);font-size:20px;font-weight:400;color:var(--paper);">Sylvia</span>
+      </div>
+      <p>Personalized mental health technology for eating disorder recovery. Built on clinical science. Delivered at scale.</p>
+    </div>
+    <div class="footer-col">
+      <h4>Navigation</h4>
+      <ul>
+        <li><a href="index.html">Home</a></li>
+        <li><a href="about.html">About</a></li>
+        <li><a href="workbook.html">Workbook</a></li>
+        <li><a href="pricing.html">Pricing</a></li>
+        <li><a href="contact.html">Contact</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>Resources</h4>
+      <ul>
+        <li><a href="how-it-works.html">How It Works</a></li>
+        <li><a href="faq.html">FAQ</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>Legal</h4>
+      <ul>
+        <li><a href="privacy-policy.html">Privacy Policy</a></li>
+        <li><a href="terms-of-service.html">Terms of Service</a></li>
+        <li><a href="cookie-policy.html">Cookie Policy</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <span>© 2026 Sylvia Precision Health. All rights reserved.</span>
+    <span>Built for those who deserve better care.</span>
+  </div>
+</footer>
+
+<script>
+  function toggleFaq(el) { el.classList.toggle('open'); }
+  const menuBtn = document.getElementById('menuBtn');
+  const mobileMenu = document.getElementById('mobileMenu');
+  if (menuBtn) {
+    menuBtn.addEventListener('click', () => { menuBtn.classList.toggle('open'); mobileMenu.classList.toggle('open'); });
+    mobileMenu.querySelectorAll('a').forEach(a => { a.addEventListener('click', () => { menuBtn.classList.remove('open'); mobileMenu.classList.remove('open'); }); });
+  }
+  document.querySelectorAll('.scroll-card, .mission-card, .feature-col, .team-member').forEach(el => {
+    el.style.opacity = '0'; el.style.transform = 'translateY(16px)'; el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+  });
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => { if (e.isIntersecting) { e.target.style.opacity = '1'; e.target.style.transform = 'translateY(0)'; }});
+  }, { threshold: 0.1 });
+  document.querySelectorAll('.scroll-card, .mission-card, .feature-col, .team-member').forEach(el => observer.observe(el));
+</script>
+</body>
+</html>

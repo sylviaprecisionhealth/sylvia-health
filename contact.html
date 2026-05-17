@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Request Access | Sylvia Precision Health</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400&family=Geist:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --paper:        #FAF6EC;
+      --paper-2:      #F4ECD8;
+      --sand:         #EADFC2;
+      --line:         #E4D8B8;
+      --line-soft:    #EFE5CC;
+      --white:        #FFFEFB;
+      --gold:         #C28E2C;
+      --gold-deep:    #8A5A1F;
+      --gold-soft:    #E5C879;
+      --mauve:        #8C5F88;
+      --plum:         #4B2E4A;
+      --rose:         #E3C5C9;
+      --ink:          #2A2024;
+      --ink-2:        #4D3E3F;
+      --ink-soft:     rgba(42,32,36,0.6);
+      --ink-faint:    rgba(42,32,36,0.35);
+      --border:       rgba(42,32,36,0.12);
+      --font-display: 'Newsreader', 'Source Serif 4', Georgia, serif;
+      --font-sans:    'Geist', ui-sans-serif, system-ui, -apple-system, sans-serif;
+      --shadow-card:  0 18px 40px -28px rgba(74,46,32,0.18);
+      --shadow-button: 0 6px 18px -8px rgba(138,90,31,0.55);
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family: var(--font-sans); background: var(--paper); color: var(--ink); overflow-x: hidden; }
+
+    nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; display: flex; align-items: center; justify-content: space-between; padding: 0 48px; height: 72px; background: rgba(250,246,236,0.85); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); }
+    .nav-logo { font-family: var(--font-display); font-size: 22px; font-weight: 600; color: var(--ink); text-decoration: none; }
+    .nav-links { display: flex; gap: 36px; list-style: none; }
+    .nav-links a { font-size: 14px; color: var(--ink-2); text-decoration: none; transition: color 0.2s; }
+    .nav-links a:hover { color: var(--ink); }
+    .btn-primary { display: inline-flex; align-items: center; background: var(--gold); color: #fff; border: none; border-radius: 999px; padding: 12px 24px; font-family: var(--font-sans); font-size: 14px; font-weight: 500; cursor: pointer; text-decoration: none; transition: background 0.2s, transform 0.15s; }
+    .btn-primary:hover { background: var(--gold-deep); transform: translateY(-1px); }
+
+    /* MAIN LAYOUT — Luvia contact style: left info + right form */
+    .contact-layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      min-height: 100vh;
+      padding-top: 72px;
+    }
+
+    /* LEFT */
+    .contact-left {
+      padding: 80px;
+      background: var(--plum);
+      color: var(--paper);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .contact-left-top { flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 40px 0; }
+    .contact-eyebrow { font-size: 12px; font-weight: 500; letter-spacing: 1.5px; text-transform: uppercase; color: rgba(250,246,236,0.4); margin-bottom: 24px; }
+    .contact-left h1 {
+      font-family: var(--font-display);
+      font-size: clamp(36px, 4vw, 56px);
+      font-weight: 700; line-height: 1.1;
+      letter-spacing: -1px; color: var(--paper);
+      margin-bottom: 24px;
+    }
+    .contact-left p { font-size: 16px; color: rgba(250,246,236,0.6); font-weight: 300; line-height: 1.7; max-width: 400px; margin-bottom: 48px; }
+
+    .contact-info-list { list-style: none; display: flex; flex-direction: column; gap: 16px; }
+    .contact-info-list li { font-size: 14px; color: rgba(250,246,236,0.7); display: flex; align-items: center; gap: 12px; font-weight: 300; }
+    .info-icon { width: 36px; height: 36px; border: 1px solid rgba(255,255,255,0.12); border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+
+    .contact-left-bottom { border-top: 1px solid rgba(255,255,255,0.1); padding-top: 32px; }
+    .testimonial-quote { font-family: var(--font-display); font-size: 17px; font-style: italic; color: rgba(250,246,236,0.8); line-height: 1.5; margin-bottom: 16px; }
+    .testimonial-attr { font-size: 12px; color: rgba(250,246,236,0.4); font-weight: 300; }
+
+    /* RIGHT — FORM */
+    .contact-right {
+      padding: 80px;
+      background: var(--paper);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    .form-title { font-family: var(--font-display); font-size: 28px; font-weight: 600; letter-spacing: -0.4px; margin-bottom: 8px; }
+    .form-sub { font-size: 14px; color: var(--ink-soft); font-weight: 300; margin-bottom: 40px; line-height: 1.6; }
+
+    .form-group { margin-bottom: 20px; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+    label { display: block; font-size: 12px; font-weight: 500; color: var(--ink-2); letter-spacing: 0.5px; margin-bottom: 8px; text-transform: uppercase; }
+    input, select, textarea {
+      width: 100%; padding: 14px 18px;
+      background: var(--paper-2);
+      border: 1.5px solid transparent;
+      border-radius: 12px;
+      font-family: var(--font-sans);
+      font-size: 14px; font-weight: 300;
+      color: var(--ink);
+      outline: none;
+      transition: border-color 0.2s, background 0.2s;
+      appearance: none;
+    }
+    input::placeholder, textarea::placeholder { color: var(--ink-soft); }
+    input:focus, select:focus, textarea:focus { border-color: var(--gold); background: #fff; }
+    textarea { resize: vertical; min-height: 120px; }
+    select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236B6560' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 16px center; padding-right: 40px; cursor: pointer; }
+
+    .form-submit {
+      width: 100%; padding: 16px;
+      background: var(--gold); color: #fff;
+      border: none; border-radius: 999px;
+      font-family: var(--font-sans);
+      font-size: 15px; font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.15s;
+      margin-top: 8px;
+    }
+    .form-submit:hover { background: var(--gold-deep); transform: translateY(-1px); }
+
+    .form-privacy { font-size: 12px; color: var(--ink-soft); font-weight: 300; text-align: center; margin-top: 16px; line-height: 1.5; }
+
+    /* SUCCESS STATE */
+    .success-state { display: none; text-align: center; padding: 40px 0; }
+    .success-state.show { display: block; }
+    .success-icon { width: 64px; height: 64px; background: var(--paper-2); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 24px; }
+    .success-state h2 { font-family: var(--font-display); font-size: 28px; font-weight: 600; margin-bottom: 12px; }
+    .success-state p { font-size: 15px; color: var(--ink-soft); font-weight: 300; line-height: 1.6; max-width: 360px; margin: 0 auto; }
+
+    /* FOOTER */
+    footer { background: var(--plum); color: var(--paper); padding: 48px 80px 32px; }
+    .footer-bottom { display: flex; justify-content: space-between; font-size: 12px; color: rgba(250,246,236,0.3); }
+
+    @media (max-width: 900px) {
+      nav { padding: 0 24px; }
+      .nav-links { display: none; }
+      .menu-btn { display: flex !important; }
+      nav > .btn-primary { display: none; }
+      .contact-layout { grid-template-columns: 1fr; min-height: auto; }
+      .contact-left { padding: 80px 32px 48px; }
+      .contact-right { padding: 48px 32px 64px; }
+      .form-row { grid-template-columns: 1fr; }
+      footer { padding: 40px 32px 28px; }
+    }
+
+    /* Hamburger menu */
+    .menu-btn {
+      display: none;
+      flex-direction: column;
+      gap: 5px;
+      cursor: pointer;
+      padding: 8px;
+      background: none;
+      border: none;
+      z-index: 200;
+    }
+    .menu-btn span {
+      display: block;
+      width: 24px;
+      height: 2px;
+      background: var(--plum);
+      border-radius: 2px;
+      transition: all 0.3s ease;
+    }
+    .menu-btn.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+    .menu-btn.open span:nth-child(2) { opacity: 0; }
+    .menu-btn.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+    .mobile-menu {
+      display: none;
+      position: fixed;
+      top: 72px; left: 0; right: 0;
+      background: rgba(250,246,236,0.97);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 24px 32px 32px;
+      z-index: 99;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .mobile-menu.open { display: flex; }
+    .mobile-menu a {
+      font-size: 18px;
+      font-weight: 400;
+      color: var(--ink);
+      text-decoration: none;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+      transition: color 0.2s;
+    }
+    .mobile-menu a:last-child { border-bottom: none; }
+    .mobile-menu a:hover { color: var(--gold); }
+    .mobile-menu .mobile-cta {
+      margin-top: 16px;
+      background: var(--gold);
+      color: #fff;
+      border-radius: 999px;
+      padding: 14px 24px;
+      text-align: center;
+      font-weight: 500;
+      font-size: 15px;
+      border-bottom: none;
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <a href="index.html" class="nav-logo">
+    <svg viewBox="0 0 120 120" width="52" height="52" role="img" aria-label="Sylvia" style="color:var(--gold-deep);">
+      <g stroke="currentColor" fill="none" stroke-linecap="round">
+        <line x1="60" y1="60" x2="28" y2="32" stroke-width="2.6" opacity=".95"/>
+        <line x1="60" y1="60" x2="92" y2="38" stroke-width="2.6" opacity=".95"/>
+        <line x1="60" y1="60" x2="74" y2="88" stroke-width="2.4" opacity=".9"/>
+        <line x1="60" y1="60" x2="38" y2="94" stroke-width="2.0" opacity=".75"/>
+        <line x1="60" y1="60" x2="18" y2="68" stroke-width="1.6" opacity=".55"/>
+        <line x1="60" y1="60" x2="100" y2="68" stroke-width="1.6" opacity=".55"/>
+        <line x1="28" y1="32" x2="92" y2="38" stroke-width="1.0" opacity=".28"/>
+        <line x1="92" y1="38" x2="100" y2="68" stroke-width="1.4" opacity=".5"/>
+        <line x1="74" y1="88" x2="100" y2="68" stroke-width="1.2" opacity=".42"/>
+        <line x1="38" y1="94" x2="74" y2="88" stroke-width="1.0" opacity=".32"/>
+        <line x1="18" y1="68" x2="38" y2="94" stroke-width="1.2" opacity=".42"/>
+        <line x1="18" y1="68" x2="28" y2="32" stroke-width="1.0" opacity=".3"/>
+      </g>
+      <g fill="currentColor">
+        <circle cx="60" cy="60" r="11.5"/>
+        <circle cx="28" cy="32" r="6.4"/>
+        <circle cx="92" cy="38" r="7.2"/>
+        <circle cx="74" cy="88" r="6.0"/>
+        <circle cx="38" cy="94" r="5.2"/>
+        <circle cx="18" cy="68" r="4.4"/>
+        <circle cx="100" cy="68" r="4.0"/>
+      </g>
+      <text x="60" y="60" text-anchor="middle" dominant-baseline="central" font-family="Newsreader, Georgia, serif" font-weight="500" font-size="15" dy="0.5" fill="var(--paper)">S</text>
+    </svg>Sylvia</a>
+  <ul class="nav-links">
+    <li><a href="index.html" class="active">Home</a></li>
+    <li><a href="about.html">About</a></li>
+    <li><a href="how-it-works.html">How It Works</a></li>
+    <li><a href="workbook.html">Workbook</a></li>
+    <li><a href="pricing.html">Pricing</a></li>
+    <li><a href="faq.html">FAQ</a></li>
+  </ul>
+  <a href="contact.html" class="btn-primary">Request Access</a>
+  <button class="menu-btn" id="menuBtn" aria-label="Toggle menu">
+    <span></span><span></span><span></span>
+  </button>
+</nav>
+
+<div class="mobile-menu" id="mobileMenu">
+  <a href="index.html">Home</a>
+  <a href="about.html">About</a>
+  <a href="how-it-works.html">How It Works</a>
+  <a href="workbook.html">Workbook</a>
+  <a href="pricing.html">Pricing</a>
+  <a href="faq.html">FAQ</a>
+  <a href="contact.html" class="mobile-cta">Request Access</a>
+</div>
+
+<div class="contact-layout">
+
+  <!-- LEFT INFO -->
+  <div class="contact-left">
+    <div class="contact-left-top">
+      <p class="contact-eyebrow">Get Started</p>
+      <h1>Design your recovery.</h1>
+      <p>Connect with our team to explore how Sylvia can deliver a personalized recovery roadmap based on your unique symptom data — or how to bring Sylvia to your clinical practice.</p>
+
+      <ul class="contact-info-list">
+        <li>
+          <div class="info-icon">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M2 4l6 5 6-5M2 4h12v9H2V4z" stroke="rgba(250,246,236,0.6)" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          info@sylviaprecisionhealth.com
+        </li>
+        <li>
+          <div class="info-icon">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <circle cx="8" cy="7" r="3" stroke="rgba(250,246,236,0.6)" stroke-width="1.2"/>
+              <path d="M8 2C5.239 2 3 4.239 3 7c0 3.5 5 9 5 9s5-5.5 5-9c0-2.761-2.239-5-5-5z" stroke="rgba(250,246,236,0.6)" stroke-width="1.2"/>
+            </svg>
+          </div>
+          Louisville, Kentucky
+        </li>
+        <li>
+          <div class="info-icon">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <circle cx="8" cy="8" r="6" stroke="rgba(250,246,236,0.6)" stroke-width="1.2"/>
+              <path d="M8 5v3l2 2" stroke="rgba(250,246,236,0.6)" stroke-width="1.2" stroke-linecap="round"/>
+            </svg>
+          </div>
+          We respond within 1-2 business days
+        </li>
+      </ul>
+    </div>
+
+    <div class="contact-left-bottom">
+      <p class="testimonial-quote">"Sylvia offers a fundamentally different approach to eating disorder treatment, one that meets each person where they are and gives clinicians the tools to truly personalize care."</p>
+      <p class="testimonial-attr">Cheri Levinson, PhD, Research Collaborator, Louisville Center for Eating Disorders</p>
+    </div>
+  </div>
+
+  <!-- RIGHT FORM -->
+  <div class="contact-right">
+    <div id="form-container">
+      <h2 class="form-title">Request Access</h2>
+      <p class="form-sub">Fill out the form below and a member of our team will be in touch to help you get started.</p>
+
+      <!--
+        SETUP INSTRUCTIONS:
+        1. Go to formspree.io and create a free account
+        2. Create a new form and copy your form endpoint URL
+        3. Replace xbdwekgk below with your actual ID (e.g. xpzgkrjb)
+        4. Submissions will be emailed directly to you
+      -->
+      <form id="contact-form" action="https://formspree.io/f/xbdwekgk" method="POST">
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="first">First Name</label>
+            <input type="text" id="first" name="first_name" placeholder="Jane" required />
+          </div>
+          <div class="form-group">
+            <label for="last">Last Name</label>
+            <input type="text" id="last" name="last_name" placeholder="Smith" required />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="email">Email Address</label>
+          <input type="email" id="email" name="email" placeholder="jane@example.com" required />
+        </div>
+
+        <div class="form-group">
+          <label for="type">I am a...</label>
+          <select id="type" name="user_type" required>
+            <option value="" disabled selected>Select one</option>
+            <option value="individual">Individual seeking recovery support</option>
+            <option value="clinician">Clinician or therapist</option>
+            <option value="treatment_center">Treatment center or organization</option>
+            <option value="researcher">Researcher or academic</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="interest">Interested in...</label>
+          <select id="interest" name="interest" required>
+            <option value="" disabled selected>Select one</option>
+            <option value="self_guided">Self-Guided Recovery</option>
+            <option value="coaching">Guided Coaching</option>
+            <option value="clinician_plan">Clinician Treatment Plans</option>
+            <option value="program">Program Implementation</option>
+            <option value="general">General information</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="message">Message (optional)</label>
+          <textarea id="message" name="message" placeholder="Tell us a bit about your situation or what you're looking for..."></textarea>
+        </div>
+
+        <button type="submit" class="form-submit">Send Request</button>
+        <p class="form-privacy">Your information is kept private and secure. We will never share your data with third parties.</p>
+      </form>
+    </div>
+
+    <div class="success-state" id="success">
+      <div class="success-icon">
+        <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+          <path d="M6 14l5 5 11-11" stroke="var(--gold)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <h2>Request received.</h2>
+      <p>Thank you for reaching out. A member of our team will be in touch within 1-2 business days.</p>
+    </div>
+  </div>
+
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-top">
+    <div class="footer-brand">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+        <svg viewBox="0 0 120 120" width="32" height="32" role="img" aria-label="Sylvia" style="color:var(--gold-soft);">
+          <g stroke="currentColor" fill="none" stroke-linecap="round">
+            <line x1="60" y1="60" x2="28" y2="32" stroke-width="2.6" opacity=".95"/>
+            <line x1="60" y1="60" x2="92" y2="38" stroke-width="2.6" opacity=".95"/>
+            <line x1="60" y1="60" x2="74" y2="88" stroke-width="2.4" opacity=".9"/>
+            <line x1="60" y1="60" x2="38" y2="94" stroke-width="2.0" opacity=".75"/>
+            <line x1="60" y1="60" x2="18" y2="68" stroke-width="1.6" opacity=".55"/>
+            <line x1="60" y1="60" x2="100" y2="68" stroke-width="1.6" opacity=".55"/>
+            <line x1="28" y1="32" x2="92" y2="38" stroke-width="1.0" opacity=".28"/>
+            <line x1="92" y1="38" x2="100" y2="68" stroke-width="1.4" opacity=".5"/>
+            <line x1="74" y1="88" x2="100" y2="68" stroke-width="1.2" opacity=".42"/>
+            <line x1="38" y1="94" x2="74" y2="88" stroke-width="1.0" opacity=".32"/>
+            <line x1="18" y1="68" x2="38" y2="94" stroke-width="1.2" opacity=".42"/>
+            <line x1="18" y1="68" x2="28" y2="32" stroke-width="1.0" opacity=".3"/>
+          </g>
+          <g fill="currentColor">
+            <circle cx="60" cy="60" r="11.5"/>
+            <circle cx="28" cy="32" r="6.4"/>
+            <circle cx="92" cy="38" r="7.2"/>
+            <circle cx="74" cy="88" r="6.0"/>
+            <circle cx="38" cy="94" r="5.2"/>
+            <circle cx="18" cy="68" r="4.4"/>
+            <circle cx="100" cy="68" r="4.0"/>
+          </g>
+          <text x="60" y="60" text-anchor="middle" dominant-baseline="central" font-family="Newsreader, Georgia, serif" font-weight="500" font-size="15" dy="0.5" fill="var(--plum)">S</text>
+        </svg>
+        <span style="font-family:var(--font-display);font-size:20px;font-weight:400;color:var(--paper);">Sylvia</span>
+      </div>
+      <p>Personalized mental health technology for eating disorder recovery. Built on clinical science. Delivered at scale.</p>
+    </div>
+    <div class="footer-col">
+      <h4>Navigation</h4>
+      <ul>
+        <li><a href="index.html">Home</a></li>
+        <li><a href="about.html">About</a></li>
+        <li><a href="workbook.html">Workbook</a></li>
+        <li><a href="pricing.html">Pricing</a></li>
+        <li><a href="contact.html">Contact</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>Resources</h4>
+      <ul>
+        <li><a href="how-it-works.html">How It Works</a></li>
+        <li><a href="faq.html">FAQ</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>Legal</h4>
+      <ul>
+        <li><a href="privacy-policy.html">Privacy Policy</a></li>
+        <li><a href="terms-of-service.html">Terms of Service</a></li>
+        <li><a href="cookie-policy.html">Cookie Policy</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <span>© 2026 Sylvia Precision Health. All rights reserved.</span>
+    <span>Built for those who deserve better care.</span>
+  </div>
+</footer>
+
+<script>
+  const form = document.getElementById('contact-form');
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const data = new FormData(form);
+    const response = await fetch(form.action, {
+      method: 'POST', body: data,
+      headers: { 'Accept': 'application/json' }
+    });
+    if (response.ok) {
+      document.getElementById('form-container').style.display = 'none';
+      document.getElementById('success').classList.add('show');
+    }
+  });
+
+  // Mobile menu toggle
+  const menuBtn = document.getElementById('menuBtn');
+  const mobileMenu = document.getElementById('mobileMenu');
+  if (menuBtn) {
+    menuBtn.addEventListener('click', () => {
+      menuBtn.classList.toggle('open');
+      mobileMenu.classList.toggle('open');
+    });
+    // Close on link click
+    mobileMenu.querySelectorAll('a').forEach(a => {
+      a.addEventListener('click', () => {
+        menuBtn.classList.remove('open');
+        mobileMenu.classList.remove('open');
+      });
+    });
+  }
+
+  const menuBtn = document.getElementById('menuBtn');
+  const mobileMenu = document.getElementById('mobileMenu');
+  if (menuBtn) {
+    menuBtn.addEventListener('click', () => { menuBtn.classList.toggle('open'); mobileMenu.classList.toggle('open'); });
+    mobileMenu.querySelectorAll('a').forEach(a => { a.addEventListener('click', () => { menuBtn.classList.remove('open'); mobileMenu.classList.remove('open'); }); });
+  }
+</script>
+</body>
+</html>

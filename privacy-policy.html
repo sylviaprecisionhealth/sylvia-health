@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Privacy Policy | Sylvia Precision Health</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400&family=Geist:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --paper:        #FAF6EC;
+      --paper-2:      #F4ECD8;
+      --sand:         #EADFC2;
+      --line:         #E4D8B8;
+      --line-soft:    #EFE5CC;
+      --white:        #FFFEFB;
+      --gold:         #C28E2C;
+      --gold-deep:    #8A5A1F;
+      --gold-soft:    #E5C879;
+      --mauve:        #8C5F88;
+      --plum:         #4B2E4A;
+      --rose:         #E3C5C9;
+      --ink:          #2A2024;
+      --ink-2:        #4D3E3F;
+      --ink-soft:     rgba(42,32,36,0.6);
+      --ink-faint:    rgba(42,32,36,0.35);
+      --border:       rgba(42,32,36,0.12);
+      --font-display: 'Newsreader', 'Source Serif 4', Georgia, serif;
+      --font-sans:    'Geist', ui-sans-serif, system-ui, -apple-system, sans-serif;
+      --shadow-card:  0 18px 40px -28px rgba(74,46,32,0.18);
+      --shadow-button: 0 6px 18px -8px rgba(138,90,31,0.55);
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family: var(--font-sans); background: var(--paper); color: var(--ink); overflow-x: hidden; }
+    nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; display: flex; align-items: center; justify-content: space-between; padding: 0 48px; height: 72px; background: rgba(250,246,236,0.85); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); }
+    .nav-logo { font-family: var(--font-display); font-size: 22px; font-weight: 600; color: var(--ink); text-decoration: none; }
+    .nav-links { display: flex; gap: 36px; list-style: none; }
+    .nav-links a { font-size: 14px; color: var(--ink-2); text-decoration: none; transition: color 0.2s; }
+    .nav-links a:hover { color: var(--ink); }
+    .btn-primary { display: inline-flex; align-items: center; background: var(--gold); color: #fff; border: none; border-radius: 999px; padding: 12px 24px; font-family: var(--font-sans); font-size: 14px; font-weight: 500; cursor: pointer; text-decoration: none; transition: background 0.2s; }
+    .btn-primary:hover { background: var(--gold-deep); }
+    .menu-btn { display: none; flex-direction: column; gap: 5px; cursor: pointer; padding: 8px; background: none; border: none; z-index: 200; }
+    .menu-btn span { display: block; width: 24px; height: 2px; background: var(--plum); border-radius: 2px; transition: all 0.3s ease; }
+    .menu-btn.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+    .menu-btn.open span:nth-child(2) { opacity: 0; }
+    .menu-btn.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+    .mobile-menu { display: none; position: fixed; top: 72px; left: 0; right: 0; background: rgba(250,246,236,0.97); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); padding: 24px 32px 32px; z-index: 99; flex-direction: column; gap: 4px; }
+    .mobile-menu.open { display: flex; }
+    .mobile-menu a { font-size: 18px; font-weight: 400; color: var(--ink); text-decoration: none; padding: 12px 0; border-bottom: 1px solid var(--border); }
+    .mobile-menu a:last-child { border-bottom: none; }
+    .mobile-menu .mobile-cta { margin-top: 16px; background: var(--gold); color: #fff; border-radius: 999px; padding: 14px 24px; text-align: center; font-weight: 500; font-size: 15px; border-bottom: none; }
+    .legal-hero { padding: 140px 80px 60px; border-bottom: 1px solid var(--border); }
+    .legal-hero .label { font-size: 12px; font-weight: 500; letter-spacing: 1.5px; text-transform: uppercase; color: var(--ink-soft); margin-bottom: 16px; display: block; }
+    .legal-hero h1 { font-family: var(--font-display); font-size: clamp(36px, 5vw, 56px); font-weight: 700; letter-spacing: -1px; line-height: 1.1; margin-bottom: 16px; }
+    .legal-hero p { font-size: 15px; color: var(--ink-soft); font-weight: 300; }
+    .legal-body { max-width: 760px; margin: 0 auto; padding: 64px 80px 100px; }
+    .legal-body h2 { font-family: var(--font-display); font-size: 24px; font-weight: 600; margin: 48px 0 16px; letter-spacing: -0.3px; }
+    .legal-body h3 { font-size: 16px; font-weight: 600; margin: 28px 0 10px; }
+    .legal-body p { font-size: 15px; color: var(--ink-soft); font-weight: 300; line-height: 1.8; margin-bottom: 16px; }
+    .legal-body ul { list-style: disc; padding-left: 24px; margin-bottom: 16px; }
+    .legal-body ul li { font-size: 15px; color: var(--ink-soft); font-weight: 300; line-height: 1.8; margin-bottom: 8px; }
+    .legal-body a { color: var(--gold); text-decoration: underline; }
+    .legal-toc { background: var(--paper-2); border-radius: 10px; padding: 28px 32px; margin-bottom: 48px; }
+    .legal-toc h4 { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 14px; color: var(--ink); }
+    .legal-toc ol { padding-left: 20px; }
+    .legal-toc li { font-size: 14px; color: var(--ink-soft); line-height: 1.8; }
+    .legal-toc a { color: var(--ink-2); text-decoration: none; }
+    .legal-toc a:hover { color: var(--gold); }
+    footer { background: var(--plum); color: var(--paper); padding: 64px 80px 40px; }
+    .footer-top { display: grid; grid-template-columns: 1.5fr 1fr 1fr 1fr; gap: 48px; padding-bottom: 48px; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 32px; }
+    .footer-brand-name { font-family: var(--font-display); font-size: 20px; font-weight: 600; color: var(--paper); display: block; margin-bottom: 12px; }
+    .footer-brand p { font-size: 13px; color: rgba(250,246,236,0.5); font-weight: 300; line-height: 1.6; max-width: 240px; }
+    .footer-col h4 { font-size: 12px; font-weight: 500; letter-spacing: 1px; text-transform: uppercase; color: rgba(250,246,236,0.4); margin-bottom: 16px; }
+    .footer-col ul { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+    .footer-col a { font-size: 13px; color: rgba(250,246,236,0.6); text-decoration: none; font-weight: 300; transition: color 0.2s; }
+    .footer-col a:hover { color: var(--paper); }
+    .footer-bottom { display: flex; justify-content: space-between; font-size: 12px; color: rgba(250,246,236,0.3); }
+    @media (max-width: 900px) {
+      nav { padding: 0 24px; } .nav-links { display: none; } .menu-btn { display: flex !important; } nav > .btn-primary { display: none; }
+      .legal-hero { padding: 120px 32px 48px; } .legal-body { padding: 48px 32px 80px; }
+      footer { padding: 48px 32px 32px; } .footer-top { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <a href="index.html" class="nav-logo">
+    <svg viewBox="0 0 120 120" width="52" height="52" role="img" aria-label="Sylvia" style="color:var(--gold-deep);">
+      <g stroke="currentColor" fill="none" stroke-linecap="round">
+        <line x1="60" y1="60" x2="28" y2="32" stroke-width="2.6" opacity=".95"/>
+        <line x1="60" y1="60" x2="92" y2="38" stroke-width="2.6" opacity=".95"/>
+        <line x1="60" y1="60" x2="74" y2="88" stroke-width="2.4" opacity=".9"/>
+        <line x1="60" y1="60" x2="38" y2="94" stroke-width="2.0" opacity=".75"/>
+        <line x1="60" y1="60" x2="18" y2="68" stroke-width="1.6" opacity=".55"/>
+        <line x1="60" y1="60" x2="100" y2="68" stroke-width="1.6" opacity=".55"/>
+        <line x1="28" y1="32" x2="92" y2="38" stroke-width="1.0" opacity=".28"/>
+        <line x1="92" y1="38" x2="100" y2="68" stroke-width="1.4" opacity=".5"/>
+        <line x1="74" y1="88" x2="100" y2="68" stroke-width="1.2" opacity=".42"/>
+        <line x1="38" y1="94" x2="74" y2="88" stroke-width="1.0" opacity=".32"/>
+        <line x1="18" y1="68" x2="38" y2="94" stroke-width="1.2" opacity=".42"/>
+        <line x1="18" y1="68" x2="28" y2="32" stroke-width="1.0" opacity=".3"/>
+      </g>
+      <g fill="currentColor">
+        <circle cx="60" cy="60" r="11.5"/>
+        <circle cx="28" cy="32" r="6.4"/>
+        <circle cx="92" cy="38" r="7.2"/>
+        <circle cx="74" cy="88" r="6.0"/>
+        <circle cx="38" cy="94" r="5.2"/>
+        <circle cx="18" cy="68" r="4.4"/>
+        <circle cx="100" cy="68" r="4.0"/>
+      </g>
+      <text x="60" y="60" text-anchor="middle" dominant-baseline="central" font-family="Newsreader, Georgia, serif" font-weight="500" font-size="15" dy="0.5" fill="var(--paper)">S</text>
+    </svg>Sylvia</a>
+  <ul class="nav-links">
+    <li><a href="index.html" class="active">Home</a></li>
+    <li><a href="about.html">About</a></li>
+    <li><a href="how-it-works.html">How It Works</a></li>
+    <li><a href="workbook.html">Workbook</a></li>
+    <li><a href="pricing.html">Pricing</a></li>
+    <li><a href="faq.html">FAQ</a></li>
+  </ul>
+  <a href="contact.html" class="btn-primary">Request Access</a>
+  <button class="menu-btn" id="menuBtn" aria-label="Toggle menu">
+    <span></span><span></span><span></span>
+  </button>
+</nav>
+<div class="mobile-menu" id="mobileMenu">
+  <a href="index.html">Home</a>
+  <a href="about.html">About</a>
+  <a href="how-it-works.html">How It Works</a>
+  <a href="workbook.html">Workbook</a>
+  <a href="pricing.html">Pricing</a>
+  <a href="faq.html">FAQ</a>
+  <a href="contact.html" class="mobile-cta">Request Access</a>
+</div>
+
+<div class="legal-hero">
+  <span class="label">Legal</span>
+  <h1>Privacy Policy</h1>
+  <p>Last updated: May 14, 2026</p>
+</div>
+
+<div class="legal-body">
+  <div class="legal-toc">
+    <h4>Contents</h4>
+    <ol>
+      <li><a href="#information-we-collect">Information We Collect</a></li>
+      <li><a href="#how-we-use">How We Use Your Information</a></li>
+      <li><a href="#sharing">Sharing of Information</a></li>
+      <li><a href="#data-security">Data Security</a></li>
+      <li><a href="#health-data">Health Data</a></li>
+      <li><a href="#your-rights">Your Rights</a></li>
+      <li><a href="#retention">Data Retention</a></li>
+      <li><a href="#children">Children's Privacy</a></li>
+      <li><a href="#changes">Changes to This Policy</a></li>
+      <li><a href="#contact-us">Contact Us</a></li>
+    </ol>
+  </div>
+
+  <p>Sylvia Precision Health ("Sylvia," "we," "us," or "our") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our platform, website, and related services (collectively, the "Services"). Please read this policy carefully. By using our Services, you agree to the practices described in this Privacy Policy.</p>
+
+  <h2 id="information-we-collect">1. Information We Collect</h2>
+  <h3>Information You Provide Directly</h3>
+  <p>We collect information you provide when you create an account, complete assessments, or contact us, including:</p>
+  <ul>
+    <li>Name, email address, and account credentials</li>
+    <li>Health and wellness information provided through ecological momentary assessments (EMAs)</li>
+    <li>Responses to surveys about eating behaviors, thoughts, emotions, and related symptoms</li>
+    <li>Communications with our support team</li>
+    <li>Payment information (processed securely through third-party payment processors)</li>
+  </ul>
+
+  <h3>Information Collected Automatically</h3>
+  <p>When you use our Services, we may automatically collect certain technical information, including:</p>
+  <ul>
+    <li>Device type, operating system, and browser information</li>
+    <li>IP address and general location data</li>
+    <li>Usage data such as pages visited, features used, and time spent on the platform</li>
+    <li>App performance data and crash reports</li>
+  </ul>
+
+  <h2 id="how-we-use">2. How We Use Your Information</h2>
+  <p>We use the information we collect to:</p>
+  <ul>
+    <li>Provide, operate, and improve our Services</li>
+    <li>Generate your Personalized Recovery Roadmap and related recommendations</li>
+    <li>Communicate with you about your account, assessments, and results</li>
+    <li>Process payments and manage subscriptions</li>
+    <li>Conduct research to improve our clinical algorithms and platform (using de-identified data only)</li>
+    <li>Comply with legal obligations</li>
+    <li>Detect, investigate, and prevent fraudulent or unauthorized activity</li>
+  </ul>
+  <p>We do not use your personal health information for advertising purposes, and we do not sell your data to third parties.</p>
+
+  <h2 id="sharing">3. Sharing of Information</h2>
+  <p>We do not sell, rent, or share your personal information with third parties for their marketing purposes. We may share your information in the following limited circumstances:</p>
+  <ul>
+    <li><strong>Service providers:</strong> We work with trusted third-party vendors who help us operate our platform (e.g., cloud hosting, payment processing, email delivery). These vendors are contractually bound to protect your data and may only use it to provide services to us.</li>
+    <li><strong>Clinicians:</strong> If you use a clinician-integrated plan, your assessment results and Roadmap may be shared with the clinician or care team you have authorized.</li>
+    <li><strong>Legal requirements:</strong> We may disclose your information if required by law, court order, or governmental authority.</li>
+    <li><strong>Business transfers:</strong> In the event of a merger, acquisition, or sale of assets, your information may be transferred as part of that transaction. We will notify you of any such change.</li>
+  </ul>
+
+  <h2 id="data-security">4. Data Security</h2>
+  <p>We implement industry-standard technical and organizational measures to protect your personal information against unauthorized access, alteration, disclosure, or destruction. These measures include:</p>
+  <ul>
+    <li>Encryption of data in transit using TLS/SSL protocols</li>
+    <li>Encryption of data at rest</li>
+    <li>Access controls limiting who within our organization can access your data</li>
+    <li>Regular security assessments and audits</li>
+  </ul>
+  <p>No method of transmission over the internet or electronic storage is completely secure. While we strive to use commercially acceptable means to protect your information, we cannot guarantee its absolute security.</p>
+
+  <h2 id="health-data">5. Health Data</h2>
+  <p>Sylvia collects sensitive personal health information through our assessment platform. We treat this data with the highest level of care and confidentiality. Your health data is:</p>
+  <ul>
+    <li>Used only to provide and improve our Services and to generate your Personalized Recovery Roadmap</li>
+    <li>Never sold to third parties, including insurance companies, employers, or advertisers</li>
+    <li>Stored with encryption and protected by strict access controls</li>
+    <li>Used in de-identified, aggregated form only for research and platform improvement</li>
+  </ul>
+  <p>We are committed to building our platform in alignment with HIPAA standards and applicable health data privacy regulations.</p>
+
+  <h2 id="your-rights">6. Your Rights</h2>
+  <p>Depending on your location, you may have the following rights regarding your personal information:</p>
+  <ul>
+    <li><strong>Access:</strong> Request a copy of the personal information we hold about you</li>
+    <li><strong>Correction:</strong> Request that we correct inaccurate or incomplete information</li>
+    <li><strong>Deletion:</strong> Request that we delete your personal information, subject to certain legal exceptions</li>
+    <li><strong>Portability:</strong> Request a machine-readable copy of your data</li>
+    <li><strong>Opt-out:</strong> Opt out of certain uses of your data, such as research</li>
+  </ul>
+  <p>To exercise any of these rights, please contact us at <a href="mailto:privacy@sylviaprecisionhealth.com">privacy@sylviaprecisionhealth.com</a>.</p>
+
+  <h2 id="retention">7. Data Retention</h2>
+  <p>We retain your personal information for as long as your account is active or as needed to provide you with our Services. If you close your account, we will delete or anonymize your personal information within 90 days, unless we are required to retain it for legal, compliance, or dispute resolution purposes. De-identified research data may be retained indefinitely.</p>
+
+  <h2 id="children">8. Children's Privacy</h2>
+  <p>Our Services are not directed to individuals under the age of 18. We do not knowingly collect personal information from children under 18. If we become aware that we have collected personal information from a child under 18 without parental consent, we will take steps to delete that information promptly. If you believe we may have collected information from a child under 18, please contact us at <a href="mailto:privacy@sylviaprecisionhealth.com">privacy@sylviaprecisionhealth.com</a>.</p>
+
+  <h2 id="changes">9. Changes to This Policy</h2>
+  <p>We may update this Privacy Policy from time to time to reflect changes in our practices or legal requirements. We will notify you of any material changes by posting the new policy on this page and updating the "Last updated" date. We encourage you to review this policy periodically. Your continued use of our Services after any changes constitutes your acceptance of the updated policy.</p>
+
+  <h2 id="contact-us">10. Contact Us</h2>
+  <p>If you have any questions, concerns, or requests regarding this Privacy Policy or how we handle your personal information, please contact us at:</p>
+  <p><strong>Sylvia Precision Health</strong><br>
+  Louisville, Kentucky<br>
+  Email: <a href="mailto:privacy@sylviaprecisionhealth.com">privacy@sylviaprecisionhealth.com</a></p>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-top">
+    <div class="footer-brand">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+        <svg viewBox="0 0 120 120" width="32" height="32" role="img" aria-label="Sylvia" style="color:var(--gold-soft);">
+          <g stroke="currentColor" fill="none" stroke-linecap="round">
+            <line x1="60" y1="60" x2="28" y2="32" stroke-width="2.6" opacity=".95"/>
+            <line x1="60" y1="60" x2="92" y2="38" stroke-width="2.6" opacity=".95"/>
+            <line x1="60" y1="60" x2="74" y2="88" stroke-width="2.4" opacity=".9"/>
+            <line x1="60" y1="60" x2="38" y2="94" stroke-width="2.0" opacity=".75"/>
+            <line x1="60" y1="60" x2="18" y2="68" stroke-width="1.6" opacity=".55"/>
+            <line x1="60" y1="60" x2="100" y2="68" stroke-width="1.6" opacity=".55"/>
+            <line x1="28" y1="32" x2="92" y2="38" stroke-width="1.0" opacity=".28"/>
+            <line x1="92" y1="38" x2="100" y2="68" stroke-width="1.4" opacity=".5"/>
+            <line x1="74" y1="88" x2="100" y2="68" stroke-width="1.2" opacity=".42"/>
+            <line x1="38" y1="94" x2="74" y2="88" stroke-width="1.0" opacity=".32"/>
+            <line x1="18" y1="68" x2="38" y2="94" stroke-width="1.2" opacity=".42"/>
+            <line x1="18" y1="68" x2="28" y2="32" stroke-width="1.0" opacity=".3"/>
+          </g>
+          <g fill="currentColor">
+            <circle cx="60" cy="60" r="11.5"/>
+            <circle cx="28" cy="32" r="6.4"/>
+            <circle cx="92" cy="38" r="7.2"/>
+            <circle cx="74" cy="88" r="6.0"/>
+            <circle cx="38" cy="94" r="5.2"/>
+            <circle cx="18" cy="68" r="4.4"/>
+            <circle cx="100" cy="68" r="4.0"/>
+          </g>
+          <text x="60" y="60" text-anchor="middle" dominant-baseline="central" font-family="Newsreader, Georgia, serif" font-weight="500" font-size="15" dy="0.5" fill="var(--plum)">S</text>
+        </svg>
+        <span style="font-family:var(--font-display);font-size:20px;font-weight:400;color:var(--paper);">Sylvia</span>
+      </div>
+      <p>Personalized mental health technology for eating disorder recovery. Built on clinical science. Delivered at scale.</p>
+    </div>
+    <div class="footer-col">
+      <h4>Navigation</h4>
+      <ul>
+        <li><a href="index.html">Home</a></li>
+        <li><a href="about.html">About</a></li>
+        <li><a href="workbook.html">Workbook</a></li>
+        <li><a href="pricing.html">Pricing</a></li>
+        <li><a href="contact.html">Contact</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>Resources</h4>
+      <ul>
+        <li><a href="how-it-works.html">How It Works</a></li>
+        <li><a href="faq.html">FAQ</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>Legal</h4>
+      <ul>
+        <li><a href="privacy-policy.html">Privacy Policy</a></li>
+        <li><a href="terms-of-service.html">Terms of Service</a></li>
+        <li><a href="cookie-policy.html">Cookie Policy</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <span>© 2026 Sylvia Precision Health. All rights reserved.</span>
+    <span>Built for those who deserve better care.</span>
+  </div>
+</footer>
+
+<script>
+  const menuBtn = document.getElementById('menuBtn');
+  const mobileMenu = document.getElementById('mobileMenu');
+  if (menuBtn) {
+    menuBtn.addEventListener('click', () => { menuBtn.classList.toggle('open'); mobileMenu.classList.toggle('open'); });
+    mobileMenu.querySelectorAll('a').forEach(a => { a.addEventListener('click', () => { menuBtn.classList.remove('open'); mobileMenu.classList.remove('open'); }); });
+  }
+</script>
+</body>
+</html>
