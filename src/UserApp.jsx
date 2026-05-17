@@ -338,15 +338,15 @@ function SessionScreen({questions, userId, sessionTime, resumeIdx, onComplete, o
                   return(
                     <div key={i} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:3}}>
                       <div style={{width:2,height:6,background:'#C8C0B0',borderRadius:1}}/>
-                      <span style={{fontSize:12,color:'#8B7355',fontWeight:500}}>{v}</span>
+                      <span style={{fontSize:12,color:'#4A3020',fontWeight:500}}>{v}</span>
                     </div>
                   )
                 })}
               </div>
               {(q.scaleMinLabel||q.scaleMaxLabel)&&(
                 <div style={{display:'flex',justifyContent:'space-between',marginTop:4}}>
-                  <span style={{fontSize:12,color:'#8B7355'}}>{q.scaleMinLabel}</span>
-                  <span style={{fontSize:12,color:'#8B7355'}}>{q.scaleMaxLabel}</span>
+                  <span style={{fontSize:12,color:'#4A3020'}}>{q.scaleMinLabel}</span>
+                  <span style={{fontSize:12,color:'#4A3020'}}>{q.scaleMaxLabel}</span>
                 </div>
               )}
               {!scaleTouched&&<p style={{fontSize:12,color:'#C8C0B0',textAlign:'center',marginTop:12}}>Move the slider to answer</p>}
